@@ -128,12 +128,13 @@
 
   /**
    * Chamada em login.html/registro.html: se já existir sessão válida, não
-   * faz sentido mostrar o formulário de novo.
+   * faz sentido mostrar o formulário de novo — manda pra sobre.html
+   * ("IBS, CBS e FAQ"), a mesma tela inicial usada logo após login/cadastro.
    */
   async function redirecionarSeLogado() {
     const sessao = await sessaoAtual();
     if (sessao) {
-      location.replace("index.html");
+      location.replace("sobre.html");
       return;
     }
     document.documentElement.classList.add("sessao-pronta");

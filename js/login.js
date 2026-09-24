@@ -29,7 +29,9 @@
         mostrarErro(resultado.erro);
         return;
       }
-      location.href = "index.html";
+      // sobre.html ("IBS, CBS e FAQ") é a tela inicial — mesmo padrão do
+      // app desktop, que sempre abre nela em vez de ir direto pra consulta.
+      location.href = "sobre.html";
     } catch (e) {
       mostrarErro("Não foi possível entrar. Tente novamente.");
     } finally {

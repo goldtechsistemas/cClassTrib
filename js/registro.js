@@ -42,7 +42,9 @@
       // O servidor já deixa a sessão "lembrada" (api/register.js) — a caixa
       // "Deseja salvar seu login?" é escolha explícita só na tela de login
       // (ver js/login.js), não faz sentido pedir de novo aqui.
-      location.href = "index.html";
+      // sobre.html ("IBS, CBS e FAQ") é a tela inicial — mesmo padrão do
+      // app desktop, que sempre abre nela em vez de ir direto pra consulta.
+      location.href = "sobre.html";
     } catch (e) {
       mostrarErro("Não foi possível criar a conta. Tente novamente.");
     } finally {
