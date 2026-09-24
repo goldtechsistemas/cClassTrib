@@ -71,12 +71,26 @@
    * "1006.10.10" diz só "Para semeadura", sem repetir "Arroz" (que só
    * aparece no capítulo/posição ancestral). Por isso js/ncm-tabela.js
    * pré-calcula um "textoBusca" com o contexto de todos os ancestrais somado
-   * à descrição do próprio item. Só usar esse texto concatenado, porém, faz
-   * qualquer item cujo capítulo cite uma palavra de passagem (ex.: um
-   * preâmbulo de capítulo que menciona "água" en passant) pontuar igual a um
-   * item cuja PRÓPRIA descrição é sobre aquilo — por isso um match na
-   * descrição do PRÓPRIO item vale mais (6) que um match que só aparece via
-   * herança do contexto ancestral (2).
+   * à descrição do próprio item.
+   *
+   * Cada palavra da busca é pontuada em 3 níveis, do mais forte ao mais
+   * fraco: (a) REFORÇADO (6) — aparece tanto na descrição do próprio item
+   * quanto herdada do ancestral (capítulo/posição), sinal de que aquele é
+   * mesmo o assunto do ramo inteiro da tabela (ex.: "parafuso" em "Parafusos
+   * autoperfurantes" dentro do capítulo 73.18, que já é todo sobre
+   * parafusos); (b) ISOLADO (3) — aparece só na descrição do próprio item,
+   * sem nenhum eco no ancestral (ex.: "parafuso" em "De parafuso", um item
+   * de COMPRESSOR — 84.14 é sobre compressores de ar, "parafuso" ali é só o
+   * mecanismo daquele modelo específico, não o assunto do capítulo); (c) SÓ
+   * HERDADO (2) — a palavra não aparece na descrição do próprio item, só no
+   * contexto ancestral (capítulo cita o termo de passagem, mas o item em si
+   * não é sobre aquilo). Sem essa distinção entre (a) e (b), os dois
+   * empatavam, e no desempate por descrição mais curta o item de compressor
+   * ("De parafuso", 11 caracteres) furava na frente do parafuso de verdade
+   * ("Parafusos autoperfurantes", 26 caracteres) — bug corrigido em
+   * 2026-09-24. Cada palavra da busca conta uma única vez por item (não soma
+   * por repetição), para uma descrição técnica que repete o termo várias
+   * vezes não furar na frente de um produto comum que só usa o termo uma vez.
    */
   // Tokenizar e normalizar as ~15 mil linhas da tabela é o mesmo trabalho
   // toda vez que essa função roda — e na consulta em lote ela roda uma vez
@@ -90,17 +104,33 @@
     const linhas = new Array(tabela.length);
     for (let i = 0; i < tabela.length; i++) {
       const [, descricao, , textoBusca] = tabela[i];
-      const proprioTokens = tokenizar(normalize(descricao));
+      const descricaoNormalizada = normalize(descricao);
+      const proprioTokens = tokenizar(descricaoNormalizada);
+      const proprioTokensSet = new Set(proprioTokens);
       const contextoCompleto = textoBusca ? normalize(textoBusca) : null;
-      const contextoTokens = contextoCompleto ? tokenizar(contextoCompleto) : proprioTokens;
+      // Isola só a parte ANCESTRAL do texto de busca (capítulo/posição/
+      // subposição), sem a própria descrição — scripts/transformar-tabela-
+      // ncm.ps1 monta textoBusca como "ancestral + ' ' + própria descrição",
+      // então a própria descrição está sempre no final; cortar esse sufixo
+      // (em vez de filtrar por palavra repetida) preserva corretamente uma
+      // palavra que aparece nos DOIS lugares de verdade (ex.: "água"/
+      // "mineral" no capítulo 22.01 inteiro E na posição 2201.10 — as duas
+      // ocorrências contam, "reforçando" o termo) e só marca como "isolado"
+      // quando a palavra realmente NÃO existe em lugar nenhum do ancestral
+      // (ex.: "parafuso" em "De parafuso", um item de compressor cujo
+      // capítulo 84.14 não menciona parafuso nenhuma vez).
+      const textoAncestral = contextoCompleto && contextoCompleto.endsWith(descricaoNormalizada)
+        ? contextoCompleto.slice(0, contextoCompleto.length - descricaoNormalizada.length)
+        : (contextoCompleto || "");
+      const ancestralTokensSet = new Set(tokenizar(textoAncestral));
       // Set para checagem O(1) por variante (ver variantesDePalavra) — o
       // gargalo real da busca em lote não era só a tokenização repetida, era
       // varrer esses arrays com .some() para CADA palavra da busca, em CADA
       // uma das ~15 mil linhas.
       linhas[i] = {
-        descricaoNormalizada: normalize(descricao),
-        proprioTokensSet: new Set(proprioTokens),
-        contextoTokensSet: new Set(contextoTokens)
+        descricaoNormalizada,
+        proprioTokensSet,
+        ancestralTokensSet
       };
     }
     indiceTokens = { tabela, linhas };
@@ -123,14 +153,32 @@
 
     for (let i = 0; i < tabela.length; i++) {
       const [codigo, descricao, completo] = tabela[i];
-      const { descricaoNormalizada, proprioTokensSet, contextoTokensSet } = linhasIndexadas[i];
+      const { descricaoNormalizada, proprioTokensSet, ancestralTokensSet } = linhasIndexadas[i];
       let score = 0;
       // Bônus de frase completa só conta para buscas de 2+ palavras, e só
       // quando a frase aparece no texto do PRÓPRIO item (não herdada).
       if (palavras.length > 1 && descricaoNormalizada.includes(termo)) score += 4;
       palavrasComVariantes.forEach(({ variantes }) => {
-        if (variantes.some((v) => proprioTokensSet.has(v))) score += 6;
-        else if (variantes.some((v) => contextoTokensSet.has(v))) score += 2;
+        const naPropria = variantes.some((v) => proprioTokensSet.has(v));
+        const noAncestral = variantes.some((v) => ancestralTokensSet.has(v));
+        // Regressão (2026-09-24): um match só na própria descrição valia o
+        // mesmo (6) estivesse ele "reforçado" pelo capítulo/posição ancestral
+        // ou não — isso fazia "parafuso" (buscando "parafuso sextavado")
+        // empatar entre "Parafusos autoperfurantes" (73.18 — capítulo
+        // inteiro é sobre parafusos, match reforçado) e "De parafuso" (item
+        // de COMPRESSOR "tipo parafuso", 84.14 — "parafuso" aparece isolado,
+        // só como diferencial mecânico daquele item específico, sem nenhuma
+        // relação com o capítulo/posição ancestral, que fala de compressores
+        // de ar). No empate, descrição mais curta vencia — e "De parafuso"
+        // é mais curta que "Parafusos autoperfurantes", furando na frente.
+        // Match reforçado (aparece na própria descrição E no contexto
+        // herdado) continua valendo o máximo; match só na própria descrição,
+        // SEM nenhum eco no ancestral, vale menos — é sinal de que a palavra
+        // ali é só um detalhe/variante isolada do item, não o assunto real
+        // daquele ramo da tabela.
+        if (naPropria && noAncestral) score += 6;
+        else if (naPropria) score += 3;
+        else if (noAncestral) score += 2;
       });
       if (score === 0) continue;
       if (completo) score += 5; // prioriza códigos completos sobre níveis hierárquicos amplos
