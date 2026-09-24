@@ -87,7 +87,7 @@ cclasstrib-app/
     ├── cClassTrib 2026-06-22.xlsx              # arquivo oficial original (Portal NF-e)
     ├── CST_INDICADORES_20250514_PUBLICACAO.xlsx # versão anterior, não usada (ver nota acima)
     ├── cclasstrib_compact_extraido.tsv          # extração compacta usada para montar cclasstrib-oficial.js
-    └── Tabela_NCM_Vigente_20260914.json          # arquivo oficial original (Siscomex/RFB) usado para ncm-tabela.js
+    └── Tabela_NCM_Vigente_20260924.json          # arquivo oficial original (Siscomex/RFB) usado para ncm-tabela.js — baixado direto da API pública (https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json), sempre reflete o dia da checagem; ver scripts/transformar-tabela-ncm.ps1
 ```
 
 ## Fonte primária dos dados — como foi montada a base
@@ -232,6 +232,13 @@ sempre com uma busca direta no texto da lei (`data/raw/lcp214_plain.txt`) ou
 na tabela oficial cClassTrib antes de commitar o valor.
 
 ## Como atualizar a base de dados quando novos Anexos/regulamentações forem publicados
+
+**Última checagem de atualização: 2026-09-24.** Resultado: tabela cClassTrib
+já era a versão oficial mais recente (v1.60/23-06-2026 — confirmado por hash
+SHA-256 idêntico ao arquivo baixado de novo do Portal da NF-e); tabela NCM
+regravada com o snapshot mais recente do Siscomex (mesmo ato normativo —
+Resolução Gecex nº 926/2026 —, sem mudança de conteúdo, só a data "vigente
+em" avançou); nenhuma LC nova além da 227/2026, já incorporada.
 
 1. **Para atualizar a tabela oficial cClassTrib (6 dígitos) quando sair uma nova versão:**
    - Baixe o arquivo mais recente em nfe.fazenda.gov.br → Documentos → Diversos
