@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Criar conta — cClassTrib</title>
+  <script>(function(){try{var t=localStorage.getItem('cclasstrib-tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <script>
+    (function(){try{if(localStorage.getItem('cclasstrib-sessao')||sessionStorage.getItem('cclasstrib-sessao'))location.replace('index.html');}catch(e){}})();
+  </script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main class="container auth-container">
+    <section class="hero">
+      <h1>Criar conta</h1>
+      <p>Leva menos de um minuto</p>
+    </section>
+
+    <div class="card auth-card">
+      <div id="erro-registro" class="aviso-legal" style="display:none;"></div>
+
+      <label for="input-nome">Nome</label>
+      <input type="text" id="input-nome" placeholder="Como devemos te chamar" autocomplete="name" />
+
+      <label for="input-email" style="margin-top:14px;">E-mail</label>
+      <input type="email" id="input-email" placeholder="voce@exemplo.com" autocomplete="username" />
+
+      <label for="input-senha" style="margin-top:14px;">Senha</label>
+      <input type="password" id="input-senha" placeholder="No mínimo 6 caracteres" autocomplete="new-password" />
+
+      <label for="input-confirmar-senha" style="margin-top:14px;">Confirmar senha</label>
+      <input type="password" id="input-confirmar-senha" placeholder="Digite a senha de novo" autocomplete="new-password" />
+
+      <div class="field-actions">
+        <button class="btn" id="btn-criar-conta">Criar conta</button>
+      </div>
+
+      <p class="hint auth-switch">Já tem uma conta? <a href="login.html">Entrar</a></p>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/tema.js"></script>
+  <script src="js/registro.js"></script>
+</body>
+</html>

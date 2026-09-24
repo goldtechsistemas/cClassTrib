@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Testes — lógica de classificação cClassTrib</title>
+  <style>
+    body { font-family: Consolas, monospace; background: #0f1220; color: #f4f2ea; padding: 24px; }
+    .pass { color: #3fbf7f; }
+    .fail { color: #e0654f; font-weight: bold; }
+    #summary { margin-top: 20px; padding: 12px; border: 1px solid #2c3154; border-radius: 8px; }
+    li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Testes automatizados — camada de regras (rules.js)</h1>
+  <p>Executado diretamente no navegador (sem dependência de Node/Jest/Vitest). Veja <code>tests.js</code>.</p>
+  <ul id="results"></ul>
+  <div id="summary"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/cclasstrib-oficial.js"></script>
+  <script src="../js/rules.js"></script>
+  <script src="../js/csv.js"></script>
+  <script src="../js/ncm-tabela.js"></script>
+  <script src="../js/marcas-conhecidas.js"></script>
+  <script src="../js/servicos-sem-ncm.js"></script>
+  <script src="../js/ncm-busca.js"></script>
+  <script src="../js/atualizador.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="tests.js"></script>
+</body>
+</html>

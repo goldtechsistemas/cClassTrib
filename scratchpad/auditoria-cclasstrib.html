@@ -1,0 +1,352 @@
+<title>Auditoria cClassTrib</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f6f3ec;
+    --surface: #ffffff;
+    --surface-2: #efe9db;
+    --text: #22252c;
+    --muted: #6b6e76;
+    --border: #e2dbc9;
+    --accent: #a97a2f;
+    --accent-ink: #ffffff;
+    --verde: #2f7d5c;
+    --verde-bg: #e3f2ec;
+    --amarelo: #97640f;
+    --amarelo-bg: #faf1de;
+    --vermelho: #ab3a2a;
+    --vermelho-bg: #fbe9e4;
+    --azul: #2f6690;
+    --azul-bg: #e6f0f7;
+    --shadow: 0 1px 2px rgba(30,20,5,0.04), 0 8px 24px rgba(30,20,5,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161b;
+      --surface: #1b1e25;
+      --surface-2: #22262f;
+      --text: #e9e6dd;
+      --muted: #9a9da6;
+      --border: #2b2f38;
+      --accent: #d3a052;
+      --accent-ink: #201804;
+      --verde: #5cb894;
+      --verde-bg: rgba(92,184,148,0.12);
+      --amarelo: #dbb35a;
+      --amarelo-bg: rgba(219,179,90,0.12);
+      --vermelho: #e58072;
+      --vermelho-bg: rgba(229,128,114,0.12);
+      --azul: #7fb0d8;
+      --azul-bg: rgba(127,176,216,0.12);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b;
+    --surface: #1b1e25;
+    --surface-2: #22262f;
+    --text: #e9e6dd;
+    --muted: #9a9da6;
+    --border: #2b2f38;
+    --accent: #d3a052;
+    --accent-ink: #201804;
+    --verde: #5cb894;
+    --verde-bg: rgba(92,184,148,0.12);
+    --amarelo: #dbb35a;
+    --amarelo-bg: rgba(219,179,90,0.12);
+    --vermelho: #e58072;
+    --vermelho-bg: rgba(229,128,114,0.12);
+    --azul: #7fb0d8;
+    --azul-bg: rgba(127,176,216,0.12);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Source Sans 3", system-ui, sans-serif;
+    padding: 0 20px 80px;
+    line-height: 1.55;
+  }
+  .doc { max-width: 820px; margin: 0 auto; }
+
+  h1, h2, h3 { font-family: "Fraunces", Georgia, serif; text-wrap: balance; color: var(--text); }
+  h1 { font-size: 2.1rem; font-weight: 700; margin: 0 0 6px; }
+  h2 { font-size: 1.4rem; font-weight: 600; margin: 0 0 4px; }
+  h3 { font-size: 1.08rem; font-weight: 600; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  code, .mono { font-family: "IBM Plex Mono", Consolas, monospace; font-size: 0.86em; }
+  code { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; color: var(--accent); }
+
+  /* ---------- Header ---------- */
+  .masthead { padding: 44px 0 24px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+  .eyebrow { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+  .masthead p.lede { color: var(--muted); font-size: 1.02rem; max-width: 60ch; margin-top: 8px; }
+  .meta-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px; font-size: 0.86rem; color: var(--muted); }
+  .meta-row strong { color: var(--text); }
+
+  /* ---------- Status strip ---------- */
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 36px; box-shadow: var(--shadow); }
+  .status-tile { background: var(--surface); padding: 18px 20px; }
+  .status-tile .num { font-family: "Fraunces", serif; font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .status-tile .label { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .status-tile.ok .num { color: var(--verde); }
+  .status-tile.warn .num { color: var(--amarelo); }
+
+  /* ---------- Sections ---------- */
+  section { margin: 44px 0; }
+  .section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+  .section-num { font-family: "IBM Plex Mono", monospace; color: var(--accent); font-size: 0.86rem; font-weight: 600; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; box-shadow: var(--shadow); margin-bottom: 14px; }
+  .card + .card { margin-top: 14px; }
+
+  /* ---------- Pills / badges ---------- */
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
+  .pill.ok { background: var(--verde-bg); color: var(--verde); }
+  .pill.warn { background: var(--amarelo-bg); color: var(--amarelo); }
+  .pill.crit { background: var(--vermelho-bg); color: var(--vermelho); }
+  .pill.info { background: var(--azul-bg); color: var(--azul); }
+  .pill.neutral { background: var(--surface-2); color: var(--muted); }
+
+  /* ---------- Tables ---------- */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  thead th { text-align: left; background: var(--surface-2); color: var(--muted); font-weight: 600; padding: 9px 12px; white-space: nowrap; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  tbody td { padding: 9px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Findings list ---------- */
+  .achado { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--border); }
+  .achado:first-child { border-top: none; padding-top: 0; }
+  .achado .sev { flex: 0 0 auto; padding-top: 2px; }
+  .achado .corpo h4 { margin: 0 0 4px; font-size: 0.98rem; font-weight: 600; }
+  .achado .corpo p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  .achado .corpo .onde { margin-top: 6px; }
+
+  ul.limpa { list-style: none; margin: 0; padding: 0; }
+  ul.checklist { margin: 8px 0 0; padding-left: 0; list-style: none; }
+  ul.checklist li { padding: 5px 0 5px 26px; position: relative; font-size: 0.92rem; color: var(--text); }
+  ul.checklist li::before { content: "✓"; position: absolute; left: 0; color: var(--verde); font-weight: 700; }
+
+  .highlight-num { font-family: "IBM Plex Mono", monospace; font-weight: 600; color: var(--accent); }
+
+  footer.doc-footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.82rem; }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 1.7rem; }
+    .masthead { padding-top: 28px; }
+  }
+</style>
+
+<div class="doc">
+
+  <div class="masthead">
+    <div class="eyebrow">Relatório de auditoria técnica</div>
+    <h1>Revisão completa — cClassTrib</h1>
+    <p class="lede">Atualizações de fontes oficiais, testes funcionais, desempenho de entrega de arquivos, integração entre o módulo de Coleta de Dados e o login, e a nova função de exclusão de cadastros salvos.</p>
+    <div class="meta-row">
+      <span>Data: <strong>16 de setembro de 2026</strong></span>
+      <span>Escopo: <strong>7 páginas · 16 módulos JS · 193 testes automatizados</strong></span>
+      <span>Ambiente: <strong>servidor local (PowerShell), paridade com produção</strong></span>
+    </div>
+  </div>
+
+  <div class="status-grid">
+    <div class="status-tile ok"><div class="num">193/193</div><div class="label">testes automatizados</div></div>
+    <div class="status-tile ok"><div class="num">7/7</div><div class="label">páginas sem erro de console</div></div>
+    <div class="status-tile ok"><div class="num">2</div><div class="label">correções aplicadas nesta revisão</div></div>
+    <div class="status-tile warn"><div class="num">2</div><div class="label">ações agendadas (dados oficiais)</div></div>
+  </div>
+
+  <section id="atualizacoes">
+    <div class="section-head"><span class="section-num">01</span><h2>Atualizações das fontes oficiais</h2></div>
+    <p>Comparei as duas tabelas oficiais embutidas no site (cClassTrib e NCM) contra o que a Receita Federal, o Comitê Gestor do IBS e o Portal Nacional da NF-e publicaram desde que os arquivos foram baixados.</p>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+        <h3 style="margin:0;">Tabela cClassTrib / CST — <code>js/cclasstrib-oficial.js</code></h3>
+        <span class="pill ok">Conteúdo já atualizado</span>
+      </div>
+      <p>Nosso arquivo-fonte é datado de 22/06/2026. A pesquisa mostra que o <strong>Informe Técnico 2025.002 v1.60</strong> foi publicado logo em seguida (23–24/06/2026), com 5 códigos novos e 3 substituídos:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Mudança</th><th>Código(s)</th><th>Situação no site</th></tr></thead>
+          <tbody>
+            <tr><td>Adicionado</td><td class="mono">410036, 410037</td><td><span class="pill ok">Presente</span></td></tr>
+            <tr><td>Adicionado</td><td class="mono">550024, 550025</td><td><span class="pill ok">Presente</span></td></tr>
+            <tr><td>Adicionado</td><td class="mono">620007</td><td><span class="pill ok">Presente</span></td></tr>
+            <tr><td>Substituído por 221002–4</td><td class="mono">220001, 220002, 220003</td><td><span class="pill warn">Presente, mas sem marca de revogado</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:10px;">Os 8 códigos já estão na nossa base — nenhum código está faltando. Uma lacuna real, porém: <strong>220001–220003 deveriam estar marcados como substituídos</strong> (a tabela oficial deu "fim de vigência" a eles), mas nosso schema não tem campo de vigência para cClassTrib — ver achado A-1 abaixo.</p>
+      <p style="margin:0; font-size:0.85rem; color:var(--muted);">Ressalva metodológica: a comparação usou reportagens de terceiros sobre a v1.60 (o PDF oficial em nfe.fazenda.gov.br não foi acessível para conferência linha a linha nesta sessão). Recomenda-se uma nova conferência direto na fonte primária periodicamente.</p>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+        <h3 style="margin:0;">Tabela NCM — <code>js/ncm-tabela.js</code></h3>
+        <span class="pill warn">Atualização agendada — 01/10/2026</span>
+      </div>
+      <p>Nossa tabela (<code>Tabela_NCM_Vigente_20260914.json</code>) é a tabela oficial <strong>correta e vigente para hoje</strong>. Mas a Resolução Gecex nº 926 (24/06/2026) inclui um código novo — <code class="mono">8518.10.20</code> (microfones) — com vigência a partir de <strong>1º de outubro de 2026</strong>, cerca de duas semanas a partir desta auditoria.</p>
+      <p style="margin:0;">Não é um bug hoje (usar a tabela futura antes da hora seria o erro), mas é uma ação com prazo real — ver plano de ação, item P-1.</p>
+    </div>
+  </section>
+
+  <section id="testes">
+    <div class="section-head"><span class="section-num">02</span><h2>Testes funcionais</h2></div>
+    <p>Suíte automatizada (<code>tests/tests.js</code>) mais verificação manual módulo a módulo, incluindo o fluxo completo de autenticação.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Módulo</th><th>Cobertura automatizada</th><th>Verificação manual</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Classificação por NCM/descrição/operação</td><td>73 testes</td><td>Busca real testada (2203.00.00 → Anexo XVII)</td><td><span class="pill ok">OK</span></td></tr>
+          <tr><td>Descobrir NCM + marcas conhecidas</td><td>27 testes</td><td>—</td><td><span class="pill ok">OK</span></td></tr>
+          <tr><td>Consulta em lote (CSV)</td><td>13 testes</td><td>—</td><td><span class="pill ok">OK</span></td></tr>
+          <tr><td>Coleta de Dados</td><td>40 testes (+8 nesta revisão)</td><td>Salvar/carregar/excluir com 2 contas reais</td><td><span class="pill ok">OK</span></td></tr>
+          <tr><td>Autenticação (login/registro)</td><td>40 testes</td><td>Cadastro, confirmação, código expirado/reenviado, e-mail duplicado, guarda de rota, logout</td><td><span class="pill ok">OK</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px;">Todas as 7 páginas (<code>index</code>, <code>registro</code>, <code>consultar</code>, <code>lote</code>, <code>sobre</code>, <code>coleta</code>, <code>tests</code>) carregadas sem nenhum erro de console.</p>
+  </section>
+
+  <section id="performance">
+    <div class="section-head"><span class="section-num">03</span><h2>Velocidade de entrega dos arquivos</h2></div>
+    <p>Tempo de resposta de cada arquivo do site, medido diretamente (requisição HTTP cronometrada, servidor local — mesma rede/hardware usados para todo o desenvolvimento).</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Arquivo</th><th class="num">Tamanho</th><th class="num">Tempo</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">js/ncm-tabela.js</td><td class="num">6.164,0 KB</td><td class="num">118 ms</td></tr>
+          <tr><td class="mono">js/data.js</td><td class="num">57,2 KB</td><td class="num">4,3 ms</td></tr>
+          <tr><td class="mono">js/cclasstrib-oficial.js</td><td class="num">36,7 KB</td><td class="num">3,5 ms</td></tr>
+          <tr><td class="mono">css/styles.css</td><td class="num">13,6 KB</td><td class="num">2,8 ms</td></tr>
+          <tr><td class="mono">demais 19 arquivos (html/js)</td><td class="num">1–22 KB cada</td><td class="num">2,5–9,5 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3 style="margin-top:0;">Achado principal: o arquivo de 6 MB comprime para <span class="highlight-num">340 KB</span></h3>
+      <p><code>ncm-tabela.js</code> (tabela NCM completa, ~15.155 itens) é, de longe, o arquivo mais pesado do site — <strong>97% do peso total</strong> de uma página que carrega a busca de NCM. Comprimido com gzip (o padrão em qualquer hospedagem estática moderna, Netlify incluso), esse arquivo cai de <span class="mono">6,02 MB</span> para <span class="mono">0,34 MB</span> — uma redução de <strong>94,3%</strong>, porque é um array gigante de texto em português (que comprime muito bem).</p>
+      <p style="margin:0;">Em produção, isso normalmente já acontece de forma automática. A ação recomendada não é reescrever o arquivo — é <strong>confirmar</strong> (cabeçalho <code>Content-Encoding: gzip</code> ou <code>br</code> nas ferramentas de rede do navegador) que o host de destino realmente está comprimindo, já que isso é responsabilidade do servidor, não do código.</p>
+    </div>
+  </section>
+
+  <section id="coleta-login">
+    <div class="section-head"><span class="section-num">04</span><h2>Coleta de Dados × Login</h2></div>
+    <p><strong>Pergunta original:</strong> os dados da Coleta de Dados ficam realmente salvos vinculados à conta autenticada?</p>
+
+    <div class="card">
+      <span class="pill crit">Antes desta revisão: não</span>
+      <p style="margin-top:10px;">O módulo de Coleta de Dados foi construído antes do sistema de login existir. O campo "Preenchido por" era texto livre — qualquer pessoa logada podia digitar qualquer nome, sem relação nenhuma com a conta autenticada. O alternador "Cliente/Contador" não filtrava nada de verdade: o modo Cliente não escondia coletas de outras pessoas porque nunca soube quem era "a pessoa".</p>
+    </div>
+
+    <div class="card">
+      <span class="pill ok">Corrigido nesta revisão</span>
+      <p style="margin-top:10px;">O campo "Preenchido por" agora é travado (somente leitura) no nome da conta logada, e cada coleta salva grava também o e-mail da sessão (<code>usuarioEmail</code>). O modo Cliente passou a filtrar de verdade por esse e-mail.</p>
+      <p style="margin:0 0 10px;"><strong>Testado com duas contas reais</strong> criadas nesta sessão:</p>
+      <ul class="checklist">
+        <li>Ana salva uma coleta → aparece em "Minhas coletas" da própria Ana.</li>
+        <li>Login como Bruno, modo Cliente → lista vazia (não vê a coleta da Ana).</li>
+        <li>Bruno muda para modo Contador → agora vê a coleta da Ana (comportamento pretendido: contador vê todas).</li>
+      </ul>
+      <p style="margin-top:10px; font-size:0.85rem; color:var(--muted);">O alternador Cliente/Contador continua sendo um filtro de interface, não uma permissão de segurança real — qualquer conta pode virar "Contador" e ver tudo. Isso já é declarado explicitamente na página; ver sugestão de melhoria M-3.</p>
+    </div>
+  </section>
+
+  <section id="exclusao">
+    <div class="section-head"><span class="section-num">05</span><h2>Nova função: excluir um cadastro salvo</h2></div>
+    <div class="card">
+      <p>Cada linha da lista de coletas salvas (nos dois modos) agora tem um botão <strong>Excluir</strong>, com uma confirmação antes de apagar de vez.</p>
+      <ul class="checklist">
+        <li>Remove o registro de <code>cclasstrib_coletas</code> permanentemente.</li>
+        <li>O log de auditoria <strong>não é apagado</strong> — é append-only por design: a exclusão grava uma nova entrada (<code>acao: "exclusao"</code>) que referencia o registro removido e quem removeu, preservando a entrada original de criação.</li>
+        <li>Cancelar a confirmação não altera nada (testado).</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="achados">
+    <div class="section-head"><span class="section-num">06</span><h2>Problemas encontrados</h2></div>
+
+    <div class="card">
+      <div class="achado">
+        <div class="sev"><span class="pill ok">Corrigido</span></div>
+        <div class="corpo">
+          <h4>Coleta de Dados não vinculada à conta logada</h4>
+          <p>Ver seção 04. Campo travado na sessão + filtro real por e-mail.</p>
+          <div class="onde"><span class="pill neutral mono">js/coleta.js · js/coleta-dados.js</span></div>
+        </div>
+      </div>
+      <div class="achado">
+        <div class="sev"><span class="pill ok">Corrigido</span></div>
+        <div class="corpo">
+          <h4>Sem opção de excluir uma coleta salva</h4>
+          <p>Ver seção 05. Botão Excluir com confirmação e auditoria.</p>
+          <div class="onde"><span class="pill neutral mono">js/coleta.js · js/coleta-dados.js · coleta.html</span></div>
+        </div>
+      </div>
+      <div class="achado">
+        <div class="sev"><span class="pill ok">Corrigido</span></div>
+        <div class="corpo">
+          <h4>Campo somente-leitura sem indicação visual</h4>
+          <p>"Preenchido por" (agora travado) parecia editável — mesmo fundo e cursor de texto de um campo normal. Adicionado estilo <code>input:read-only</code> (fundo diferenciado, cursor bloqueado).</p>
+          <div class="onde"><span class="pill neutral mono">css/styles.css</span></div>
+        </div>
+      </div>
+      <div class="achado">
+        <div class="sev"><span class="pill warn">Médio</span></div>
+        <div class="corpo">
+          <h4>Códigos cClassTrib revogados sem marcação</h4>
+          <p>220001–220003 seguem na base sem indicar que foram substituídos por 221002–221004 (Informe Técnico v1.60). Risco de alguém escolher o código antigo. Ver plano de ação P-2.</p>
+          <div class="onde"><span class="pill neutral mono">js/cclasstrib-oficial.js</span></div>
+        </div>
+      </div>
+      <div class="achado">
+        <div class="sev"><span class="pill warn">Médio</span></div>
+        <div class="corpo">
+          <h4>Tabela NCM ficará desatualizada em 01/10/2026</h4>
+          <p>Novo código 8518.10.20 (Resolução Gecex 926) entra em vigor nessa data. Nada a corrigir hoje — é um prazo, não um bug. Ver plano de ação P-1.</p>
+          <div class="onde"><span class="pill neutral mono">js/ncm-tabela.js</span></div>
+        </div>
+      </div>
+      <div class="achado">
+        <div class="sev"><span class="pill info">Informativo</span></div>
+        <div class="corpo">
+          <h4>Compressão do arquivo de 6 MB depende do host</h4>
+          <p>gzip reduz o arquivo em 94% (verificado localmente), mas isso só se aplica se o servidor de produção comprimir — não é algo que o código controla. Confirmar após o próximo deploy.</p>
+          <div class="onde"><span class="pill neutral mono">infraestrutura de deploy</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="plano">
+    <div class="section-head"><span class="section-num">07</span><h2>Plano de ação</h2></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Ação</th><th>Prioridade</th><th>Prazo sugerido</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">P-1</td><td>Baixar a nova Tabela NCM vigente (inclui 8518.10.20) e regerar <code>ncm-tabela.js</code></td><td><span class="pill warn">Média</span></td><td>Logo após 01/10/2026</td></tr>
+          <tr><td class="mono">P-2</td><td>Adicionar campo de vigência aos códigos cClassTrib (mesmo padrão já usado em <code>data.js</code> para Anexos revogados) e marcar 220001–220003</td><td><span class="pill warn">Média</span></td><td>Próxima janela de manutenção</td></tr>
+          <tr><td class="mono">P-3</td><td>Confirmar <code>Content-Encoding: gzip/br</code> no próximo deploy de produção</td><td><span class="pill neutral">Baixa</span></td><td>No próximo deploy</td></tr>
+          <tr><td class="mono">P-4</td><td>Avaliar carregar <code>ncm-tabela.js</code> só quando a aba "Descobrir NCM" for aberta (lazy load)</td><td><span class="pill neutral">Baixa</span></td><td>Backlog</td></tr>
+          <tr><td class="mono">P-5</td><td>Reconferir a tabela cClassTrib direto na fonte primária (nfe.fazenda.gov.br), sem depender de reportagens de terceiros</td><td><span class="pill neutral">Baixa</span></td><td>Próxima revisão periódica</td></tr>
+          <tr><td class="mono">P-6</td><td>Antes de qualquer uso com dados reais de clientes: migrar login e Coleta de Dados para um backend de verdade (banco + hash de senha no servidor + permissões reais)</td><td><span class="pill crit">Alta, se for para produção real</span></td><td>Antes do primeiro uso real</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    Gerado a partir de testes automatizados (<code>tests/tests.js</code>), medições diretas de tempo de resposta e pesquisa nas fontes oficiais (Receita Federal, Portal Nacional da NF-e, Siscomex). Ver <code>README.md</code> do projeto para o detalhamento técnico de cada módulo.
+  </footer>
+
+</div>

@@ -1,0 +1,166 @@
+CST-IBS/CBS	cClassTrib	Nome cClassTrib	LC 214/25	Tipo de Alíquota	pRedIBS	pRedCBS	ANEXO
+000	000001	Situações tributadas integralmente pelo IBS e CBS.		Padrão	0	0	
+000	000002	Exploração de via	Art. 11, VIII	Padrão	0	0	90111
+000	000003	Regime automotivo - projetos incentivados (art. 311)	Art. 311	Padrão	0	0	
+000	000004	Regime automotivo - projetos incentivados (art. 312)	Art. 312	Padrão	0	0	
+000	000005	Operação com EAC destinado à mistura com gasolina A, mas com saída do biocombustível com destinação diversa	Art. 179, I	Padrão	0	0	
+010	010001	Operações do FGTS não realizadas pela Caixa Econômica Federal	Art. 212	Uniforme setorial	0	0	
+010	010002	Operações do serviço financeiro	Art. 233	Uniforme setorial	0	0	
+011	011001	Planos de assistência funerária.	Art. 236	Uniforme nacional (referência)	60	60	
+011	011002	Planos de assistência à saúde	Art. 237	Uniforme nacional (referência)	60	60	
+011	011003	Intermediação de planos de assistência à saúde	Art. 240	Uniforme nacional (referência)	60	60	92401
+011	011004	Concursos e prognósticos	Art. 246	Uniforme nacional (referência)	0	0	
+011	011005	Planos de assistência à saúde de animais domésticos	Art. 243	Uniforme nacional (referência)	30	30	
+200	200001	Serviços de transporte de bens até as zonas de processamento de exportação e bens exportados a partir das zonas de processamento de exportação	Art. 103	Padrão	100	100	
+200	200002	Fornecimento ou importação para produtor rural não contribuinte ou TAC	Art. 110	Padrão	100	100	
+200	200003	Vendas de produtos destinados à alimentação humana (Anexo I)	Art. 125	Padrão	100	100	1
+200	200004	Fornecimento de dispositivos médicos (Anexo XII)	Art. 144, I	Padrão	100	100	12
+200	200005	Fornecimento de dispositivos médicos para órgãos da administração pública e entidades de saúde imunes (Anexo IV)	Art. 144, II	Padrão	100	100	4
+200	200006	Situação de emergência de saúde pública reconhecida pelo Poder público	Art. 144, § 3º	Padrão	100	100	
+200	200007	Fornecimento dos dispositivos de acessibilidade próprios para pessoas com deficiência (Anexo XIII)	Art. 145, I	Padrão	100	100	13
+200	200008	Fornecimento dos dispositivos de acessibilidade próprios para pessoas com deficiência adquiridos por órgãos da administração pública (Anexo V)	Art. 145, II	Padrão	100	100	5
+200	200009	Fornecimento dos medicamentos registrados na Anvisa	Art. 146	Padrão	100	100	
+200	200010	Fornecimento dos medicamentos registrados na Anvisa, adquiridos por órgãos da administração pública	Art. 146, § 1º, I e II	Padrão	100	100	
+200	200011	Fornecimento das composições para nutrição enteral e parenteral quando adquiridas por órgãos da administração pública (Anexo VI)	Art. 146, § 2º	Padrão	100	100	6
+200	200012	Situação de emergência de saúde pública reconhecida pelo Poder público	Art. 146, § 4º	Padrão	100	100	
+200	200013	Fornecimento de tampões higiênicos, absorventes higiênicos internos ou externos	Art. 147	Padrão	100	100	91471
+200	200014	Fornecimento dos produtos hortícolas, frutas e ovos (Anexo XV)	Art. 148	Padrão	100	100	15
+200	200015	Venda de automóveis de passageiros de fabricação nacional adquiridos por motoristas profissionais ou pessoas com deficiência	Art. 149	Padrão	100	100	
+200	200016	Prestação de serviços de pesquisa e desenvolvimento por Instituição Científica, Tecnológica e de Inovação (ICT)	Art. 156	Padrão	100	100	91561
+200	200017	Operações relacionadas ao FGTS	Art. 212, § 3º, I	Padrão	100	100	
+200	200018	Operações de resseguro e retrocessão	Art. 223, § 4º	Padrão	100	100	
+200	200019	Importador dos serviços financeiros contribuinte	Art. 231, § 1º, II	Padrão	100	100	
+200	200020	Operação praticada por sociedades cooperativas optantes por regime específico do IBS e CBS	Art. 271	Padrão	100	100	
+200	200021	Serviços de transporte público coletivo de passageiros ferroviário e hidroviário	Art. 285, I	Padrão	100	100	
+200	200022	Operação originada fora da ZFM que destine bem material industrializado a contribuinte estabelecido na ZFM	Art. 445	Padrão	100	100	
+200	200023	Operação realizada por indústria incentivada que destine bem material intermediário para outra indústria incentivada na ZFM	Art. 448	Padrão	100	100	
+200	200024	Operação originada fora das Áreas de Livre Comércio destinadas a contribuinte estabelecido nas Áreas de Livre Comércio	Art. 463	Padrão	100	100	
+200	200025	Fornecimento dos serviços de educação relacionados ao Programa Universidade para Todos (Prouni)	Art. 308	Padrão	60	100	93081
+200	200026	Locação de imóveis localizados nas zonas reabilitadas	Art. 158, parágrafo único	Padrão	80	80	91581
+200	200027	Operações de locação, cessão onerosa e arrendamento de bens imóveis	Art. 261, parágrafo único	Padrão	70	70	92611
+200	200028	Fornecimento dos serviços de educação (Anexo II)	Art. 129	Padrão	60	60	2
+200	200029	Fornecimento dos serviços de saúde humana (Anexo III)	Art. 130	Padrão	60	60	3
+200	200030	Venda dos dispositivos médicos (Anexo IV)	Art. 131	Padrão	60	60	4
+200	200031	Fornecimento dos dispositivos de acessibilidade próprios para pessoas com deficiência (Anexo V)	Art. 132	Padrão	60	60	5
+200	200032	Fornecimento dos medicamentos registrados na Anvisa ou produzidos por farmácias de manipulação, ressalvados os medicamentos sujeitos à alíquota zero	Art. 133	Padrão	60	60	
+200	200033	Fornecimento das composições para nutrição enteral e parenteral (Anexo VI)	Art. 133, § 1º	Padrão	60	60	6
+200	200034	Fornecimento dos alimentos destinados ao consumo humano (Anexo VII)	Art. 135	Padrão	60	60	7
+200	200035	Fornecimento dos produtos de higiene pessoal e limpeza (Anexo VIII)	Art. 136	Padrão	60	60	8
+200	200036	Fornecimento de produtos agropecuários, aquícolas, pesqueiros, florestais e extrativistas vegetais in natura	Art. 137	Padrão	60	60	
+200	200037	Fornecimento de serviços ambientais de conservação ou recuperação da vegetação nativa	Art. 137, § 3º	Padrão	60	60	
+200	200038	Fornecimento dos insumos agropecuários e aquícolas (Anexo IX)	Art. 138	Padrão	60	60	9
+200	200039	Fornecimento dos bens e serviços relacionados com produções nacionais artísticas, culturais, de eventos, jornalísticas e audiovisuais (Anexo X)	Art. 139	Padrão	60	60	10
+200	200040	Fornecimento de serviços de comunicação institucional à administração pública	Art. 140	Padrão	60	60	
+200	200041	Fornecimento de serviço de educação desportiva (art. 141. I)	Art. 141, I	Padrão	60	60	91411
+200	200042	Fornecimento de serviço de gestão e exploração do desporto (art. 141. II)	Art. 141, II	Padrão	60	60	
+200	200043	Fornecimento à administração pública dos serviços e dos bens relativos à soberania (Anexo XI)	Art. 142, I	Padrão	60	60	11
+200	200044	Operações e prestações de serviços de segurança da informação e segurança cibernética desenvolvidos por sociedade que tenha sócio brasileiro (Anexo XI)	Art. 142, II	Padrão	60	60	11
+200	200045	Operações relacionadas a projetos de reabilitação urbana de zonas históricas e de áreas críticas de recuperação e reconversão urbanística	Art. 158	Padrão	60	60	
+200	200046	Operações com bens imóveis	Art. 261	Padrão	50	50	
+200	200047	Bares e Restaurantes	Art. 275	Padrão	40	40	
+200	200048	Hotelaria, Parques de Diversão e Parques Temáticos	Art. 281	Padrão	40	40	92811
+200	200049	Transporte coletivo de passageiros rodoviário, ferroviário e hidroviário	Art. 286	Padrão	40	40	
+200	200050	Serviços de transporte aéreo regional coletivo de passageiros ou de carga	Art. 287	Padrão	40	40	
+200	200051	Agências de Turismo	Art. 289, II	Padrão	40	40	
+200	200052	Prestação de serviços de profissões intelectuais	Art. 127, I a XVIII	Padrão	30	30	91271
+200	200053	Fornecimento de medicamentos registrados na Anvisa, quando classificados como soros ou vacinas	Art. 146, § 1º, III	Padrão	100	100	
+200	200054	Fornecimento de bem material pela cooperativa de produção agropecuária a associado não sujeito ao regime regular do IBS e da CBS	Art. 271, § 1º, II	Padrão	100	100	
+220	220001	Incorporação imobiliária submetida ao regime especial de tributação	Art. 485, I	Fixa	0	0	
+220	220002	Incorporação imobiliária submetida ao regime especial de tributação	Art. 485, II	Fixa	0	0	
+220	220003	Alienação de imóvel decorrente de parcelamento do solo	Art. 486	Fixa	0	0	
+221	221001	Locação, cessão onerosa ou arrendamento de bem imóvel com alíquota sobre a receita bruta	Art. 487, § 2º	Fixa	0	0	94871
+221	221002	Incorporação imobiliária submetida ao regime especial de tributação	Art. 485, I	Fixa	0	0	
+221	221003	Incorporação imobiliária submetida ao regime especial de tributação	Art. 485, II	Fixa	0	0	
+221	221004	Alienação de imóvel decorrente de parcelamento do solo	Art. 486	Fixa	0	0	
+222	222001	Transporte internacional de passageiros, caso os trechos de ida e volta sejam vendidos em conjunto	Art. 12 § 8º	Padrão	0	0	
+400	400001	Fornecimento de serviços de transporte público coletivo de passageiros rodoviário e metroviário	Art. 157	Sem alíquota	0	0	
+400	400002	Fornecimento de serviços de transporte público coletivo de passageiros rodoviário e metroviário com medição por quilômetro rodado	Art. 157	Sem alíquota	0	0	
+410	410001	Fornecimento de bonificações quando constem no documento fiscal e que não dependam de evento posterior	Art. 5º, § 1º, I	Sem alíquota	0	0	
+410	410002	Transferências entre estabelecimentos pertencentes ao mesmo contribuinte	Art. 6º, II	Sem alíquota	0	0	
+410	410003	Doações sem contraprestação em benefício do doador	Art. 6º, VIII	Sem alíquota	0	0	
+410	410004	Exportações de bens e serviços	Art. 8º	Sem alíquota	0	0	
+410	410005	Fornecimentos realizados pela União, pelos Estados, pelo Distrito Federal e pelos Municípios	Art. 9º, I e § 1º	Sem alíquota	0	0	
+410	410006	Fornecimentos realizados por entidades religiosas e templos de qualquer culto	Art. 9º, II	Sem alíquota	0	0	
+410	410007	Fornecimentos realizados por partidos políticos, entidades sindicais e instituições de educação e de assistência social	Art. 9º, III	Sem alíquota	0	0	
+410	410008	Fornecimentos de livros, jornais, periódicos e do papel destinado a sua impressão	Art. 9º, IV	Sem alíquota	0	0	
+410	410009	Fornecimentos de fonogramas e videofonogramas musicais produzidos no Brasil	Art. 9º, V	Sem alíquota	0	0	
+410	410010	Fornecimentos de serviço de comunicação nas modalidades de radiodifusão sonora e de sons e imagens de recepção livre e gratuita	Art. 9º, VI	Sem alíquota	0	0	
+410	410011	Fornecimentos de ouro, quando definido em lei como ativo financeiro ou instrumento cambial	Art. 9º, VII	Sem alíquota	0	0	
+410	410012	Fornecimento de condomínio edilício não optante pelo regime regular	Art. 26, § 2º, II	Sem alíquota	0	0	
+410	410013	Exportações de combustíveis	Art. 98	Sem alíquota	0	0	
+410	410014	Fornecimento de produtor rural não contribuinte	Art. 164	Sem alíquota	0	0	
+410	410015	Fornecimento por transportador autônomo não contribuinte	Art. 169	Sem alíquota	0	0	
+410	410016	Fornecimento ou aquisição de resíduos sólidos	Art. 170	Sem alíquota	0	0	
+410	410017	Aquisição de bem móvel com crédito presumido sob condição de revenda realizada	Art. 171	Sem alíquota	0	0	
+410	410018	Operações relacionadas aos fundos garantidores e executores de políticas públicas	Art. 213	Sem alíquota	0	0	
+410	410019	Exclusão da gorjeta na base de cálculo no fornecimento de alimentação	Art. 274, I	Sem alíquota	0	0	
+410	410020	Exclusão do valor de intermediação na base de cálculo no fornecimento de alimentação	Art. 274, II	Sem alíquota	0	0	
+410	410021	Contribuição de que trata o art. 149-A da Constituição Federal	Art. 12 § 2º	Sem alíquota	0	0	
+410	410022	Consolidação da propriedade do bem pelo credor	Art. 200, I	Sem alíquota	0	0	
+410	410023	Alienação de bens móveis ou imóveis que tenham sido objeto de garantia em que o prestador da garantia não seja contribuinte	Art. 200, II, a	Sem alíquota	0	0	
+410	410024	Consolidação da propriedade do bem pelo grupo de consórcio	Art. 204, § 3º, I	Sem alíquota	0	0	
+410	410025	Alienação de bem que tenha sido objeto de garantia em que o prestador da garantia não seja contribuinte	Art. 204, § 3º II, a	Sem alíquota	0	0	
+410	410026	Doação com anulação de crédito	Art. 6º, § 2º II	Sem alíquota	0	0	
+410	410027	Exportação de serviço ou de bem imaterial	Art. 80 II	Sem alíquota	0	0	
+410	410028	Operações com bens imóveis realizadas por pessoas físicas não consideradas contribuintes	Art. 251, § 1º	Sem alíquota	0	0	
+410	410029	Operações acobertadas somente pelo ICMS	Art. 4º	Sem alíquota	0	0	
+410	410030	Estorno de crédito por perecimento, deteriorização, roubo, furto ou extravio.	Art. 47, § 6º	Sem alíquota	0	0	
+410	410031	Fornecimento em período anterior ao início de vigência de incidências de CBS e IBS	Art. 544, VI	Sem alíquota	0	0	
+410	410032	Tributos incidentes na operação que não integram a base de cálculo do IBS e da CBS	Art. 12, §2º V	Sem alíquota	0	0	
+410	410033	Operações de Fundos de Investimento Imobiliário (FII) e Fundos de Investimento nas Cadeias Produtivas do Agronegócio (Fiagro)	Art. 26, § 5º-A, I e II	Sem alíquota	0	0	
+410	410034	Operações de fundos de investimento	Art. 26, § 5º-A, III	Sem alíquota	0	0	
+410	410035	Fornecimento realizado por nanoempreendedor	Art. 26, IV	Sem alíquota	0	0	
+410	410036	Descontos incondicionais	Art. 12, §2º III	Sem alíquota	0	0	
+410	410037	Importação os bens materiais sem incidência de IBS e CBS	Art. 66, I,III e VII	Sem alíquota	0	0	
+410	410999	Operações não onerosas sem previsão de tributação, não especificadas anteriormente	Art. 4º, § 1º	Sem alíquota	0	0	
+510	510001	Operações, sujeitas a diferimento, com energia elétrica, relativas à importação, geração, comercialização, distribuição e transmissão	Art. 28, § 1º	Sem alíquota	0	0	90281
+515	515001	Operações, sujeitas a diferimento, com insumos agropecuários e aquícolas (Anexo IX)	Art. 138, § 2º	Padrão	60	60	9
+550	550001	Exportações de bens materiais	Art. 82	Sem alíquota	0	0	
+550	550002	Regime de Trânsito	Art. 84	Sem alíquota	0	0	
+550	550003	Regimes de Depósito (art. 85)	Art. 85	Sem alíquota	0	0	
+550	550004	Regimes de Depósito (art. 87)	Art. 87	Sem alíquota	0	0	
+550	550005	Regimes de Depósito (art. 87, Parágrafo único)	Art. 87, parágrafo único	Sem alíquota	0	0	
+550	550006	Regimes de Permanência Temporária	Art. 88	Sem alíquota	0	0	
+550	550007	Regimes de Aperfeiçoamento	Art. 90	Sem alíquota	0	0	
+550	550008	Importação de bens para o Regime de Repetro-Temporário	Art. 93, I	Sem alíquota	0	0	
+550	550009	GNL-Temporário	Art. 93, II	Sem alíquota	0	0	
+550	550010	Repetro-Permanente	Art. 93, III	Sem alíquota	0	0	
+550	550011	Repetro-Industrialização	Art. 93, IV	Sem alíquota	0	0	
+550	550012	Repetro-Nacional	Art. 93, V	Sem alíquota	0	0	
+550	550013	Repetro-Entreposto	Art. 93, VI	Sem alíquota	0	0	
+550	550014	Zona de Processamento de Exportação	Arts. 99, 100 e 102	Sem alíquota	0	0	
+550	550015	Regime Tributário para Incentivo à Modernização e à Ampliação da Estrutura Portuária	Art. 105	Sem alíquota	0	0	
+550	550016	Regime Especial de Incentivos para o Desenvolvimento da Infraestrutura	Art. 106	Sem alíquota	0	0	
+550	550017	Regime Tributário para Incentivo à Atividade Naval - Renaval (Art. 107, I)	Art. 107, I	Sem alíquota	0	0	
+550	550018	Desoneração da aquisição de bens de capital	Art. 109	Sem alíquota	0	0	
+550	550019	Importação de bem material por indústria incentivada para utilização na ZFM	Art. 443	Sem alíquota	0	0	
+550	550020	Áreas de livre comércio	Art. 461	Sem alíquota	0	0	
+550	550021	Industrialização destinada a exportações	Art. 82, § 11	Sem alíquota	0	0	
+550	550022	Regime Especial de Incentivos para a Produção de Hidrogênio de Baixa Emissão de Carbono (Rehidro)	Art. 106, § 7º	Sem alíquota	0	0	
+550	550023	Operações com hidrocarbonetos líquidos derivados de petróleo não combustíveis ou de gás natural, inclusive nafta	Art. 172, § 2º	Sem alíquota	0	0	
+550	550024	Regime Tributário para Incentivo à Atividade Naval - Renaval (Art. 107, II)	Art. 107, II	Sem alíquota	0	0	
+550	550025	Regime Tributário para Incentivo à Atividade Naval - Renaval (Art. 107, III)	Art. 107, III	Sem alíquota	0	0	
+620	620001	Tributação monofásica sobre combustíveis	Art. 172	Uniforme setorial	0	0	91721
+620	620002	Tributação monofásica com responsabilidade pela retenção sobre combustíveis	Art. 178	Uniforme setorial	0	0	91722
+620	620003	Tributação monofásica com responsabilidade de retenção de tributos por terceiros	Art. 178	Uniforme setorial	0	0	91723
+620	620004	Tributação monofásica sobre mistura de EAC com gasolina A em percentual superior ao obrigatório	Art. 179, II, a	Uniforme setorial	0	0	91724
+620	620005	Tributação monofásica sobre mistura de EAC com gasolina A em percentual inferior ao obrigatório	Art. 179, II, b	Uniforme setorial	0	0	91725
+620	620006	Tributação monofásica sobre combustíveis cobrada anteriormente	Art. 180	Uniforme setorial	0	0	91726
+620	620007	Perecimento, deteriorização, roubo, furto ou extravio no regime monofásico	Art. 47, § 6º	Sem alíquota	0	0	
+800	800001	Fusão, cisão ou incorporação	Art. 55	Sem alíquota	0	0	
+800	800002	Transferência de crédito do associado, inclusive as cooperativas singulares	Art. 272	Sem alíquota	0	0	
+810	810001	Crédito presumido de IBS sobre o valor apurado nos fornecimentos a partir da ZFM	Art. 450, § 1º	Sem alíquota	0	0	
+811	811001	Anulação de Crédito por Saídas Imunes/Isentas	Art. 51	Sem alíquota	0	0	
+811	811002	Débitos de notas fiscais não processadas na apuração	Art. 45	Sem alíquota	0	0	
+811	811003	Desenquadramento do Simples Nacional	Art. 41	Sem alíquota	0	0	
+820	820001	Documento com informações de fornecimento de serviços de planos de assistência à saúde elencados no art. 234 da Lei Complementar nº214, de 2025	Art. 234	Sem alíquota	0	0	92341
+820	820002	Documento com informações de fornecimento de serviços de planos de assistência funerária	Art. 236	Sem alíquota	0	0	92361
+820	820003	Documento com informações de fornecimento de serviços de planos de assistência à saúde de animais domésticos	Art. 243	Sem alíquota	0	0	92431
+820	820004	Documento com informações de prestação de serviços de consursos de prognósticos	Art. 248	Sem alíquota	0	0	
+820	820005	Documento com informações de alienação de bens imóveis	Art. 254, § 1º	Sem alíquota	0	0	
+820	820006	Documento com informações de fornecimento de serviços de exploração de via	Art. 11, VIII	Sem alíquota	0	0	90111
+820	820007	Documento com informações de fornecimento de serviços financeiros	Art. 181	Sem alíquota	0	0	91811
+820	820008	Documento com informações de fornecimento de serviço continuado, mas com tributação realizada em fatura anterior	Art. 10, § 3º	Sem alíquota	0	0	
+820	820009	Cobrança relativa a fornecimentos declarados em outro documento	Art. 60	Sem alíquota	0	0	
+830	830001	Documento com exclusão da BC da CBS e do IBS de energia elétrica fornecida pela distribuidora à UC	Art. 28, parágrafos 3° e 4°	Sem alíquota	0	0	
+							

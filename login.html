@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entrar — cClassTrib</title>
+  <script>(function(){try{var t=localStorage.getItem('cclasstrib-tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <script>
+    // Já logado? Não faz sentido mostrar a tela de login de novo. Checa
+    // localStorage (sessão "lembrada") E sessionStorage (sessão só desta
+    // aba/execução) — ver js/auth.js, iniciarSessao().
+    (function(){try{if(localStorage.getItem('cclasstrib-sessao')||sessionStorage.getItem('cclasstrib-sessao'))location.replace('index.html');}catch(e){}})();
+  </script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main class="container auth-container">
+    <section class="hero">
+      <h1>cClassTrib</h1>
+      <p>Entre para continuar</p>
+    </section>
+
+    <div class="card auth-card">
+      <div id="erro-login" class="aviso-legal" style="display:none;"></div>
+
+      <label for="input-email">E-mail</label>
+      <input type="email" id="input-email" placeholder="voce@exemplo.com" autocomplete="username" />
+
+      <label for="input-senha" style="margin-top:14px;">Senha</label>
+      <input type="password" id="input-senha" placeholder="Sua senha" autocomplete="current-password" />
+
+      <label class="checkbox-linha" for="input-lembrar" style="margin-top:14px;">
+        <input type="checkbox" id="input-lembrar" />
+        Deseja salvar seu login?
+      </label>
+
+      <div class="field-actions">
+        <button class="btn" id="btn-entrar">Entrar</button>
+      </div>
+
+      <p class="hint auth-switch">Não tem uma conta? <a href="registro.html">Criar conta</a></p>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/tema.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>
