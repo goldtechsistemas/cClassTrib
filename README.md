@@ -24,6 +24,14 @@ lógica em `js/rules.js` foi escrita sem dependências de DOM e pode ser
 reaproveitada quase sem alterações dentro de uma API route ou de um pacote
 TypeScript.
 
+**Atualização (2026-09-24):** isso deixou de ser 100% verdade só pro login e
+o painel admin — essas duas partes passaram a depender de um backend real
+(Vercel Functions + Postgres, pasta `api/`) pra viabilizar o painel
+administrativo (ver "Login e criação de conta" e "Painel administrativo" mais
+abaixo). Todo o resto (busca por NCM/descrição/operação, CSV em lote,
+exportação, FAQ) continua 100% estático, sem depender de servidor nem de
+banco de dados.
+
 ## Estrutura do projeto (camadas)
 
 ```
@@ -33,12 +41,23 @@ cclasstrib-app/
 ├── sobre.html            # Explicação IBS/CBS/IS + FAQ + aviso legal
 ├── login.html            # Login — obrigatório antes de index/lote/sobre (ver js/auth.js)
 ├── registro.html         # Criação de conta (nome, e-mail, senha, confirmar senha)
+├── admin.html            # Painel administrativo — login próprio, lista/bloqueia/exclui usuários (ver seção própria)
 ├── versao.json           # Versão publicada atual — lida por js/atualizador.js (ver seção própria)
+├── package.json          # Dependências do backend (pg, bcryptjs, jsonwebtoken) — só usadas por api/*.js e scripts/init-db.js
 ├── css/styles.css        # Design system (paleta laranja, dark/light — ver js/tema.js)
+├── api/                  # Backend (Vercel Functions, Node) — ver seções "Login" e "Painel administrativo"
+│   ├── _db.js                  # Pool de conexão Postgres compartilhado (prefixo _ = não vira rota, convenção da Vercel)
+│   ├── _lib.js                 # Cookies de sessão (JWT assinado), leitura de corpo JSON
+│   ├── register.js, login.js, logout.js, session.js   # Auth de usuário comum
+│   ├── conta/nome.js, email.js, senha.js               # Alterar dados da conta logada
+│   └── admin/login.js, logout.js, session.js, users.js, users/[id].js   # Auth e gestão de usuários do painel admin
 ├── js/
-│   ├── auth.js                 # Login/conta client-side (PBKDF2 via SubtleCrypto, localStorage) — ver seção própria
+│   ├── auth.js                 # Login/conta — fala com api/*.js (fetch); ver seção própria
 │   ├── login.js                # Lógica da página login.html
 │   ├── registro.js             # Lógica da página registro.html
+│   ├── conta.js                 # Menu "Minha conta" (nome no cabeçalho → trocar nome/e-mail/senha)
+│   ├── admin.js                 # Lógica de admin.html (login admin + tabela de usuários + bloquear/excluir)
+│   ├── tema.js                  # Alternância claro/escuro (botão no cabeçalho, preferência em localStorage)
 │   ├── data.js                # CAMADA DE DADOS — Anexos I-XVII extraídos da LC 214/2025
 │   ├── cclasstrib-oficial.js   # CAMADA DE DADOS — tabela oficial cClassTrib/CST (Portal NF-e)
 │   ├── ncm-tabela.js           # CAMADA DE DADOS — tabela NCM oficial completa + contexto hierárquico (Siscomex/RFB, ~15 mil itens, ~6 MB)
@@ -56,7 +75,8 @@ cclasstrib-app/
 │   ├── tests.html          # Executa a suíte de testes no navegador
 │   └── tests.js            # Testes automatizados (assert simples, sem framework)
 ├── scripts/
-│   ├── serve.ps1            # Servidor HTTP estático em PowerShell (dev local, sem Node/Python)
+│   ├── init-db.js           # Cria as tabelas usuarios/admins no Postgres + a conta admin inicial (ver "Painel administrativo")
+│   ├── serve.ps1            # Servidor HTTP estático em PowerShell (dev local só pra partes estáticas, sem login/admin)
 │   ├── extract-anexos.ps1   # Baixa e fatia os Anexos da LC 214/2025 a partir do Planalto
 │   ├── read-xlsx.ps1        # Leitor genérico de .xlsx (ZIP/XML) em PowerShell puro
 │   ├── read-xlsx-cols.ps1   # Extrai colunas específicas de uma planilha .xlsx em TSV
@@ -361,97 +381,163 @@ rechecagem (até 30 min, ou na hora se recarregar a página); quem abre o
 site depois do deploy já recebe a versão nova de cara, sem aviso nenhum
 (não tem nada "desatualizado" para detectar).
 
-## Login e criação de conta (2026-09-23)
+## Login e criação de conta (2026-09-23, migrado pra backend real em 2026-09-24)
 
-Reintroduzido a pedido do usuário (tinha sido removido em 2026-09-18 "até
-finalizar tudo"). É client-side — este site continua sem backend/servidor
-de aplicação, então **não é um sistema de contas de verdade**: as contas
-ficam salvas no `localStorage` do navegador/instalação, não num banco
-compartilhado — cada máquina/navegador tem sua própria lista.
+Reintroduzido a pedido do usuário em 2026-09-23 (tinha sido removido em
+2026-09-18 "até finalizar tudo") — nessa primeira versão era client-side
+(contas em `localStorage`, sem banco compartilhado). Em 2026-09-24 foi
+**migrado para um backend real** (Vercel Functions + Postgres) para viabilizar
+o painel administrativo (ver seção seguinte), que precisa enxergar e
+gerenciar todas as contas cadastradas — algo impossível enquanto cada conta
+vivia isolada no navegador de quem se cadastrou.
 
-- `index.html`, `lote.html` e `sobre.html` têm um script inline no `<head>`
-  (antes de qualquer conteúdo) que confere `localStorage['cclasstrib-sessao']`
-  e redireciona pra `login.html` se não houver sessão — é assim que "abrir o
-  site sem estar logado" sempre cai na tela de login primeiro, em vez de um
-  flash do conteúdo protegido.
-- `login.html`: e-mail + senha. Link "Criar conta" pra quem não tem.
+- `login.html`: e-mail + senha + "Deseja salvar seu login?". Link "Criar
+  conta" pra quem não tem.
 - `registro.html`: nome, e-mail, senha, confirmar senha. Ao criar a conta,
   já loga automaticamente e manda pra `index.html`.
-- `js/auth.js`: a senha nunca é salva em texto puro — só um hash PBKDF2
-  (100.000 iterações, SHA-256) com salt aleatório por usuário, via
-  `crypto.subtle` (SubtleCrypto). Isso só funciona em "contexto seguro"
-  (`https://` ou `http://localhost`) — é por isso que o app desktop serve
-  o site via servidor HTTP local em vez de abrir os arquivos direto
-  (`file://`, que não conta como contexto seguro).
-- Sessão fica em `localStorage['cclasstrib-sessao']` (não expira sozinha —
-  permanece até clicar em "Sair", que `js/auth.js` liga automaticamente no
-  botão injetado por `Components.renderHeader()` quando há sessão ativa).
+- `index.html`, `lote.html`, `sobre.html`, `login.html` e `registro.html`
+  chamam `Auth.protegerPagina()` / `Auth.redirecionarSeLogado()`
+  (`js/auth.js`) no fim do `<body>`: como a sessão agora é conferida no
+  servidor (`GET /api/session`, assíncrono), não dá mais pra bloquear a
+  renderização de forma síncrona como antes — em vez disso, `css/styles.css`
+  deixa `body{visibility:hidden}` até `js/auth.js` confirmar a checagem e
+  adicionar a classe `sessao-pronta` no `<html>`, evitando um flash de
+  conteúdo protegido (ou do formulário de login por cima de uma sessão já
+  ativa).
+- Backend (`api/*.js`, funções serverless da Vercel, Node + `pg`):
+  - `POST /api/register`, `POST /api/login`, `POST /api/logout`,
+    `GET /api/session` — a senha é hasheada com `bcryptjs` (custo 12) e
+    **nunca** sai do servidor; a sessão é um cookie `HttpOnly` assinado
+    (JWT, `jsonwebtoken`, segredo em `SESSION_SECRET`), não algo que o
+    JavaScript do cliente consegue ler ou forjar.
+  - "Deseja salvar seu login?" vira o `Max-Age` do cookie: marcado = 180
+    dias (sobrevive fechar/abrir o navegador); desmarcado = cookie de
+    sessão (some ao fechar o navegador).
+  - `POST /api/conta/{nome,email,senha}` — trocar e-mail ou senha exige
+    reconfirmar a senha atual; a conta ativa é sempre a do cookie da
+    requisição, nunca um e-mail vindo do corpo do POST.
+  - Tabela `usuarios` no Postgres: `id, email, nome, senha_hash, bloqueado,
+    criado_em`. Criada por `scripts/init-db.js` (ver seção do painel admin).
 - No cabeçalho, o nome do usuário e "Sair" ficam à direita do botão de
-  tema (claro/escuro). Clicar no nome abre um menu suspenso (`js/conta.js`)
-  com "Alterar nome de usuário" / "Alterar e-mail" / "Alterar senha", cada
-  um abrindo um modal com abas (reaproveita o mesmo `.card`/`.tabs` do
-  resto do site). Trocar e-mail ou senha exige confirmar a senha atual
-  (`Auth.alterarEmail`/`Auth.alterarSenha`, em `js/auth.js`); trocar só o
-  nome de exibição não exige senha. Qualquer alteração recarrega a página
-  ao salvar (mais simples que re-renderizar o cabeçalho na hora).
-- Testes em `tests/tests.js` usam um e-mail claramente de teste
-  (`teste-automatizado-tests-js@example.invalid`) e removem essa conta ao
-  final (sucesso ou falha) pra não deixar lixo misturado com contas reais.
+  tema (claro/escuro) — injetados por `Auth.protegerPagina()` depois de
+  confirmar a sessão, não mais por `Components.renderHeader()` (que voltou a
+  ser síncrona/sem sessão). Clicar no nome abre um menu suspenso
+  (`js/conta.js`) com "Alterar nome de usuário" / "Alterar e-mail" /
+  "Alterar senha", cada um abrindo um modal com abas.
+- Testes em `tests/tests.js`: como `criarConta`/`login`/`sessaoAtual`/etc.
+  viraram chamadas de rede (exigem servidor + banco rodando), a suíte
+  offline (`tests/tests.html`, aberta direto no navegador) só cobre o que
+  continua 100% client-side (`emailValido`). O fluxo completo foi testado
+  manualmente ponta a ponta com `vercel dev` antes do deploy (cadastro,
+  login, trocar senha, bloqueio via admin barra login, exclusão).
+- **Atenção — app desktop (`cClassTrib-Desktop`)**: essa migração **quebra o
+  login no `.exe`**. O app desktop serve os mesmos arquivos deste site
+  através de um servidor HTTP local em Python (`app.py`), que não tem (nem
+  pode rodar) as funções serverless de `api/*.js` — qualquer fetch para
+  `/api/...` dentro do app desktop dá 404. Não corrigido nesta mudança
+  (estava fora do escopo pedido, que era só o site/Vercel); precisa de um
+  ajuste separado antes da próxima atualização do desktop (ex.: apontar os
+  fetches de auth do app pra URL pública do site em vez de `localhost`).
+
+## Painel administrativo (2026-09-24)
+
+`admin.html` — login próprio (conta separada dos usuários comuns, tabela
+`admins`, sem relação com o menu "Minha conta" do site) com a lista de todos
+os usuários cadastrados e ações de bloquear/desbloquear/excluir.
+
+- **Banco de dados**: Postgres via integração nativa da Vercel (Neon,
+  plano Free — Storage → Connect Database → Neon, no painel do projeto).
+  Depois de conectado, a Vercel injeta sozinha as variáveis `POSTGRES_URL`
+  etc. no projeto (produção, preview e — foi preciso habilitar manualmente —
+  desenvolvimento, pra rodar `vercel dev`/scripts localmente).
+- **Setup inicial** (uma vez só, por máquina de dev): `vercel link` (linka
+  a pasta a este projeto na Vercel), `vercel env pull .env.local` (baixa as
+  connection strings pro `.env.local`, que está no `.gitignore` — nunca vai
+  pro Git) e `node scripts/init-db.js` — cria as tabelas `usuarios`/`admins`
+  e, se ainda não existir, uma conta admin com senha aleatória (impressa no
+  terminal uma única vez; guarde na hora, não fica salva em texto puro em
+  lugar nenhum). Pra um e-mail de admin específico:
+  `node scripts/init-db.js outro@email.com` (padrão:
+  `goldtechsistemas@gmail.com`). Essa senha não é digitada em nenhum
+  formulário/campo nem guardada como variável de ambiente — é gerada com
+  `crypto.randomBytes` e o hash (`bcryptjs`) vai direto pro banco.
+- `api/admin/login.js`, `api/admin/logout.js`, `api/admin/session.js`:
+  mesmo esquema de cookie `HttpOnly` assinado do login normal, mas num
+  cookie separado (`cclasstrib_admin_sessao`) e sem relação nenhuma com
+  sessão de usuário comum.
+- `api/admin/users.js` (listar) e `api/admin/users/[id].js` (`PATCH` pra
+  bloquear/desbloquear, `DELETE` pra excluir) — todos exigem sessão de
+  admin válida (401 se não tiver).
+- Bloqueio é reforçado em duas camadas: `api/login.js` recusa login de
+  conta bloqueada, e `api/session.js` também confere `bloqueado` a cada
+  checagem de sessão — se um admin bloquear alguém com sessão já aberta, o
+  acesso cai na próxima navegação, não só no próximo login.
+- Excluir tem confirmação dupla: modal de aviso + é preciso digitar o
+  e-mail exato da conta (conferido de novo no servidor, em
+  `api/admin/users/[id].js`, não só na interface) antes do `DELETE` de
+  verdade.
 
 ## Como rodar localmente
 
-Este projeto não precisa de build nem de `npm install`. Para testar localmente
-sem abrir os arquivos diretamente como `file://` (o que bloqueia alguns
-recursos do navegador), suba um servidor estático simples:
+Desde a migração do login pra backend real (ver seção acima), rodar só um
+servidor estático não é mais suficiente pra testar login/cadastro/admin — é
+preciso o `vercel dev`, que serve os arquivos estáticos E roda as funções de
+`api/*.js` (contra o mesmo Postgres do projeto na Vercel):
 
 ```bash
-# Opção 1: com Node instalado
-npx serve .
-
-# Opção 2: com Python instalado
-python -m http.server 8420
-
-# Opção 3: com apenas PowerShell (sem dependências), incluído neste projeto
-pwsh -File scripts/serve.ps1 -Port 8420
+npm install          # instala pg, bcryptjs, jsonwebtoken (uma vez só)
+vercel link          # liga esta pasta ao projeto na Vercel (uma vez só)
+vercel env pull .env.local
+node scripts/init-db.js   # cria as tabelas e a conta admin (uma vez só)
+vercel dev --listen 3000
 ```
 
-Depois acesse `http://localhost:8420/index.html`.
+Depois acesse `http://localhost:3000/index.html` (ou `/admin.html`).
+
+Se for só mexer em partes puramente estáticas (Anexos, regras de
+classificação, CSS) sem precisar de login/admin, um servidor estático simples
+ainda funciona pra essas páginas (mas login/cadastro vão dar erro de rede,
+já que não há `api/*.js` rodando):
+
+```bash
+python -m http.server 8420
+# ou: pwsh -File scripts/serve.ps1 -Port 8420
+```
 
 ## Testes automatizados
 
-Abra `tests/tests.html` no navegador (via um dos servidores acima — não abra
-como `file://` direto pois módulos podem falhar dependendo do navegador). O
-título da aba muda para "✔ OK" ou "✘ FALHOU" e a página lista cada asserção.
+Abra `tests/tests.html` num dos servidores acima (`vercel dev` ou o estático
+simples — não abra como `file://` direto pois módulos podem falhar dependendo
+do navegador). O título da aba muda para "✔ OK" ou "✘ FALHOU" e a página
+lista cada asserção. Cobre a lógica de classificação (`rules.js`,
+`ncm-busca.js`, `csv.js` etc.); o fluxo de login/admin (rede, exige banco) é
+testado manualmente com `vercel dev` — ver "Login e criação de conta" acima.
 
 Os testes cobrem: normalização de NCM, correspondência hierárquica de código
 (posição/subposição/capítulo), resolução de conflitos entre Anexos que se
 "ressalvam" mutuamente, cálculo de alíquota estimada, busca textual, consulta
 por tipo de operação e o tratamento correto do Anexo XIV revogado.
 
-## Deploy (Vercel ou Netlify)
+## Deploy
 
-Por ser um site 100% estático, o deploy é direto — não há variáveis de
-ambiente obrigatórias.
+Publicado em `https://github.com/goldtechsistemas/cClassTrib` → Vercel
+(projeto `gold-tech-sistemas/c-class-trib`), com deploy automático: todo
+`git push` pra `main` dispara um novo deploy sozinho — não precisa rodar
+`vercel --prod` manualmente no dia a dia (só a primeira vez, ou pra depurar
+um preview antes do push).
 
-### Vercel
+Desde a migração do login pra backend real, isso **não é mais um deploy
+100% estático** — depende de: um banco Postgres conectado ao projeto
+(Storage → Neon, ver seção do painel admin) e três variáveis de ambiente:
+`POSTGRES_URL` (injetada sozinha pela integração do banco), `SESSION_SECRET`
+(gerado uma vez com `crypto.randomBytes`, configurado via
+`vercel env add SESSION_SECRET production` — nunca digitado em nenhum
+formulário do painel da Vercel) e nenhuma outra (a senha do admin fica só no
+Postgres, nunca em variável de ambiente).
 
-```bash
-# Na raiz do projeto (cclasstrib-app/):
-npx vercel --prod
-```
-Ou pelo painel da Vercel: "Add New Project" → importe a pasta/repositório →
-Framework Preset: "Other" → Build Command: (vazio) → Output Directory: `.`
-(raiz). Não é necessário configurar nenhuma variável de ambiente.
-
-### Netlify
-
-```bash
-# Na raiz do projeto:
-npx netlify deploy --prod
-```
-Ou pelo painel da Netlify: "Add new site" → "Deploy manually" (arraste a
-pasta) ou conecte o repositório Git com Build Command vazio e Publish
-directory `.`.
+⚠ Por causa das funções serverless (`api/*.js`, específicas da Vercel), esse
+projeto **não roda mais no Netlify** sem reescrever essa camada pro formato
+de Netlify Functions.
 
 ### Domínio próprio
 

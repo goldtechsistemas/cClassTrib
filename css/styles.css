@@ -71,6 +71,16 @@ body {
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+/* A sessão agora é conferida no servidor (fetch assíncrono — ver
+   Auth.protegerPagina()/redirecionarSeLogado() em js/auth.js), então não dá
+   mais pra bloquear a renderização de forma síncrona como antes
+   (localStorage). Em vez disso, o body começa invisível e só aparece quando
+   js/auth.js confirma a checagem e adiciona esta classe no <html> — evita
+   mostrar conteúdo protegido, ou o formulário de login por cima de uma
+   sessão já ativa, por uma fração de segundo. */
+body { visibility: hidden; }
+html.sessao-pronta body { visibility: visible; }
+
 /* ---------- Scrollbar (tema, não o padrão cinza do navegador/WebView) ---------- */
 * { scrollbar-color: var(--border) var(--bg-0); scrollbar-width: thin; }
 ::-webkit-scrollbar { width: 12px; height: 12px; }
@@ -367,6 +377,12 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
   border: 1px solid var(--border);
 }
 .btn.secondary:hover { border-color: var(--gold); }
+.btn.perigo {
+  background: var(--vermelho-bg);
+  color: var(--vermelho);
+  border: 1px solid transparent;
+}
+.btn.perigo:hover { border-color: var(--vermelho); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .field-actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
@@ -441,6 +457,8 @@ thead th {
 }
 tbody td { padding: 10px 14px; border-top: 1px solid var(--border); vertical-align: top; }
 tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+.tabela-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Colunas de texto longo (ex.: explicação do Imposto Seletivo, descrição do
    item): trava em 2 linhas com reticências em vez de esticar a linha da

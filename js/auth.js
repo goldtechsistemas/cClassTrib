@@ -1,256 +1,154 @@
 /*
  * Autenticação — login/criação de conta.
  *
- * Este site é 100% estático (sem backend/servidor de aplicação), então as
- * contas ficam salvas no localStorage do navegador/instalação, não num
- * banco de dados compartilhado — cada máquina/navegador tem sua própria
- * lista de contas. A senha NUNCA é salva em texto puro: só um hash PBKDF2
- * (via SubtleCrypto, window.crypto.subtle) com um salt aleatório por
- * usuário. PBKDF2/SubtleCrypto só funciona em "contexto seguro"
- * (https:// ou http://localhost) — é por isso que o app desktop serve o
- * site via servidor HTTP local em vez de abrir os arquivos direto
- * (file://, que não conta como contexto seguro).
+ * Reescrito para falar com o backend real (api/*.js, Vercel Functions +
+ * Postgres) em vez de guardar contas no localStorage. Motivo: o painel
+ * admin (js/admin.js, admin.html) precisa ver TODAS as contas cadastradas
+ * e bloquear/excluir de verdade — algo impossível quando cada conta vive
+ * isolada no navegador de quem se cadastrou. A sessão agora é um cookie
+ * HttpOnly assinado (JWT) que o servidor confere a cada chamada; o
+ * JavaScript do cliente nunca vê nem guarda a senha ou o token.
  *
- * "Deseja salvar seu login?" (login.html): controla ONDE a sessão fica —
- * localStorage (sobrevive fechar/abrir de novo) se marcada, sessionStorage
- * (some ao fechar) se não. Ver iniciarSessao() mais abaixo.
+ * Aviso: o app desktop (cClassTrib-Desktop) serve esses mesmos arquivos
+ * através de um servidor HTTP local em Python, que NÃO tem as rotas
+ * api/*.js (essas só existem no deploy da Vercel) — login/cadastro deixam
+ * de funcionar no .exe até esse ponto ser resolvido separadamente (ex.:
+ * apontar os fetches para a URL pública em vez de localhost).
  */
 (function (global) {
   "use strict";
 
-  const CHAVE_USUARIOS = "cclasstrib-usuarios";
-  const CHAVE_SESSAO = "cclasstrib-sessao";
-  const ITERACOES_PBKDF2 = 100000;
-
-  function lerUsuarios() {
-    try {
-      return JSON.parse(localStorage.getItem(CHAVE_USUARIOS) || "{}");
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function salvarUsuarios(usuarios) {
-    localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(usuarios));
-  }
-
-  function normalizarEmail(email) {
-    return String(email || "").trim().toLowerCase();
-  }
-
   function emailValido(email) {
-    // Checagem simples de formato (não confirma que o e-mail existe de
-    // verdade — não há como confirmar isso sem servidor/envio de e-mail).
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  function bufferParaHex(buffer) {
-    return Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  async function postJson(url, corpo) {
+    let resposta;
+    try {
+      resposta = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(corpo || {}),
+      });
+    } catch (e) {
+      return { ok: false, erro: "Não foi possível conectar ao servidor. Tente novamente." };
+    }
+    let dados = {};
+    try {
+      dados = await resposta.json();
+    } catch (e) {
+      // resposta sem corpo JSON (ex.: erro 500 genérico do runtime)
+    }
+    if (dados.ok === undefined) dados.ok = resposta.ok;
+    return dados;
   }
 
-  function hexParaBytes(hex) {
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-    return bytes;
+  function criarConta(email, senha, nome) {
+    return postJson("/api/register", { email, senha, nome });
   }
 
-  async function derivarHash(senha, saltBytes) {
-    const enc = new TextEncoder();
-    const chaveBase = await crypto.subtle.importKey("raw", enc.encode(senha), "PBKDF2", false, ["deriveBits"]);
-    const bits = await crypto.subtle.deriveBits(
-      { name: "PBKDF2", salt: saltBytes, iterations: ITERACOES_PBKDF2, hash: "SHA-256" },
-      chaveBase,
-      256
+  function login(email, senha, lembrar) {
+    return postJson("/api/login", { email, senha, lembrar });
+  }
+
+  async function logout() {
+    await postJson("/api/logout", {});
+  }
+
+  async function sessaoAtual() {
+    try {
+      const resposta = await fetch("/api/session", { credentials: "same-origin" });
+      const dados = await resposta.json();
+      return dados.logado ? { email: dados.email, nome: dados.nome } : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function alterarNome(novoNome) {
+    return postJson("/api/conta/nome", { nome: novoNome });
+  }
+
+  function alterarEmail(novoEmail, senhaAtual) {
+    return postJson("/api/conta/email", { novoEmail, senhaAtual });
+  }
+
+  function alterarSenha(senhaAtual, novaSenha) {
+    return postJson("/api/conta/senha", { senhaAtual, novaSenha });
+  }
+
+  function montarMenuUsuario(sessao) {
+    const nav = document.querySelector("#header .links");
+    if (!nav || document.getElementById("btn-usuario-menu")) return;
+    const esc = (global.Components && global.Components.esc) || ((s) => String(s == null ? "" : s));
+    nav.insertAdjacentHTML(
+      "beforeend",
+      `<div class="usuario-menu">
+         <button class="usuario-logado" id="btn-usuario-menu" type="button">${esc(sessao.nome || sessao.email)}</button>
+         <div class="usuario-dropdown" id="usuario-dropdown">
+           <a href="#" id="link-conta-nome">Alterar nome de usuário</a>
+           <a href="#" id="link-conta-email">Alterar e-mail</a>
+           <a href="#" id="link-conta-senha">Alterar senha</a>
+         </div>
+       </div>
+       <a href="#" id="btn-sair">Sair</a>`
     );
-    return bufferParaHex(bits);
+    iniciarBotaoSair();
   }
 
-  /**
-   * Cria uma conta nova. Devolve {ok:true} ou {ok:false, erro}.
-   * Validações de formato (e-mail, tamanho de senha) ficam por conta de
-   * quem chama (ver js/registro.js) — esta função só garante que o
-   * e-mail ainda não está cadastrado antes de gravar.
-   */
-  async function criarConta(email, senha, nome) {
-    email = normalizarEmail(email);
-    const usuarios = lerUsuarios();
-    if (usuarios[email]) {
-      return { ok: false, erro: "Já existe uma conta com este e-mail." };
-    }
-    const saltBytes = crypto.getRandomValues(new Uint8Array(16));
-    const hash = await derivarHash(senha, saltBytes);
-    usuarios[email] = {
-      nome: String(nome || "").trim(),
-      salt: bufferParaHex(saltBytes),
-      hash,
-      criadoEm: new Date().toISOString()
-    };
-    salvarUsuarios(usuarios);
-    return { ok: true };
-  }
-
-  /**
-   * Confere e-mail/senha. Devolve {ok:true, email, nome} ou
-   * {ok:false, erro}. Propositalmente usa a mesma mensagem de erro pra
-   * "e-mail não existe" e "senha errada" — não vale a pena revelar pra
-   * quem está tentando entrar qual dos dois estava errado.
-   */
-  async function autenticar(email, senha) {
-    email = normalizarEmail(email);
-    const usuarios = lerUsuarios();
-    const registro = usuarios[email];
-    if (!registro) return { ok: false, erro: "E-mail ou senha incorretos." };
-    const hash = await derivarHash(senha, hexParaBytes(registro.salt));
-    if (hash !== registro.hash) return { ok: false, erro: "E-mail ou senha incorretos." };
-    return { ok: true, email, nome: registro.nome };
-  }
-
-  /**
-   * Troca só o nome de exibição — não exige senha (não é um dado sensível
-   * como e-mail/senha, é só o que aparece no cabeçalho). Atualiza a sessão
-   * ativa também, se for a conta logada no momento.
-   */
-  async function alterarNome(email, novoNome) {
-    email = normalizarEmail(email);
-    novoNome = String(novoNome || "").trim();
-    if (!novoNome) return { ok: false, erro: "Preencha o nome." };
-    const usuarios = lerUsuarios();
-    const registro = usuarios[email];
-    if (!registro) return { ok: false, erro: "Conta não encontrada." };
-    registro.nome = novoNome;
-    salvarUsuarios(usuarios);
-    const sessao = sessaoAtual();
-    if (sessao && normalizarEmail(sessao.email) === email) iniciarSessao(email, novoNome, sessaoEstaLembrada());
-    return { ok: true };
-  }
-
-  /**
-   * Troca o e-mail — exige a senha atual pra confirmar (e-mail é a "chave"
-   * da conta no localStorage, então trocar sem confirmar a identidade de
-   * quem está pedindo seria arriscado demais). Move o registro pra uma
-   * nova chave no dicionário de usuários; o e-mail antigo deixa de existir.
-   */
-  async function alterarEmail(emailAtual, novoEmail, senhaAtual) {
-    emailAtual = normalizarEmail(emailAtual);
-    novoEmail = normalizarEmail(novoEmail);
-    if (!emailValido(novoEmail)) return { ok: false, erro: "Preencha um e-mail válido." };
-    if (novoEmail === emailAtual) return { ok: false, erro: "Esse já é o e-mail atual." };
-    const confirmacao = await autenticar(emailAtual, senhaAtual);
-    if (!confirmacao.ok) return { ok: false, erro: "Senha atual incorreta." };
-    const usuarios = lerUsuarios();
-    if (usuarios[novoEmail]) return { ok: false, erro: "Já existe uma conta com este e-mail." };
-    const registro = usuarios[emailAtual];
-    delete usuarios[emailAtual];
-    usuarios[novoEmail] = registro;
-    salvarUsuarios(usuarios);
-    const sessao = sessaoAtual();
-    if (sessao && normalizarEmail(sessao.email) === emailAtual) iniciarSessao(novoEmail, registro.nome, sessaoEstaLembrada());
-    return { ok: true };
-  }
-
-  /**
-   * Troca a senha — exige a senha atual pra confirmar. Gera um salt novo
-   * (não reaproveita o antigo) e recalcula o hash com a senha nova.
-   */
-  async function alterarSenha(email, senhaAtual, novaSenha) {
-    email = normalizarEmail(email);
-    const confirmacao = await autenticar(email, senhaAtual);
-    if (!confirmacao.ok) return { ok: false, erro: "Senha atual incorreta." };
-    const usuarios = lerUsuarios();
-    const registro = usuarios[email];
-    if (!registro) return { ok: false, erro: "Conta não encontrada." };
-    const saltBytes = crypto.getRandomValues(new Uint8Array(16));
-    registro.hash = await derivarHash(novaSenha, saltBytes);
-    registro.salt = bufferParaHex(saltBytes);
-    salvarUsuarios(usuarios);
-    return { ok: true };
-  }
-
-  function removerConta(email) {
-    email = normalizarEmail(email);
-    const usuarios = lerUsuarios();
-    delete usuarios[email];
-    salvarUsuarios(usuarios);
-  }
-
-  /**
-   * "Lembrar login" (caixa "Deseja salvar seu login?" em login.html): sem
-   * marcar, a sessão fica em sessionStorage — some sozinha ao fechar a
-   * aba/o app, exigindo login de novo na próxima vez. Marcando, a sessão
-   * vai pro localStorage, que sobrevive a fechar e reabrir. As duas
-   * chaves nunca ficam preenchidas ao mesmo tempo (guardar sempre limpa a
-   * outra) pra sessaoAtual() nunca ler um estado antigo por engano.
-   */
-  function iniciarSessao(email, nome, lembrar) {
-    const dados = JSON.stringify({ email, nome });
-    if (lembrar) {
-      localStorage.setItem(CHAVE_SESSAO, dados);
-      sessionStorage.removeItem(CHAVE_SESSAO);
-    } else {
-      sessionStorage.setItem(CHAVE_SESSAO, dados);
-      localStorage.removeItem(CHAVE_SESSAO);
-    }
-  }
-
-  function encerrarSessao() {
-    localStorage.removeItem(CHAVE_SESSAO);
-    sessionStorage.removeItem(CHAVE_SESSAO);
-  }
-
-  function sessaoAtual() {
-    try {
-      const doLocal = localStorage.getItem(CHAVE_SESSAO);
-      if (doLocal) return JSON.parse(doLocal);
-      const daAba = sessionStorage.getItem(CHAVE_SESSAO);
-      if (daAba) return JSON.parse(daAba);
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Pra alterarNome/alterarEmail reabrirem a sessão no MESMO lugar de
-  // onde ela já estava (não forçar "lembrado" nem "não lembrado" — só
-  // manter a preferência que a pessoa já tinha escolhido no login).
-  function sessaoEstaLembrada() {
-    try {
-      return !!localStorage.getItem(CHAVE_SESSAO);
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Liga o botão "Sair" injetado por Components.renderHeader() quando há
-  // sessão ativa — mesmo padrão de auto-inicialização de js/tema.js.
   function iniciarBotaoSair() {
     const btn = document.getElementById("btn-sair");
     if (!btn || btn.dataset.sairLigado) return;
     btn.dataset.sairLigado = "1";
-    btn.addEventListener("click", (e) => {
+    btn.addEventListener("click", async (e) => {
       e.preventDefault();
-      encerrarSessao();
+      await logout();
       location.href = "login.html";
     });
+  }
+
+  /**
+   * Chamada no fim de toda página protegida (index.html, lote.html,
+   * sobre.html): confere a sessão no servidor, redireciona pra login.html
+   * se não houver uma válida, injeta o menu do usuário no header (já
+   * desenhado por Components.renderHeader) e só então revela a página —
+   * ver a regra `html.sessao-pronta body` em css/styles.css.
+   */
+  async function protegerPagina() {
+    const sessao = await sessaoAtual();
+    if (!sessao) {
+      location.replace("login.html");
+      return;
+    }
+    montarMenuUsuario(sessao);
+    document.documentElement.classList.add("sessao-pronta");
+    if (global.Conta) global.Conta.iniciar(sessao);
+  }
+
+  /**
+   * Chamada em login.html/registro.html: se já existir sessão válida, não
+   * faz sentido mostrar o formulário de novo.
+   */
+  async function redirecionarSeLogado() {
+    const sessao = await sessaoAtual();
+    if (sessao) {
+      location.replace("index.html");
+      return;
+    }
+    document.documentElement.classList.add("sessao-pronta");
   }
 
   global.Auth = {
     emailValido,
     criarConta,
-    autenticar,
+    login,
+    logout,
+    sessaoAtual,
     alterarNome,
     alterarEmail,
     alterarSenha,
-    removerConta,
-    iniciarSessao,
-    encerrarSessao,
-    sessaoAtual,
-    sessaoEstaLembrada,
-    iniciarBotaoSair
+    protegerPagina,
+    redirecionarSeLogado,
   };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", iniciarBotaoSair);
-  } else {
-    iniciarBotaoSair();
-  }
 })(window);

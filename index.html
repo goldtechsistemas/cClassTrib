@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>cClassTrib — Consulta de Classificação Tributária (LC 214/2025)</title>
   <script>(function(){try{var t=localStorage.getItem('cclasstrib-tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-  <script>(function(){try{if(!localStorage.getItem('cclasstrib-sessao')&&!sessionStorage.getItem('cclasstrib-sessao'))location.replace('login.html');}catch(e){}})();</script>
   <link rel="stylesheet" href="css/styles.css" />
+</head>
 <body>
   <div id="header"></div>
 
@@ -90,5 +90,6 @@
   <script src="js/atualizador.js"></script>
   <script src="js/tema.js"></script>
   <script src="js/conta.js"></script>
+  <script>window.Auth.protegerPagina();</script>
 </body>
 </html>

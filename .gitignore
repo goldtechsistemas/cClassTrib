@@ -2,3 +2,6 @@ node_modules/
 .vercel/
 .netlify/
 *.log
+
+.vercel
+.env*

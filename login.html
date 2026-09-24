@@ -5,12 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Entrar — cClassTrib</title>
   <script>(function(){try{var t=localStorage.getItem('cclasstrib-tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-  <script>
-    // Já logado? Não faz sentido mostrar a tela de login de novo. Checa
-    // localStorage (sessão "lembrada") E sessionStorage (sessão só desta
-    // aba/execução) — ver js/auth.js, iniciarSessao().
-    (function(){try{if(localStorage.getItem('cclasstrib-sessao')||sessionStorage.getItem('cclasstrib-sessao'))location.replace('index.html');}catch(e){}})();
-  </script>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>

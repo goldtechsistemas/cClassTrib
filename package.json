@@ -1,0 +1,11 @@
+{
+  "name": "cclasstrib-site",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Site do cClassTrib (estático) + API serverless (Vercel Functions) para login/cadastro e painel admin.",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  }
+}

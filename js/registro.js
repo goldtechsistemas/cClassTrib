@@ -1,5 +1,7 @@
 (function () {
   "use strict";
+  window.Auth.redirecionarSeLogado();
+
   const inputNome = document.getElementById("input-nome");
   const inputEmail = document.getElementById("input-email");
   const inputSenha = document.getElementById("input-senha");
@@ -37,10 +39,9 @@
         mostrarErro(resultado.erro);
         return;
       }
-      // Recém-cadastrado entra "lembrado" (localStorage) por padrão — a
-      // caixa "Deseja salvar seu login?" é escolha explícita só na tela de
-      // login (ver js/login.js), não faz sentido pedir de novo aqui.
-      window.Auth.iniciarSessao(email.trim().toLowerCase(), nome, true);
+      // O servidor já deixa a sessão "lembrada" (api/register.js) — a caixa
+      // "Deseja salvar seu login?" é escolha explícita só na tela de login
+      // (ver js/login.js), não faz sentido pedir de novo aqui.
       location.href = "index.html";
     } catch (e) {
       mostrarErro("Não foi possível criar a conta. Tente novamente.");

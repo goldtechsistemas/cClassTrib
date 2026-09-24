@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — cClassTrib</title>
+  <script>(function(){try{var t=localStorage.getItem('cclasstrib-tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main class="container auth-container" id="view-login">
+    <section class="hero">
+      <h1>cClassTrib — Admin</h1>
+      <p>Acesso restrito à administração</p>
+    </section>
+
+    <div class="card auth-card">
+      <div id="erro-admin-login" class="aviso-legal" style="display:none;"></div>
+
+      <label for="input-admin-email">E-mail</label>
+      <input type="email" id="input-admin-email" placeholder="admin@exemplo.com" autocomplete="username" />
+
+      <label for="input-admin-senha" style="margin-top:14px;">Senha</label>
+      <input type="password" id="input-admin-senha" placeholder="Sua senha" autocomplete="current-password" />
+
+      <div class="field-actions">
+        <button class="btn" id="btn-admin-entrar">Entrar</button>
+      </div>
+    </div>
+  </main>
+
+  <main class="container" id="view-painel" style="display:none;">
+    <section class="hero">
+      <h1>Painel administrativo</h1>
+      <p>Usuários cadastrados no cClassTrib</p>
+    </section>
+
+    <div class="field-actions" style="justify-content:flex-end;">
+      <span class="hint" id="texto-admin-logado" style="margin-right:auto;"></span>
+      <button class="btn secondary" id="btn-admin-atualizar" type="button">Atualizar lista</button>
+      <a href="#" class="btn secondary" id="btn-admin-sair">Sair</a>
+    </div>
+
+    <div id="aviso-admin"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>E-mail</th>
+            <th>Nome</th>
+            <th>Cadastrado em</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-usuarios-body"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal "Ver Detalhes" -->
+  <div class="modal-overlay" id="modal-detalhes-overlay">
+    <div class="card modal-card">
+      <button class="modal-fechar" id="btn-fechar-modal-detalhes" type="button" aria-label="Fechar">&times;</button>
+      <h2 class="modal-titulo">Detalhes do usuário</h2>
+      <div id="corpo-detalhes"></div>
+    </div>
+  </div>
+
+  <!-- Modal de exclusão com confirmação dupla -->
+  <div class="modal-overlay" id="modal-excluir-overlay">
+    <div class="card modal-card">
+      <button class="modal-fechar" id="btn-fechar-modal-excluir" type="button" aria-label="Fechar">&times;</button>
+      <h2 class="modal-titulo">Excluir usuário</h2>
+      <div id="erro-excluir" class="aviso-legal" style="display:none;"></div>
+      <p>Essa ação é <strong>permanente</strong> e não pode ser desfeita — a conta e o histórico de acesso somem do banco de dados.</p>
+      <p class="hint">Conta a ser excluída: <strong id="texto-excluir-email"></strong></p>
+      <label for="input-confirmar-exclusao">Pra confirmar, digite o e-mail da conta:</label>
+      <input type="email" id="input-confirmar-exclusao" autocomplete="off" />
+      <div class="field-actions">
+        <button class="btn perigo" id="btn-confirmar-exclusao">Excluir definitivamente</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>

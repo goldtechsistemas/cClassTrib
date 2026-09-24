@@ -1,5 +1,7 @@
 (function () {
   "use strict";
+  window.Auth.redirecionarSeLogado();
+
   const inputEmail = document.getElementById("input-email");
   const inputSenha = document.getElementById("input-senha");
   const inputLembrar = document.getElementById("input-lembrar");
@@ -22,12 +24,11 @@
     btnEntrar.disabled = true;
     btnEntrar.textContent = "Entrando...";
     try {
-      const resultado = await window.Auth.autenticar(email, senha);
+      const resultado = await window.Auth.login(email, senha, inputLembrar.checked);
       if (!resultado.ok) {
         mostrarErro(resultado.erro);
         return;
       }
-      window.Auth.iniciarSessao(resultado.email, resultado.nome, inputLembrar.checked);
       location.href = "index.html";
     } catch (e) {
       mostrarErro("Não foi possível entrar. Tente novamente.");

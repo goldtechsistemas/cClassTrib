@@ -400,106 +400,18 @@
   assertEqual("compararVersoes trata segmento ausente como 0 (1.0 == 1.0.0)", AT.compararVersoes("1.0", "1.0.0"), 0);
 
   // --- Auth (js/auth.js) ---
-  // Roda no mesmo localStorage do app de verdade (mesma origem da página
-  // de testes) — por isso usa um e-mail claramente de teste e se garante
-  // de apagar essa conta no final, passe ou falhe, pra não deixar lixo
-  // misturado com contas reais de quem usa o site.
+  // Desde 2026-09-24, criarConta/login/sessaoAtual/alterarNome/alterarEmail/
+  // alterarSenha deixaram de ser funções síncronas de localStorage e viraram
+  // chamadas de rede pra api/*.js (Vercel Functions + Postgres — ver painel
+  // admin em admin.html/js/admin.js). Testar esse fluxo de verdade exige um
+  // servidor + banco rodando (não dá pra fazer nesta página de testes
+  // estática, aberta direto num navegador) — por isso só o que continua
+  // 100% client-side (validação de formato de e-mail) é coberto aqui.
   if (window.Auth) {
     const AU = window.Auth;
-    const EMAIL_TESTE = "teste-automatizado-tests-js@example.invalid";
-    AU.removerConta(EMAIL_TESTE); // limpa resíduo de uma execução anterior que tenha falhado no meio
-
     assert("emailValido aceita e-mail bem formado", AU.emailValido("a@b.com"));
     assert("emailValido rejeita string sem @", !AU.emailValido("abc"));
     assert("emailValido rejeita e-mail sem domínio", !AU.emailValido("a@b"));
-
-    try {
-      const criacao1 = await AU.criarConta(EMAIL_TESTE, "senhaDeTeste123", "Fulano de Teste");
-      assert("criarConta: primeira criação com e-mail novo funciona", criacao1.ok === true);
-
-      const criacao2 = await AU.criarConta(EMAIL_TESTE, "outraSenha", "Outro Nome");
-      assert("criarConta: e-mail duplicado é rejeitado", criacao2.ok === false);
-
-      const loginCerto = await AU.autenticar(EMAIL_TESTE, "senhaDeTeste123");
-      assert("autenticar: senha certa entra", loginCerto.ok === true);
-      assertEqual("autenticar: devolve o nome cadastrado", loginCerto.nome, "Fulano de Teste");
-
-      const loginErrado = await AU.autenticar(EMAIL_TESTE, "senhaErrada");
-      assert("autenticar: senha errada não entra", loginErrado.ok === false);
-
-      const loginInexistente = await AU.autenticar("ninguem-cadastrado@example.invalid", "qualquer");
-      assert("autenticar: e-mail não cadastrado não entra (sem erro/exceção)", loginInexistente.ok === false);
-
-      // E-mail é tratado sem diferenciar maiúsculas/minúsculas nem espaços
-      // nas pontas — mesma conta, digitada de formas diferentes.
-      const loginComVariacao = await AU.autenticar(`  ${EMAIL_TESTE.toUpperCase()}  `, "senhaDeTeste123");
-      assert("autenticar: e-mail não é sensível a maiúsculas/espaços nas pontas", loginComVariacao.ok === true);
-
-      // --- alterarNome ---
-      const nomeOk = await AU.alterarNome(EMAIL_TESTE, "Fulano Renomeado");
-      assert("alterarNome: funciona sem pedir senha", nomeOk.ok === true);
-      const loginAposRenomear = await AU.autenticar(EMAIL_TESTE, "senhaDeTeste123");
-      assertEqual("alterarNome: o novo nome aparece num login seguinte", loginAposRenomear.nome, "Fulano Renomeado");
-
-      // --- alterarSenha ---
-      const senhaErradaNaoMuda = await AU.alterarSenha(EMAIL_TESTE, "senhaTotalmenteErrada", "senhaNovaQualquer");
-      assert("alterarSenha: senha atual errada é rejeitada", senhaErradaNaoMuda.ok === false);
-      const senhaOk = await AU.alterarSenha(EMAIL_TESTE, "senhaDeTeste123", "senhaDeTesteNova456");
-      assert("alterarSenha: com a senha atual certa, funciona", senhaOk.ok === true);
-      const loginComSenhaAntiga = await AU.autenticar(EMAIL_TESTE, "senhaDeTeste123");
-      assert("alterarSenha: a senha antiga para de funcionar", loginComSenhaAntiga.ok === false);
-      const loginComSenhaNova = await AU.autenticar(EMAIL_TESTE, "senhaDeTesteNova456");
-      assert("alterarSenha: a senha nova passa a funcionar", loginComSenhaNova.ok === true);
-
-      // --- alterarEmail ---
-      const EMAIL_TESTE_NOVO = "teste-automatizado-tests-js-novo@example.invalid";
-      AU.removerConta(EMAIL_TESTE_NOVO); // limpa resíduo de uma execução anterior
-      try {
-        const emailSenhaErrada = await AU.alterarEmail(EMAIL_TESTE, EMAIL_TESTE_NOVO, "senhaErrada");
-        assert("alterarEmail: rejeita com a senha atual errada", emailSenhaErrada.ok === false);
-
-        const emailOk = await AU.alterarEmail(EMAIL_TESTE, EMAIL_TESTE_NOVO, "senhaDeTesteNova456");
-        assert("alterarEmail: com a senha certa, funciona", emailOk.ok === true);
-
-        const loginEmailAntigo = await AU.autenticar(EMAIL_TESTE, "senhaDeTesteNova456");
-        assert("alterarEmail: o e-mail antigo para de existir", loginEmailAntigo.ok === false);
-
-        const loginEmailNovo = await AU.autenticar(EMAIL_TESTE_NOVO, "senhaDeTesteNova456");
-        assert("alterarEmail: o e-mail novo passa a funcionar, com a mesma senha", loginEmailNovo.ok === true);
-        assertEqual("alterarEmail: o nome cadastrado é preservado na troca", loginEmailNovo.nome, "Fulano Renomeado");
-
-        // Recria EMAIL_TESTE pra o `finally` externo (que tenta remover
-        // EMAIL_TESTE) não precisar saber que essa conta "mudou de nome" no
-        // meio do teste — mantém a limpeza simples e sempre no mesmo lugar.
-        await AU.criarConta(EMAIL_TESTE, "irrelevante", "irrelevante");
-      } finally {
-        AU.removerConta(EMAIL_TESTE_NOVO);
-      }
-    } finally {
-      AU.removerConta(EMAIL_TESTE);
-    }
-
-    // Sessão — usada pelas páginas protegidas (ver script inline no <head>
-    // de index/lote/sobre.html) pra decidir se redireciona pra login.html.
-    // Fica em sessionStorage (some ao fechar) por padrão, ou localStorage
-    // (sobrevive fechar/abrir) só quando "lembrar" é true — caixa "Deseja
-    // salvar seu login?" em login.html.
-    AU.encerrarSessao();
-    assertEqual("sessaoAtual: sem sessão ativa devolve null", AU.sessaoAtual(), null);
-
-    AU.iniciarSessao("sessao-teste@example.invalid", "Sessão Teste"); // sem 3º argumento = não lembrar
-    assertEqual("sessaoAtual: depois de iniciarSessao, devolve email/nome salvos", AU.sessaoAtual(), { email: "sessao-teste@example.invalid", nome: "Sessão Teste" });
-    assert("iniciarSessao sem 'lembrar': vai pro sessionStorage, não localStorage", sessionStorage.getItem("cclasstrib-sessao") !== null && localStorage.getItem("cclasstrib-sessao") === null);
-    assert("sessaoEstaLembrada(): false quando a sessão está só no sessionStorage", AU.sessaoEstaLembrada() === false);
-    AU.encerrarSessao();
-    assertEqual("encerrarSessao: limpa a sessão (volta a null)", AU.sessaoAtual(), null);
-
-    AU.iniciarSessao("sessao-teste@example.invalid", "Sessão Teste", true); // lembrar = true
-    assert("iniciarSessao com 'lembrar' true: vai pro localStorage, não sessionStorage", localStorage.getItem("cclasstrib-sessao") !== null && sessionStorage.getItem("cclasstrib-sessao") === null);
-    assert("sessaoEstaLembrada(): true quando a sessão está no localStorage", AU.sessaoEstaLembrada() === true);
-    assertEqual("sessaoAtual: lê certo de qualquer um dos dois (localStorage neste caso)", AU.sessaoAtual(), { email: "sessao-teste@example.invalid", nome: "Sessão Teste" });
-    AU.encerrarSessao();
-    assert("encerrarSessao: limpa dos dois lugares (localStorage e sessionStorage)", localStorage.getItem("cclasstrib-sessao") === null && sessionStorage.getItem("cclasstrib-sessao") === null);
   } else {
     assert("js/auth.js está incluído na página de testes", false);
   }

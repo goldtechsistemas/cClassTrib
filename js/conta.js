@@ -1,13 +1,16 @@
 /*
  * Menu "minha conta" (nome no cabeçalho → menu suspenso → modal com 3
- * abas: nome, e-mail, senha). Auto-inicializa como js/tema.js e
- * js/auth.js: só liga os elementos se eles existirem na página (só
- * existem quando há sessão ativa — ver Components.renderHeader).
+ * abas: nome, e-mail, senha). Diferente de js/tema.js/js/auth.js, não se
+ * auto-inicia sozinho: Auth.protegerPagina() (js/auth.js) chama
+ * Conta.iniciar(sessao) explicitamente depois de confirmar a sessão no
+ * servidor e injetar o botão do usuário no header — antes disso o botão
+ * #btn-usuario-menu nem existe no DOM.
  */
 (function () {
   "use strict";
 
   const TAMANHO_MINIMO_SENHA = 6;
+  let sessaoAtual = null;
   const MODAL_HTML = `
     <div class="modal-overlay" id="modal-conta-overlay">
       <div class="card modal-card">
@@ -68,11 +71,10 @@
   }
 
   function abrirModal(nomeAba) {
-    const sessao = window.Auth.sessaoAtual();
-    if (!sessao) return;
+    if (!sessaoAtual) return;
     limparErros();
-    document.getElementById("input-conta-nome").value = sessao.nome || "";
-    document.getElementById("texto-email-atual").textContent = sessao.email || "";
+    document.getElementById("input-conta-nome").value = sessaoAtual.nome || "";
+    document.getElementById("texto-email-atual").textContent = sessaoAtual.email || "";
     document.getElementById("input-conta-email").value = "";
     document.getElementById("input-conta-email-senha").value = "";
     document.getElementById("input-conta-senha-atual").value = "";
@@ -88,27 +90,24 @@
 
   async function salvarNome() {
     limparErros();
-    const sessao = window.Auth.sessaoAtual();
     const novoNome = document.getElementById("input-conta-nome").value.trim();
-    const resultado = await window.Auth.alterarNome(sessao.email, novoNome);
+    const resultado = await window.Auth.alterarNome(novoNome);
     if (!resultado.ok) { mostrarErro("erro-conta-nome", resultado.erro); return; }
     location.reload();
   }
 
   async function salvarEmail() {
     limparErros();
-    const sessao = window.Auth.sessaoAtual();
     const novoEmail = document.getElementById("input-conta-email").value.trim();
     const senha = document.getElementById("input-conta-email-senha").value;
     if (!novoEmail || !senha) { mostrarErro("erro-conta-email", "Preencha o novo e-mail e a senha atual."); return; }
-    const resultado = await window.Auth.alterarEmail(sessao.email, novoEmail, senha);
+    const resultado = await window.Auth.alterarEmail(novoEmail, senha);
     if (!resultado.ok) { mostrarErro("erro-conta-email", resultado.erro); return; }
     location.reload();
   }
 
   async function salvarSenha() {
     limparErros();
-    const sessao = window.Auth.sessaoAtual();
     const senhaAtual = document.getElementById("input-conta-senha-atual").value;
     const senhaNova = document.getElementById("input-conta-senha-nova").value;
     const senhaConfirmar = document.getElementById("input-conta-senha-confirmar").value;
@@ -117,12 +116,13 @@
       return;
     }
     if (senhaNova !== senhaConfirmar) { mostrarErro("erro-conta-senha", "As senhas não são iguais."); return; }
-    const resultado = await window.Auth.alterarSenha(sessao.email, senhaAtual, senhaNova);
+    const resultado = await window.Auth.alterarSenha(senhaAtual, senhaNova);
     if (!resultado.ok) { mostrarErro("erro-conta-senha", resultado.erro); return; }
     location.reload();
   }
 
-  function iniciar() {
+  function iniciar(sessao) {
+    sessaoAtual = sessao;
     const btnMenu = document.getElementById("btn-usuario-menu");
     if (!btnMenu || btnMenu.dataset.contaLigado) return;
     btnMenu.dataset.contaLigado = "1";
@@ -160,9 +160,5 @@
     document.getElementById("btn-salvar-senha").addEventListener("click", salvarSenha);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", iniciar);
-  } else {
-    iniciar();
-  }
+  window.Conta = { iniciar };
 })();

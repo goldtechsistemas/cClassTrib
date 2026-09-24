@@ -10,21 +10,14 @@
     }[c]));
   }
 
+  // Não injeta mais o menu do usuário aqui — a sessão hoje é confirmada de
+  // forma assíncrona no servidor (ver Auth.protegerPagina() em js/auth.js),
+  // então essa função continua 100% síncrona (chamada assim que a página
+  // carrega, sem esperar a checagem) e o menu "Fulano / Sair" é injetado
+  // depois, quando a sessão é confirmada.
   function renderHeader(active) {
     const link = (href, label, id) =>
       `<a href="${href}" class="${active === id ? "active" : ""}">${label}</a>`;
-    const sessao = (global.Auth && global.Auth.sessaoAtual()) || null;
-    const usuarioHtml = sessao
-      ? `<div class="usuario-menu">
-           <button class="usuario-logado" id="btn-usuario-menu" type="button">${esc(sessao.nome || sessao.email)}</button>
-           <div class="usuario-dropdown" id="usuario-dropdown">
-             <a href="#" id="link-conta-nome">Alterar nome de usuário</a>
-             <a href="#" id="link-conta-email">Alterar e-mail</a>
-             <a href="#" id="link-conta-senha">Alterar senha</a>
-           </div>
-         </div>
-         <a href="#" id="btn-sair">Sair</a>`
-      : "";
     return `
       <header class="site">
         <div class="nav-inner">
@@ -36,7 +29,6 @@
             ${link("index.html", "Consultar", "consultar")}
             ${link("lote.html", "Consulta em lote", "lote")}
             <button class="theme-toggle" id="btn-tema" type="button"></button>
-            ${usuarioHtml}
           </nav>
         </div>
       </header>`;
