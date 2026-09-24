@@ -9,7 +9,7 @@
   // uma expectativa clara antes do envio, não depois de travar a tela. É só
   // uma constante local: ajuste esse número livremente conforme sua
   // infraestrutura e capacidade de atendimento.
-  const LIMITE_PRODUTOS_POR_LOTE = 1000;
+  const LIMITE_PRODUTOS_POR_LOTE = 2000;
 
   // Processa um array grande em blocos pequenos, cedendo o event loop entre
   // blocos (setTimeout 0) para a interface não travar/soluçar durante lotes
@@ -176,8 +176,8 @@
           <td>${esc(r.descricaoOriginal || "")}</td>
           <td>${esc(r.consultaOriginal)}</td>
           <td><span class="badge cor-${r.cor}">${esc(r.tratamentoLabel)}</span></td>
-          <td>${r.anexoId ? esc(r.anexoId) + (r.vigente === false ? " (revogado)" : "") : "regra geral"}</td>
-          <td>${esc(r.artigo)}</td>
+          <td class="nowrap">${r.anexoId ? esc(r.anexoId) + (r.vigente === false ? " (revogado)" : "") : "regra geral"}</td>
+          <td class="nowrap">${esc(r.artigo)}</td>
           <td>${cclassCel}</td>
           <td>${r.percentualReducao != null ? r.percentualReducao + "%" : "—"}</td>
           <td>${r.aliquotaEstimada != null ? r.aliquotaEstimada + "%" : "—"}</td>
