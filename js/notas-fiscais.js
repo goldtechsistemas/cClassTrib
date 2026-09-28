@@ -54,6 +54,19 @@
     return `${s.slice(0, 2)}.${s.slice(2, 5)}.${s.slice(5, 8)}/${s.slice(8, 12)}-${s.slice(12, 14)}`;
   }
 
+  function formatarCpf(cpf) {
+    const s = String(cpf || "").padStart(11, "0");
+    return `${s.slice(0, 3)}.${s.slice(3, 6)}.${s.slice(6, 9)}-${s.slice(9, 11)}`;
+  }
+
+  // A empresa cadastrada pode ser pessoa jurídica (certificado e-CNPJ, 14
+  // dígitos) ou física (certificado e-CPF, 11 dígitos) — formata cada uma
+  // com a máscara certa em vez de forçar tudo no formato de CNPJ.
+  function formatarDocumentoEmpresa(documento) {
+    const digitos = String(documento || "").replace(/\D/g, "");
+    return digitos.length === 11 ? formatarCpf(digitos) : formatarCnpj(digitos);
+  }
+
   async function carregarEmpresas() {
     let dados;
     try {
@@ -104,7 +117,7 @@
 
         return `
           <tr>
-            <td class="mono">${esc(formatarCnpj(emp.cnpj))}</td>
+            <td class="mono">${esc(formatarDocumentoEmpresa(emp.cnpj))}</td>
             <td>${esc(emp.razaoSocial || "—")}${avisoUf}</td>
             <td>${esc(ambiente)}</td>
             <td>${validade}</td>
@@ -387,7 +400,9 @@
         mostrarAviso(dados.erro || "Erro ao validar o certificado.", "erro");
         return;
       }
-      mostrarAviso(`Certificado validado! Empresa CNPJ ${formatarCnpj(dados.empresa.cnpj)} cadastrada.`, "ok");
+      const documento = dados.empresa.cnpj;
+      const rotuloDocumento = String(documento || "").replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ";
+      mostrarAviso(`Certificado validado! Empresa ${rotuloDocumento} ${formatarDocumentoEmpresa(documento)} cadastrada.`, "ok");
       inputArquivo.value = "";
       inputSenha.value = "";
       carregarEmpresas();

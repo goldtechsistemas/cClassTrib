@@ -41,6 +41,28 @@ const SITUACOES = {
 
 class ErroSefaz extends Error {}
 
+// SOAP 1.2 Fault não tem "faultstring" (isso é SOAP 1.1) — o texto vem em
+// Fault.Reason.Text, que o parser (com removeNSPrefix) devolve como objeto
+// ({Text: "..."} ou, se tiver atributo xml:lang, {Text: {"#text": "..."}}),
+// nunca como string direto. Sem isto, o template literal que monta a
+// mensagem de erro imprimia literalmente "[object Object]".
+function extrairMotivoFault(fault) {
+  if (!fault) return "Erro SOAP desconhecido.";
+  if (typeof fault.faultstring === "string") return fault.faultstring;
+  const reason = fault.Reason;
+  if (typeof reason === "string") return reason;
+  const texto = reason && (typeof reason.Text === "string" ? reason.Text : reason.Text && reason.Text["#text"]);
+  return texto || "Erro SOAP desconhecido.";
+}
+
+// distDFeInt (e o evento, mais abaixo) exigem OU <CNPJ> OU <CPF> — nunca os
+// dois — dependendo se o consultante é pessoa jurídica ou física. `cnpj`
+// aqui é só o nome histórico do parâmetro; o valor pode ter 11 dígitos
+// (CPF, certificado e-CPF) ou 14 (CNPJ, certificado e-CNPJ).
+function tagDocumento(cnpj) {
+  return cnpj && String(cnpj).length === 11 ? `<CPF>${cnpj}</CPF>` : `<CNPJ>${cnpj}</CNPJ>`;
+}
+
 function montarEnvelope({ tpAmb, cUFAutor, cnpj, ultNsu }) {
   const ultNsuFormatado = String(ultNsu || "0").replace(/\D/g, "").padStart(15, "0");
   return (
@@ -52,7 +74,7 @@ function montarEnvelope({ tpAmb, cUFAutor, cnpj, ultNsu }) {
     `<distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">` +
     `<tpAmb>${tpAmb}</tpAmb>` +
     `<cUFAutor>${cUFAutor}</cUFAutor>` +
-    `<CNPJ>${cnpj}</CNPJ>` +
+    tagDocumento(cnpj) +
     `<distNSU><ultNSU>${ultNsuFormatado}</ultNSU></distNSU>` +
     `</distDFeInt>` +
     `</nfeDadosMsg>` +
@@ -108,8 +130,7 @@ function parsearEnvelopeResposta(xmlTexto) {
     ((body.nfeDistDFeInteresseResponse && body.nfeDistDFeInteresseResponse.nfeDistDFeInteresseResult) ||
       body.Fault);
   if (body && body.Fault) {
-    const motivo = body.Fault.faultstring || body.Fault.Reason || "Erro SOAP desconhecido.";
-    throw new ErroSefaz(`SEFAZ retornou um erro SOAP: ${motivo}`);
+    throw new ErroSefaz(`SEFAZ retornou um erro SOAP: ${extrairMotivoFault(body.Fault)}`);
   }
   const ret = result && result.retDistDFeInt;
   if (!ret) {
@@ -282,7 +303,7 @@ function montarXmlEvento({ tpAmb, cOrgao, cnpj, chNFe, tpEvento, nSeqEvento }) {
       `<infEvento Id="${id}">` +
       `<cOrgao>${cOrgao}</cOrgao>` +
       `<tpAmb>${tpAmb}</tpAmb>` +
-      `<CNPJ>${cnpj}</CNPJ>` +
+      tagDocumento(cnpj) +
       `<chNFe>${chNFe}</chNFe>` +
       `<dhEvento>${dh}</dhEvento>` +
       `<tpEvento>${tpEvento}</tpEvento>` +
@@ -345,8 +366,7 @@ function parsearRespostaEvento(xmlTexto) {
   }
   const body = obj.Envelope && obj.Envelope.Body;
   if (body && body.Fault) {
-    const motivo = body.Fault.faultstring || body.Fault.Reason || "Erro SOAP desconhecido.";
-    throw new ErroSefaz(`SEFAZ retornou um erro SOAP: ${motivo}`);
+    throw new ErroSefaz(`SEFAZ retornou um erro SOAP: ${extrairMotivoFault(body.Fault)}`);
   }
   const result = body && body.nfeRecepcaoEventoResponse && body.nfeRecepcaoEventoResponse.nfeRecepcaoEventoResult;
   const ret = result && result.retEnvEvento;

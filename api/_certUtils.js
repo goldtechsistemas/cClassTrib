@@ -15,27 +15,47 @@ const forge = require("node-forge");
 class CertificadoInvalido extends Error {}
 
 const CNPJ_OTHERNAME_OID = "2.16.76.1.3.3";
+const CPF_OTHERNAME_OID = "2.16.76.1.3.1";
 
 function somenteDigitos(s) {
   return String(s || "").replace(/\D/g, "");
 }
 
+// Fallback pra e-CNPJ: no padrao ICP-Brasil o CN vem como "RAZAO SOCIAL:CNPJ"
+// — exige os 14 digitos logo apos o primeiro ":" (nao "quaisquer 14 digitos
+// soltos no texto", que em certificados de pessoa fisica pode pegar lixo de
+// outro campo e mandar um "CNPJ" invalido pra SEFAZ sem avisar ninguem).
 function extrairCnpjDoSubject(cert) {
   const cn = cert.subject.getField("CN");
   const texto = cn ? cn.value : cert.subject.attributes.map((a) => a.value).join(" ");
-  const m = somenteDigitos(texto).match(/\d{14}/);
-  return m ? m[0] : null;
+  const idx = texto.indexOf(":");
+  const apos = idx === -1 ? texto : texto.slice(idx + 1);
+  const digitos = somenteDigitos(apos);
+  return digitos.length === 14 ? digitos : null;
+}
+
+// Alguns emissores de e-CPF gravam o CPF por extenso e rotulado no CN (ex.:
+// "JOSE LUIZ VIEIRA CPF 234.440.296-91"), fora do padrao "NOME:documento" —
+// pega isso explicitamente em vez de arriscar casar dígitos de outro campo.
+function extrairCpfRotuladoDoCn(cert) {
+  const cn = cert.subject.getField("CN");
+  const texto = cn ? cn.value : cert.subject.attributes.map((a) => a.value).join(" ");
+  const m = texto.match(/CPF[:\s]*?(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/i);
+  return m ? somenteDigitos(m[1]) : null;
 }
 
 // No padrao ICP-Brasil para e-CNPJ, o CN vem como "RAZAO SOCIAL:CNPJ" — a
 // razao social "de verdade" e so a parte antes dos dois-pontos, nao o
 // Subject inteiro (que tambem tem C=, O=, OU=, ST=, L= etc., irrelevantes
-// para exibir como nome da empresa).
+// para exibir como nome da empresa/pessoa).
 function extrairRazaoSocial(cert) {
   const cn = cert.subject.getField("CN");
   if (!cn || !cn.value) return null;
   const idx = cn.value.indexOf(":");
-  const nome = (idx === -1 ? cn.value : cn.value.slice(0, idx)).trim();
+  let nome = (idx === -1 ? cn.value : cn.value.slice(0, idx)).trim();
+  // Tira o CPF rotulado por extenso do fallback acima, se estiver colado no
+  // nome (ex.: "JOSE LUIZ VIEIRA CPF 234.440.296-91" -> "JOSE LUIZ VIEIRA").
+  nome = nome.replace(/\s*CPF[:\s]*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$/i, "").trim();
   return nome || null;
 }
 
@@ -47,8 +67,10 @@ function extrairUf(cert) {
 
 // Tentativa best-effort — a estrutura interna do node-forge para otherName
 // (tipo 0 do SAN) não é totalmente documentada; qualquer erro aqui é
-// silencioso e cai para a extração pelo CN (extrairCnpjDoSubject).
-function extrairCnpjDoSan(cert) {
+// silencioso e cai para os fallbacks pelo CN. Reconhece tanto e-CNPJ (OID
+// 2.16.76.1.3.3, documento vem no meio de um campo composto, offset 8)
+// quanto e-CPF (OID 2.16.76.1.3.1, CPF vem no início do campo, offset 0).
+function extrairDocumentoDoSan(cert) {
   try {
     const ext = cert.getExtension("subjectAltName");
     if (!ext || !Array.isArray(ext.altNames)) return null;
@@ -58,18 +80,36 @@ function extrairCnpjDoSan(cert) {
       const oidNode = asn1.value && asn1.value[0];
       if (!oidNode) continue;
       const oid = forge.asn1.derToOid(oidNode.value);
-      if (oid !== CNPJ_OTHERNAME_OID) continue;
+      if (oid !== CNPJ_OTHERNAME_OID && oid !== CPF_OTHERNAME_OID) continue;
       const tagged = asn1.value[1];
       const inner = tagged && tagged.value && tagged.value[0];
       const bruto = inner && inner.value;
       if (!bruto) continue;
       const digitos = somenteDigitos(bruto);
-      if (digitos.length >= 22) return digitos.slice(8, 22);
-      if (digitos.length === 14) return digitos;
+      if (oid === CNPJ_OTHERNAME_OID) {
+        if (digitos.length >= 22) return { documento: digitos.slice(8, 22), tipoDocumento: "CNPJ" };
+        if (digitos.length === 14) return { documento: digitos, tipoDocumento: "CNPJ" };
+      } else if (digitos.length >= 11) {
+        return { documento: digitos.slice(0, 11), tipoDocumento: "CPF" };
+      }
     }
   } catch (e) {
     return null;
   }
+  return null;
+}
+
+// Ordem: SAN (mais confiável, estrutura tipada) -> CPF rotulado no CN
+// (best-effort, mas explícito) -> CNPJ logo após ":" no CN. Se nada bater,
+// não inventa nada — melhor recusar o certificado do que mandar um
+// documento errado pra SEFAZ.
+function extrairDocumento(cert) {
+  const doSan = extrairDocumentoDoSan(cert);
+  if (doSan) return doSan;
+  const cpfRotulado = extrairCpfRotuladoDoCn(cert);
+  if (cpfRotulado && cpfRotulado.length === 11) return { documento: cpfRotulado, tipoDocumento: "CPF" };
+  const cnpj = extrairCnpjDoSubject(cert);
+  if (cnpj) return { documento: cnpj, tipoDocumento: "CNPJ" };
   return null;
 }
 
@@ -129,14 +169,15 @@ function carregarCertificado(pfxBuffer, senha) {
     );
   }
 
-  const cnpj = extrairCnpjDoSan(cert) || extrairCnpjDoSubject(cert);
-  if (!cnpj || cnpj.length !== 14) {
-    throw new CertificadoInvalido("Não foi possível identificar o CNPJ no certificado.");
+  const info = extrairDocumento(cert);
+  if (!info) {
+    throw new CertificadoInvalido("Não foi possível identificar o CNPJ/CPF no certificado.");
   }
 
   return {
-    cnpj,
-    razaoSocial: extrairRazaoSocial(cert) || cnpj,
+    cnpj: info.documento,
+    tipoDocumento: info.tipoDocumento,
+    razaoSocial: extrairRazaoSocial(cert) || info.documento,
     uf: extrairUf(cert),
     subject: cert.subject.attributes.map((a) => `${a.shortName || a.name}=${a.value}`).join(", "),
     validFrom: cert.validity.notBefore,
@@ -164,9 +205,9 @@ function extrairParaMtls(pfxBuffer, senha) {
 
   const certPem = [cert, ...outrosCerts].map((c) => forge.pki.certificateToPem(c)).join("\n");
   const keyPem = forge.pki.privateKeyToPem(privateKey);
-  const cnpj = extrairCnpjDoSan(cert) || extrairCnpjDoSubject(cert);
+  const info = extrairDocumento(cert);
 
-  return { certPem, keyPem, cnpj };
+  return { certPem, keyPem, cnpj: info ? info.documento : null };
 }
 
 module.exports = { carregarCertificado, extrairParaMtls, CertificadoInvalido };
