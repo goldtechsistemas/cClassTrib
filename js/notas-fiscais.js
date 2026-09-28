@@ -20,6 +20,7 @@
   const notasBody = document.getElementById("notas-body");
 
   let empresaSelecionadaId = null;
+  let empresaSelecionadaNome = "";
 
   function mostrarAviso(mensagem, tipo) {
     if (!mensagem) {
@@ -159,8 +160,12 @@
     notasVazio.style.display = "none";
     notasWrap.style.display = "";
     notasBody.innerHTML = notas
-      .map(
-        (n) => `
+      .map((n) => {
+        const acaoManifestacao =
+          n.manifestacao === "ciencia"
+            ? "Ciência dada"
+            : `<button class="btn secondary btn-sm btn-manifestar" data-ch-nfe="${esc(n.chNFe)}" type="button">Dar ciência</button>`;
+        return `
           <tr>
             <td class="mono">${esc(n.numero || "—")}${n.serie ? ` (série ${esc(n.serie)})` : ""}</td>
             <td>${esc(n.emitNome || "—")}</td>
@@ -170,13 +175,54 @@
             <td>${esc(formatarValor(n.vNf))}</td>
             <td>${esc(n.situacao || "—")}</td>
             <td>${esc(n.tipo === "completa" ? "XML completo" : "Resumo")}</td>
-          </tr>`
-      )
+            <td>${acaoManifestacao}</td>
+          </tr>`;
+      })
       .join("");
+
+    notasBody.querySelectorAll(".btn-manifestar").forEach((btn) => {
+      btn.addEventListener("click", () => manifestarNota(btn.dataset.chNfe, btn));
+    });
+  }
+
+  async function manifestarNota(chNFe, botao) {
+    if (
+      !confirm(
+        "Dar Ciência da Operação para esta nota? Isso registra um evento oficial junto à SEFAZ, vinculado ao seu CNPJ — não pode ser desfeito."
+      )
+    ) {
+      return;
+    }
+    const textoOriginal = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = "Enviando...";
+    mostrarAviso("");
+    try {
+      const resposta = await fetch("/api/nfe-manifestar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ empresaId: empresaSelecionadaId, chNFe }),
+      });
+      const dados = await resposta.json();
+      if (!dados.ok) {
+        mostrarAviso(dados.erro || "SEFAZ não aceitou a manifestação.", "erro");
+        botao.disabled = false;
+        botao.textContent = textoOriginal;
+        return;
+      }
+      mostrarAviso(dados.mensagem || "Ciência da Operação registrada.", "ok");
+      carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
+    } catch (e) {
+      mostrarAviso("Não foi possível falar com a SEFAZ. Tente novamente.", "erro");
+      botao.disabled = false;
+      botao.textContent = textoOriginal;
+    }
   }
 
   function mostrarNotas(empresaId, nomeEmpresa) {
     empresaSelecionadaId = Number(empresaId);
+    empresaSelecionadaNome = nomeEmpresa;
     notasSecao.style.display = "";
     notasSecao.scrollIntoView({ behavior: "smooth", block: "start" });
     carregarNotas(empresaId, nomeEmpresa);

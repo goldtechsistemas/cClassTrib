@@ -9,13 +9,19 @@
 const https = require("https");
 const zlib = require("zlib");
 const { XMLParser } = require("fast-xml-parser");
+const { SignedXml } = require("xml-crypto");
 
 const ENDPOINTS = {
   2: "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
   1: "https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
 };
+const ENDPOINTS_EVENTO = {
+  2: "https://hom1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx",
+  1: "https://www1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx",
+};
 
 const SOAP_ACTION = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
+const SOAP_ACTION_EVENTO = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEvento";
 
 // Código IBGE da UF — usado em cUFAutor (UF da base do CNPJ consultante).
 const UF_PARA_CODIGO = {
@@ -54,7 +60,7 @@ function montarEnvelope({ tpAmb, cUFAutor, cnpj, ultNsu }) {
   );
 }
 
-function enviarSoap({ url, certPem, keyPem, envelopeXml, timeoutMs = 25000 }) {
+function enviarSoap({ url, certPem, keyPem, envelopeXml, soapAction = SOAP_ACTION, timeoutMs = 25000 }) {
   return new Promise((resolve, reject) => {
     const alvo = new URL(url);
     const req = https.request(
@@ -66,7 +72,7 @@ function enviarSoap({ url, certPem, keyPem, envelopeXml, timeoutMs = 25000 }) {
         cert: certPem,
         key: keyPem,
         headers: {
-          "Content-Type": `application/soap+xml; charset=utf-8; action="${SOAP_ACTION}"`,
+          "Content-Type": `application/soap+xml; charset=utf-8; action="${soapAction}"`,
           "Content-Length": Buffer.byteLength(envelopeXml),
         },
         timeout: timeoutMs,
@@ -254,4 +260,129 @@ async function distribuirDfe({ ambiente, uf, cnpj, ultNsu, certPem, keyPem }) {
   };
 }
 
-module.exports = { distribuirDfe, ErroSefaz, UF_PARA_CODIGO };
+// --- Manifestação do Destinatário (evento 210210 — Ciência da Operação) ---
+//
+// Ao contrário da consulta distDFeInt (que só lê), enviar este evento GRAVA
+// um registro permanente no sistema da SEFAZ associado ao CNPJ/certificado
+// — por isso só é disparado por ação explícita do usuário (botão "Dar
+// ciência" por nota), nunca automaticamente.
+
+const DESCRICOES_EVENTO = { 210210: "Ciencia da Operacao" };
+
+function montarXmlEvento({ tpAmb, cOrgao, cnpj, chNFe, tpEvento, nSeqEvento }) {
+  const dh = new Date().toISOString().replace(/\.\d{3}Z$/, "-03:00"); // aproximação; SEFAZ aceita o offset local
+  const id = `ID${tpEvento}${chNFe}${String(nSeqEvento).padStart(2, "0")}`;
+  const descEvento = DESCRICOES_EVENTO[tpEvento] || "Evento";
+  return {
+    id,
+    xml:
+      `<evento xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.00">` +
+      `<infEvento Id="${id}">` +
+      `<cOrgao>${cOrgao}</cOrgao>` +
+      `<tpAmb>${tpAmb}</tpAmb>` +
+      `<CNPJ>${cnpj}</CNPJ>` +
+      `<chNFe>${chNFe}</chNFe>` +
+      `<dhEvento>${dh}</dhEvento>` +
+      `<tpEvento>${tpEvento}</tpEvento>` +
+      `<nSeqEvento>${nSeqEvento}</nSeqEvento>` +
+      `<verEvento>1.00</verEvento>` +
+      `<detEvento versao="1.00"><descEvento>${descEvento}</descEvento></detEvento>` +
+      `</infEvento>` +
+      `</evento>`,
+  };
+}
+
+// A NF-e ainda exige SHA-1 no XMLDSig (padrão legado do schema oficial,
+// não é escolha nossa) — RSA-SHA1 + digest SHA1, canonicalização C14N.
+function assinarEvento(xmlEvento, certPem, keyPem) {
+  const sig = new SignedXml({
+    privateKey: keyPem,
+    publicCert: certPem,
+    signatureAlgorithm: "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+    canonicalizationAlgorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
+  });
+  sig.addReference({
+    xpath: "//*[local-name(.)='infEvento']",
+    transforms: [
+      "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
+      "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
+    ],
+    digestAlgorithm: "http://www.w3.org/2000/09/xmldsig#sha1",
+  });
+  sig.computeSignature(xmlEvento, {
+    location: { reference: "//*[local-name(.)='infEvento']", action: "after" },
+  });
+  return sig.getSignedXml();
+}
+
+function montarEnvelopeEvento({ idLote, eventoAssinadoXml }) {
+  return (
+    `<?xml version="1.0" encoding="utf-8"?>` +
+    `<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">` +
+    `<soap12:Body>` +
+    `<nfeRecepcaoEvento xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4">` +
+    `<nfeDadosMsg>` +
+    `<envEvento xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.00">` +
+    `<idLote>${idLote}</idLote>` +
+    eventoAssinadoXml +
+    `</envEvento>` +
+    `</nfeDadosMsg>` +
+    `</nfeRecepcaoEvento>` +
+    `</soap12:Body>` +
+    `</soap12:Envelope>`
+  );
+}
+
+function parsearRespostaEvento(xmlTexto) {
+  const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@_", removeNSPrefix: true });
+  let obj;
+  try {
+    obj = parser.parse(xmlTexto);
+  } catch (e) {
+    throw new ErroSefaz("Resposta da SEFAZ não é um XML válido.");
+  }
+  const body = obj.Envelope && obj.Envelope.Body;
+  if (body && body.Fault) {
+    const motivo = body.Fault.faultstring || body.Fault.Reason || "Erro SOAP desconhecido.";
+    throw new ErroSefaz(`SEFAZ retornou um erro SOAP: ${motivo}`);
+  }
+  const result = body && body.nfeRecepcaoEventoResponse && body.nfeRecepcaoEventoResponse.nfeRecepcaoEventoResult;
+  const ret = result && result.retEnvEvento;
+  if (!ret) throw new ErroSefaz("Resposta da SEFAZ em formato inesperado (retEnvEvento não encontrado).");
+
+  const retEventoBruto = ret.retEvento;
+  const infEvento = Array.isArray(retEventoBruto)
+    ? retEventoBruto[0] && retEventoBruto[0].infEvento
+    : retEventoBruto && retEventoBruto.infEvento;
+
+  return {
+    cStatLote: String(ret.cStat || ""),
+    xMotivoLote: ret.xMotivo || "",
+    cStat: infEvento ? String(infEvento.cStat) : String(ret.cStat || ""),
+    xMotivo: infEvento ? infEvento.xMotivo : ret.xMotivo || "",
+  };
+}
+
+/**
+ * Envia o evento 210210 (Ciência da Operação) para uma NF-e específica.
+ * @returns {{cStat: string, xMotivo: string, sucesso: boolean}}
+ */
+async function enviarManifestacaoCiencia({ ambiente, uf, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1 }) {
+  const url = ENDPOINTS_EVENTO[ambiente] || ENDPOINTS_EVENTO[2];
+  const cOrgao = UF_PARA_CODIGO[uf] || UF_PARA_CODIGO.DF;
+  const { xml } = montarXmlEvento({ tpAmb: ambiente, cOrgao, cnpj, chNFe, tpEvento: 210210, nSeqEvento });
+  const eventoAssinado = assinarEvento(xml, certPem, keyPem);
+  const idLote = String(Date.now()).slice(-15).padStart(15, "0");
+  const envelope = montarEnvelopeEvento({ idLote, eventoAssinadoXml: eventoAssinado });
+
+  const resposta = await enviarSoap({ url, certPem, keyPem, envelopeXml: envelope, soapAction: SOAP_ACTION_EVENTO });
+  if (resposta.statusCode >= 400 && resposta.statusCode !== 500) {
+    throw new ErroSefaz(`SEFAZ respondeu HTTP ${resposta.statusCode}.`);
+  }
+
+  const analisada = parsearRespostaEvento(resposta.body);
+  const sucesso = analisada.cStat === "135" || analisada.cStat === "136";
+  return { cStat: analisada.cStat, xMotivo: analisada.xMotivo, sucesso, eventoAssinadoXml: eventoAssinado };
+}
+
+module.exports = { distribuirDfe, enviarManifestacaoCiencia, ErroSefaz, UF_PARA_CODIGO };

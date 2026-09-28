@@ -69,7 +69,7 @@ async function main() {
       cert_password_encrypted TEXT,
       cert_valid_until TIMESTAMPTZ,
       cert_subject TEXT,
-      ambiente SMALLINT NOT NULL DEFAULT 2,
+      ambiente SMALLINT NOT NULL DEFAULT 1,
       ult_nsu TEXT NOT NULL DEFAULT '0',
       ultima_sincronizacao TIMESTAMPTZ,
       proxima_consulta_permitida_em TIMESTAMPTZ,
@@ -82,6 +82,9 @@ async function main() {
   // coluna uf ser adicionada (o CREATE TABLE IF NOT EXISTS acima não altera
   // uma tabela já existente).
   await pool.query(`ALTER TABLE nfe_empresas ADD COLUMN IF NOT EXISTS uf CHAR(2);`);
+  // Padrão do módulo passou a ser produção (1) em vez de homologação (2) —
+  // decisão explícita do usuário (não quer ficar alternando ambiente).
+  await pool.query(`ALTER TABLE nfe_empresas ALTER COLUMN ambiente SET DEFAULT 1;`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS nfe_documentos (
       id SERIAL PRIMARY KEY,
