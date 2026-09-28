@@ -1,5 +1,6 @@
 const { query } = require("./_db");
 const { exigirUsuario } = require("./_nfeHelpers");
+const { montarFiltroDocumentos } = require("./_nfeFiltros");
 
 function docParaSaida(row) {
   return {
@@ -40,9 +41,11 @@ module.exports = async (req, res) => {
       return;
     }
 
+    const params = [empresaId];
+    const filtro = montarFiltroDocumentos(req.query || {}, params);
     const r = await query(
-      "SELECT * FROM nfe_documentos WHERE empresa_id = $1 ORDER BY dh_emi DESC NULLS LAST, criado_em DESC LIMIT 500",
-      [empresaId]
+      `SELECT * FROM nfe_documentos WHERE empresa_id = $1${filtro} ORDER BY dh_emi DESC NULLS LAST, criado_em DESC LIMIT 500`,
+      params
     );
     res.status(200).json({ ok: true, documentos: r.rows.map(docParaSaida) });
   } catch (e) {

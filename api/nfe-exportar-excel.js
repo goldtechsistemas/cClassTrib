@@ -1,5 +1,6 @@
 const { query } = require("./_db");
 const { exigirUsuario } = require("./_nfeHelpers");
+const { montarFiltroDocumentos } = require("./_nfeFiltros");
 const ExcelJS = require("exceljs");
 
 module.exports = async (req, res) => {
@@ -22,9 +23,11 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const params = [empresaId];
+  const filtro = montarFiltroDocumentos(req.query || {}, params);
   const r = await query(
-    "SELECT * FROM nfe_documentos WHERE empresa_id = $1 ORDER BY dh_emi DESC NULLS LAST",
-    [empresaId]
+    `SELECT * FROM nfe_documentos WHERE empresa_id = $1${filtro} ORDER BY dh_emi DESC NULLS LAST`,
+    params
   );
   if (!r.rows.length) {
     res.status(404).json({ ok: false, erro: "Nenhuma nota sincronizada ainda para esta empresa." });

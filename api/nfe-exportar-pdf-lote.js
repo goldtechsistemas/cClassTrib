@@ -1,6 +1,7 @@
 const { query } = require("./_db");
 const { exigirUsuario } = require("./_nfeHelpers");
 const { montarFiltroDocumentos } = require("./_nfeFiltros");
+const { gerarPdfResumo } = require("./_pdfResumo");
 const JSZip = require("jszip");
 
 module.exports = async (req, res) => {
@@ -26,24 +27,22 @@ module.exports = async (req, res) => {
   const params = [empresaId];
   const filtro = montarFiltroDocumentos(req.query || {}, params);
   const r = await query(
-    `SELECT ch_nfe, xml_completo FROM nfe_documentos WHERE empresa_id = $1 AND xml_completo IS NOT NULL${filtro}`,
+    `SELECT * FROM nfe_documentos WHERE empresa_id = $1${filtro} ORDER BY dh_emi DESC NULLS LAST`,
     params
   );
   if (!r.rows.length) {
-    res.status(404).json({
-      ok: false,
-      erro: 'Nenhuma nota com XML completo disponível ainda. Dê "Ciência da Operação" na nota e sincronize de novo antes de baixar.',
-    });
+    res.status(404).json({ ok: false, erro: "Nenhuma nota encontrada para gerar PDF." });
     return;
   }
 
   const zip = new JSZip();
-  for (const row of r.rows) {
-    zip.file(`${row.ch_nfe}.xml`, row.xml_completo);
+  for (const doc of r.rows) {
+    const buffer = await gerarPdfResumo(doc);
+    zip.file(`${doc.ch_nfe}.pdf`, buffer);
   }
   const buffer = await zip.generateAsync({ type: "nodebuffer" });
 
   res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", `attachment; filename="xml-notas-${empresaCheck.rows[0].cnpj}.zip"`);
+  res.setHeader("Content-Disposition", `attachment; filename="pdf-notas-${empresaCheck.rows[0].cnpj}.zip"`);
   res.status(200).end(buffer);
 };

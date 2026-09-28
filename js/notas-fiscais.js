@@ -21,9 +21,17 @@
   const notasAcoesLote = document.getElementById("notas-acoes-lote");
   const linkExportarXml = document.getElementById("link-exportar-xml");
   const linkExportarExcel = document.getElementById("link-exportar-excel");
+  const linkExportarPdfLote = document.getElementById("link-exportar-pdf-lote");
+  const notasSelecaoInfo = document.getElementById("notas-selecao-info");
+  const inputDataInicio = document.getElementById("input-data-inicio");
+  const inputDataFim = document.getElementById("input-data-fim");
+  const btnFiltrarPeriodo = document.getElementById("btn-filtrar-periodo");
+  const btnLimparPeriodo = document.getElementById("btn-limpar-periodo");
+  const checkboxSelecionarTodas = document.getElementById("checkbox-selecionar-todas");
 
   let empresaSelecionadaId = null;
   let empresaSelecionadaNome = "";
+  let notasSelecionadas = new Set();
 
   function mostrarAviso(mensagem, tipo) {
     if (!mensagem) {
@@ -81,7 +89,13 @@
 
         const aguardando = emp.proximaConsultaPermitidaEm && new Date(emp.proximaConsultaPermitidaEm) > new Date();
         const botaoSincronizar = aguardando
-          ? `<button class="btn secondary btn-sm" disabled title="SEFAZ pede para aguardar até ${new Date(emp.proximaConsultaPermitidaEm).toLocaleString("pt-BR")}">Aguardando SEFAZ</button>`
+          ? (() => {
+              const espera = new Date(emp.proximaConsultaPermitidaEm);
+              const horaCurta = espera.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              const mesmoDia = espera.toDateString() === new Date().toDateString();
+              const rotulo = mesmoDia ? `Libera às ${horaCurta}` : `Libera em ${espera.toLocaleString("pt-BR")}`;
+              return `<button class="btn secondary btn-sm" disabled title="SEFAZ pede para aguardar até ${espera.toLocaleString("pt-BR")} antes de consultar de novo">${esc(rotulo)}</button>`;
+            })()
           : `<button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>`;
 
         return `
@@ -148,11 +162,40 @@
     return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
+  function montarQueryFiltro() {
+    const params = new URLSearchParams();
+    if (inputDataInicio.value) params.set("dataInicio", inputDataInicio.value);
+    if (inputDataFim.value) params.set("dataFim", inputDataFim.value);
+    return params;
+  }
+
+  function atualizarLinksExportacao(empresaId) {
+    const params = montarQueryFiltro();
+    params.set("empresaId", empresaId);
+
+    if (notasSelecionadas.size > 0) {
+      params.set("chaves", Array.from(notasSelecionadas).join(","));
+      notasSelecaoInfo.textContent = `${notasSelecionadas.size} nota(s) selecionada(s) — os downloads abaixo usam só a seleção.`;
+    } else {
+      notasSelecaoInfo.textContent = "Nenhuma nota selecionada — os downloads abaixo usam todas as notas visíveis (respeitando o filtro de período).";
+    }
+
+    linkExportarXml.href = `/api/nfe-exportar-xml?${params.toString()}`;
+    linkExportarExcel.href = `/api/nfe-exportar-excel?${params.toString()}`;
+    linkExportarPdfLote.href = `/api/nfe-exportar-pdf-lote?${params.toString()}`;
+  }
+
   async function carregarNotas(empresaId, nomeEmpresa) {
     notasTitulo.textContent = `Notas fiscais — ${nomeEmpresa}`;
+    notasSelecionadas = new Set();
+    checkboxSelecionarTodas.checked = false;
+
+    const params = montarQueryFiltro();
+    params.set("empresaId", empresaId);
+
     let dados;
     try {
-      const resposta = await fetch(`/api/nfe-documentos?empresaId=${encodeURIComponent(empresaId)}`, { credentials: "same-origin" });
+      const resposta = await fetch(`/api/nfe-documentos?${params.toString()}`, { credentials: "same-origin" });
       dados = await resposta.json();
     } catch (e) {
       mostrarAviso("Não foi possível carregar as notas.", "erro");
@@ -173,8 +216,8 @@
     notasVazio.style.display = "none";
     notasWrap.style.display = "";
     notasAcoesLote.style.display = "";
-    linkExportarXml.href = `/api/nfe-exportar-xml?empresaId=${encodeURIComponent(empresaId)}`;
-    linkExportarExcel.href = `/api/nfe-exportar-excel?empresaId=${encodeURIComponent(empresaId)}`;
+    atualizarLinksExportacao(empresaId);
+
     notasBody.innerHTML = notas
       .map((n) => {
         const acaoManifestacao =
@@ -184,6 +227,7 @@
         const linkPdf = `/api/nfe-exportar-pdf?empresaId=${encodeURIComponent(empresaId)}&chNFe=${encodeURIComponent(n.chNFe)}`;
         return `
           <tr>
+            <td><input type="checkbox" class="checkbox-nota" data-ch-nfe="${esc(n.chNFe)}" /></td>
             <td class="mono">${esc(n.numero || "—")}${n.serie ? ` (série ${esc(n.serie)})` : ""}</td>
             <td>${esc(n.emitNome || "—")}</td>
             <td class="mono">${esc(n.emitCnpj ? formatarCnpj(n.emitCnpj) : "—")}</td>
@@ -200,6 +244,15 @@
 
     notasBody.querySelectorAll(".btn-manifestar").forEach((btn) => {
       btn.addEventListener("click", () => manifestarNota(btn.dataset.chNfe, btn));
+    });
+    notasBody.querySelectorAll(".checkbox-nota").forEach((chk) => {
+      chk.addEventListener("change", () => {
+        if (chk.checked) notasSelecionadas.add(chk.dataset.chNfe);
+        else notasSelecionadas.delete(chk.dataset.chNfe);
+        checkboxSelecionarTodas.checked =
+          notasSelecionadas.size > 0 && notasSelecionadas.size === notasBody.querySelectorAll(".checkbox-nota").length;
+        atualizarLinksExportacao(empresaId);
+      });
     });
   }
 
@@ -327,6 +380,25 @@
   }
 
   btnEnviar.addEventListener("click", enviarCertificado);
+
+  checkboxSelecionarTodas.addEventListener("change", () => {
+    const caixas = notasBody.querySelectorAll(".checkbox-nota");
+    caixas.forEach((chk) => {
+      chk.checked = checkboxSelecionarTodas.checked;
+      if (chk.checked) notasSelecionadas.add(chk.dataset.chNfe);
+      else notasSelecionadas.delete(chk.dataset.chNfe);
+    });
+    atualizarLinksExportacao(empresaSelecionadaId);
+  });
+
+  btnFiltrarPeriodo.addEventListener("click", () => {
+    if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
+  });
+  btnLimparPeriodo.addEventListener("click", () => {
+    inputDataInicio.value = "";
+    inputDataFim.value = "";
+    if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
+  });
 
   carregarEmpresas();
 })();
