@@ -28,7 +28,6 @@
             ${link("sobre.html", "IBS, CBS e FAQ", "sobre")}
             ${link("index.html", "Consultar", "consultar")}
             ${link("lote.html", "Consulta em lote", "lote")}
-            ${link("notas-fiscais.html", "Notas Fiscais", "notas")}
             <button class="theme-toggle" id="btn-tema" type="button"></button>
           </nav>
         </div>
