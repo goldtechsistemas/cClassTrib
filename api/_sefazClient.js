@@ -15,9 +15,17 @@ const ENDPOINTS = {
   2: "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
   1: "https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
 };
+// Atenção: o host de produção do NFeRecepcaoEvento4 é "www." (sem o "1"),
+// diferente do NFeDistribuicaoDFe acima que é "www1." — são hosts distintos
+// de verdade, confirmado na lista de webservices oficiais/comunidade
+// (nfephp-org/sped-nfe). Mandar pro host errado não dá um erro de negócio
+// da SEFAZ — o servidor responde, só que com outro serviço, e o SOAP
+// retorna um fault genérico de "action não reconhecida", o que fazia TODA
+// manifestação em produção falhar silenciosamente (e, por tabela, a nota
+// nunca recebia o XML completo, ficando presa em "Resumo" pra sempre).
 const ENDPOINTS_EVENTO = {
   2: "https://hom1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx",
-  1: "https://www1.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx",
+  1: "https://www.nfe.fazenda.gov.br/NFeRecepcaoEvento4/NFeRecepcaoEvento4.asmx",
 };
 
 const SOAP_ACTION = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
