@@ -4,7 +4,11 @@ const { carregarCertificado, CertificadoInvalido } = require("./_certUtils");
 const { encryptSecret } = require("./_crypto");
 const { corpoJson } = require("./_lib");
 
-const TAMANHO_MAX_PFX = 16 * 1024; // certificados A1 sao pequenos; generoso
+// Certificados A1 costumam ter uns 4-8KB, mas alguns emissores empacotam a
+// cadeia completa da AC dentro do .pfx e passam disso — 64KB cobre esse caso
+// com folga sem deixar de ser um limite sensato pro que é, no fim, um par
+// de chave+certificado.
+const TAMANHO_MAX_PFX = 64 * 1024;
 const TAMANHO_MAX_BASE64 = Math.ceil(TAMANHO_MAX_PFX / 3) * 4 + 100;
 
 module.exports = async (req, res) => {

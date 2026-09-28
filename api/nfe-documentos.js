@@ -1,5 +1,5 @@
 const { query } = require("./_db");
-const { exigirUsuario } = require("./_nfeHelpers");
+const { exigirUsuario, exigirEmpresaDoUsuario } = require("./_nfeHelpers");
 const { montarFiltroDocumentos } = require("./_nfeFiltros");
 
 function docParaSaida(row) {
@@ -29,18 +29,10 @@ module.exports = async (req, res) => {
   if (usuarioId == null) return;
 
   const empresaId = req.query && req.query.empresaId;
-  if (!empresaId) {
-    res.status(400).json({ ok: false, erro: "Informe a empresa." });
-    return;
-  }
+  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, "id");
+  if (!empresa) return;
 
   try {
-    const empresaCheck = await query("SELECT id FROM nfe_empresas WHERE id = $1 AND usuario_id = $2", [empresaId, usuarioId]);
-    if (!empresaCheck.rows.length) {
-      res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
-      return;
-    }
-
     const params = [empresaId];
     const filtro = montarFiltroDocumentos(req.query || {}, params);
     const r = await query(

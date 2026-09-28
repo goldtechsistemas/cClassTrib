@@ -1,9 +1,10 @@
 const { query } = require("./_db");
-const { exigirUsuario } = require("./_nfeHelpers");
+const { exigirUsuario, exigirEmpresaDoUsuario } = require("./_nfeHelpers");
 const { montarFiltroDocumentos } = require("./_nfeFiltros");
-const { gerarPdfResumo } = require("./_pdfResumo");
-const { gerarDanfePdf } = require("./_danfe");
+const { gerarPdfParaDocumento } = require("./_pdfResumo");
 const JSZip = require("jszip");
+
+const CONCORRENCIA = 5; // gera até 5 PDFs em paralelo (CPU-bound: barcode + layout) em vez de um por um
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -14,16 +15,8 @@ module.exports = async (req, res) => {
   if (usuarioId == null) return;
 
   const empresaId = req.query && req.query.empresaId;
-  if (!empresaId) {
-    res.status(400).json({ ok: false, erro: "Informe a empresa." });
-    return;
-  }
-
-  const empresaCheck = await query("SELECT id, cnpj FROM nfe_empresas WHERE id = $1 AND usuario_id = $2", [empresaId, usuarioId]);
-  if (!empresaCheck.rows.length) {
-    res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
-    return;
-  }
+  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, "id, cnpj");
+  if (!empresa) return;
 
   const params = [empresaId];
   const filtro = montarFiltroDocumentos(req.query || {}, params);
@@ -37,19 +30,14 @@ module.exports = async (req, res) => {
   }
 
   const zip = new JSZip();
-  for (const doc of r.rows) {
-    let buffer;
-    try {
-      buffer = doc.xml_completo ? await gerarDanfePdf(doc.xml_completo) : await gerarPdfResumo(doc);
-    } catch (e) {
-      console.error(e);
-      buffer = await gerarPdfResumo(doc);
-    }
-    zip.file(`${doc.ch_nfe}.pdf`, buffer);
+  for (let i = 0; i < r.rows.length; i += CONCORRENCIA) {
+    const lote = r.rows.slice(i, i + CONCORRENCIA);
+    const buffers = await Promise.all(lote.map((doc) => gerarPdfParaDocumento(doc)));
+    lote.forEach((doc, j) => zip.file(`${doc.ch_nfe}.pdf`, buffers[j]));
   }
   const buffer = await zip.generateAsync({ type: "nodebuffer" });
 
   res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", `attachment; filename="pdf-notas-${empresaCheck.rows[0].cnpj}.zip"`);
+  res.setHeader("Content-Disposition", `attachment; filename="pdf-notas-${empresa.cnpj}.zip"`);
   res.status(200).end(buffer);
 };

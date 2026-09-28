@@ -35,8 +35,26 @@ module.exports = async (req, res) => {
     res.status(404).json({ ok: false, erro: "Nota nao encontrada para esta empresa." });
     return;
   }
-  if (documento.manifestacao === "ciencia") {
-    res.status(409).json({ ok: false, erro: "Esta nota ja teve Ciencia da Operacao registrada." });
+  if (documento.manifestacao !== "nenhuma") {
+    res.status(409).json({
+      ok: false,
+      erro:
+        documento.manifestacao === "ciencia"
+          ? "Esta nota ja teve Ciencia da Operacao registrada."
+          : "Esta nota ja esta sendo manifestada (provavelmente por uma sincronizacao automatica em andamento).",
+    });
+    return;
+  }
+
+  // Reivindica a nota atomicamente antes de chamar a SEFAZ — evita manifestar
+  // a mesma nota duas vezes se a sincronizacao automatica estiver rodando ao
+  // mesmo tempo (mesmo padrao usado em _nfeSync.js).
+  const reivindicada = await query(
+    "UPDATE nfe_documentos SET manifestacao = 'enviando' WHERE id = $1 AND manifestacao = 'nenhuma' RETURNING id",
+    [documento.id]
+  );
+  if (!reivindicada.rows.length) {
+    res.status(409).json({ ok: false, erro: "Esta nota ja esta sendo manifestada (provavelmente por uma sincronizacao automatica em andamento)." });
     return;
   }
 
@@ -47,6 +65,7 @@ module.exports = async (req, res) => {
     ({ certPem, keyPem } = extrairParaMtls(pfxBuffer, senha));
   } catch (e) {
     console.error(e);
+    await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [documento.id]).catch(() => {});
     res.status(500).json({ ok: false, erro: "Nao foi possivel carregar o certificado salvo." });
     return;
   }
@@ -64,11 +83,13 @@ module.exports = async (req, res) => {
   } catch (e) {
     const mensagem = e instanceof ErroSefaz ? e.message : "Erro inesperado ao enviar a manifestacao.";
     if (!(e instanceof ErroSefaz)) console.error(e);
+    await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [documento.id]).catch(() => {});
     res.status(502).json({ ok: false, erro: mensagem });
     return;
   }
 
   if (!resultado.sucesso) {
+    await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [documento.id]).catch(() => {});
     res.status(422).json({ ok: false, erro: `SEFAZ rejeitou o evento (cStat ${resultado.cStat}): ${resultado.xMotivo}` });
     return;
   }

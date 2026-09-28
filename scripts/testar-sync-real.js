@@ -2,38 +2,20 @@
 // JÁ cadastrado no banco (decifra em memória, nunca imprime segredo).
 // NÃO grava nada no banco (não avança ult_nsu) — só valida se o código do
 // cliente SEFAZ funciona ponta a ponta. Uso: node scripts/testar-sync-real.js [empresaId]
-const fs = require("fs");
-const path = require("path");
-
-function carregarEnvLocal() {
-  const arquivo = path.join(__dirname, "..", ".env.local");
-  if (!fs.existsSync(arquivo)) return;
-  const conteudo = fs.readFileSync(arquivo, "utf8");
-  conteudo.split("\n").forEach((linha) => {
-    const l = linha.trim();
-    if (!l || l.startsWith("#")) return;
-    const idx = l.indexOf("=");
-    if (idx === -1) return;
-    const chave = l.slice(0, idx).trim();
-    let valor = l.slice(idx + 1).trim();
-    if (valor.startsWith('"') && valor.endsWith('"')) valor = valor.slice(1, -1);
-    process.env[chave] = valor;
-  });
-}
+const { carregarEnvLocal } = require("./_env");
 carregarEnvLocal();
 
-const { Pool } = require("pg");
+const { query, getPool } = require("../api/_db");
 const { decryptSecret } = require("../api/_crypto");
 const { extrairParaMtls } = require("../api/_certUtils");
 const { distribuirDfe } = require("../api/_sefazClient");
 
 async function main() {
   const empresaId = process.argv[2];
-  const pool = new Pool({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } });
 
   const { rows } = empresaId
-    ? await pool.query("SELECT * FROM nfe_empresas WHERE id = $1", [empresaId])
-    : await pool.query("SELECT * FROM nfe_empresas ORDER BY id DESC LIMIT 1");
+    ? await query("SELECT * FROM nfe_empresas WHERE id = $1", [empresaId])
+    : await query("SELECT * FROM nfe_empresas ORDER BY id DESC LIMIT 1");
   const empresa = rows[0];
   if (!empresa) throw new Error("Nenhuma empresa encontrada.");
 
@@ -64,7 +46,7 @@ async function main() {
     console.log("Primeiro documento:", JSON.stringify(resultado.documentos[0], null, 2));
   }
 
-  await pool.end();
+  await getPool().end();
 }
 
 main().catch((e) => {

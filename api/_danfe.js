@@ -134,7 +134,11 @@ async function gerarDanfePdf(xmlCompleto) {
   const wBarra = LARGURA - wEmit - wDanfe;
 
   D.pdf.lineWidth(0.75).rect(x, y, wEmit, alturaCab).stroke();
-  pdf.font("Helvetica-Bold").fontSize(10).fillColor("#000000").text(nfe.emitente.nome || "—", x + 6, y + 6, { width: wEmit - 12 });
+  pdf
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor("#000000")
+    .text(nfe.emitente.nome || "—", x + 6, y + 6, { width: wEmit - 12, height: 28, ellipsis: true });
   pdf.font("Helvetica").fontSize(7.5);
   const end = nfe.emitente.endereco;
   if (end) {
@@ -300,9 +304,12 @@ async function gerarDanfePdf(xmlCompleto) {
   });
 
   // --- Tabela de itens (grade completa: linhas E colunas) ---
+  // As larguras somam 0.98 (não 1.0) de propósito — se somarem exatamente
+  // 1.0 ou mais, a última coluna estoura a margem direita da página (já
+  // aconteceu). Sobra pouca margem é intencional, não preencher tudo.
   const colunas = [
     { titulo: "CÓDIGO", w: 0.07, chave: "codigo" },
-    { titulo: "DESCRIÇÃO", w: 0.19, chave: "descricao" },
+    { titulo: "DESCRIÇÃO", w: 0.23, chave: "descricao" },
     { titulo: "NCM/SH", w: 0.06, chave: "ncm" },
     { titulo: "O/CST", w: 0.05, chave: "origCst" },
     { titulo: "CFOP", w: 0.05, chave: "cfop" },
@@ -351,7 +358,13 @@ async function gerarDanfePdf(xmlCompleto) {
       else if (c.chave === "quantidade") texto = Number(texto).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
       else if (c.chave === "aliquotaIcms" || c.chave === "aliquotaIpi") texto = texto ? moeda(texto) : "0,00";
       else if (c.num) texto = moeda(texto);
-      pdf.font("Helvetica").fontSize(6).fillColor("#000000").text(String(texto ?? ""), cx + 2, y + 3, { width: w - 4, align: c.num ? "right" : "left" });
+      pdf.font("Helvetica").fontSize(6).fillColor("#000000").text(String(texto ?? ""), cx + 2, y + 3, {
+        width: w - 4,
+        height: alturaLinha - 4,
+        align: c.num ? "right" : "left",
+        ellipsis: true,
+        lineBreak: false,
+      });
     });
     if (temSt) {
       pdf.font("Helvetica").fontSize(5).fillColor("#555555").text(
@@ -366,12 +379,12 @@ async function gerarDanfePdf(xmlCompleto) {
   }
 
   // --- Dados adicionais ---
-  if (y + 60 > ALTURA_MAX_PAGINA) {
+  const alturaAdic = 70;
+  if (y + alturaAdic > ALTURA_MAX_PAGINA) {
     pdf.addPage();
     pagina++;
     y = MARGEM;
   }
-  const alturaAdic = 70;
   D.pdf.lineWidth(0.75).rect(x, y, LARGURA, alturaAdic).stroke();
   D.rotulo("DADOS ADICIONAIS / INFORMAÇÕES COMPLEMENTARES", x, y);
   pdf.font("Helvetica").fontSize(6.5).fillColor("#000000").text(nfe.informacoesComplementares || "", x + 4, y + 12, { width: LARGURA - 8, height: alturaAdic - 16 });

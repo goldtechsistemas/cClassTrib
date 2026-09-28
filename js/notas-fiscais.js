@@ -98,10 +98,14 @@
             })()
           : `<button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>`;
 
+        const avisoUf = emp.uf
+          ? ""
+          : `<br><span style="color:var(--amarelo, #c98a1c)" title="Não foi possível identificar a UF no certificado; a consulta à SEFAZ pode falhar até isso ser corrigido.">⚠ UF não detectada</span>`;
+
         return `
           <tr>
             <td class="mono">${esc(formatarCnpj(emp.cnpj))}</td>
-            <td>${esc(emp.razaoSocial || "—")}</td>
+            <td>${esc(emp.razaoSocial || "—")}${avisoUf}</td>
             <td>${esc(ambiente)}</td>
             <td>${validade}</td>
             <td>${esc(formatarData(emp.ultimaSincronizacao) === "—" ? "Nunca sincronizado" : formatarData(emp.ultimaSincronizacao))}</td>
@@ -353,7 +357,7 @@
       mostrarAviso("Informe a senha do certificado.", "erro");
       return;
     }
-    if (arquivo.size > 16 * 1024) {
+    if (arquivo.size > 64 * 1024) {
       mostrarAviso("Arquivo grande demais para ser um certificado A1 (.pfx) válido.", "erro");
       return;
     }

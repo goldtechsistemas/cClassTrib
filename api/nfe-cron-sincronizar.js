@@ -23,7 +23,12 @@ module.exports = async (req, res) => {
   const resultados = [];
   for (const empresa of r.rows) {
     try {
-      const resultado = await sincronizarEmpresa(empresa);
+      // Chamada desatendida (ninguém está olhando) — só manifesta
+      // automaticamente se a própria empresa ligou essa opção
+      // explicitamente (manifestacao_automatica, padrão false no banco).
+      // Manifestação é um evento oficial e irreversível junto à SEFAZ; não
+      // deve disparar sozinha sem esse consentimento explícito.
+      const resultado = await sincronizarEmpresa(empresa, { manifestarAutomaticamente: !!empresa.manifestacao_automatica });
       resultados.push({ empresaId: empresa.id, cnpj: empresa.cnpj, ...resultado });
     } catch (e) {
       console.error(`Falha ao sincronizar empresa #${empresa.id}:`, e);

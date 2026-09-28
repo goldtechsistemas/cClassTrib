@@ -1,5 +1,5 @@
 const { query } = require("./_db");
-const { exigirUsuario } = require("./_nfeHelpers");
+const { exigirUsuario, exigirEmpresaDoUsuario } = require("./_nfeHelpers");
 const { montarFiltroDocumentos } = require("./_nfeFiltros");
 const ExcelJS = require("exceljs");
 
@@ -12,16 +12,8 @@ module.exports = async (req, res) => {
   if (usuarioId == null) return;
 
   const empresaId = req.query && req.query.empresaId;
-  if (!empresaId) {
-    res.status(400).json({ ok: false, erro: "Informe a empresa." });
-    return;
-  }
-
-  const empresaCheck = await query("SELECT id, cnpj FROM nfe_empresas WHERE id = $1 AND usuario_id = $2", [empresaId, usuarioId]);
-  if (!empresaCheck.rows.length) {
-    res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
-    return;
-  }
+  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, "id, cnpj");
+  if (!empresa) return;
 
   const params = [empresaId];
   const filtro = montarFiltroDocumentos(req.query || {}, params);
@@ -69,6 +61,6 @@ module.exports = async (req, res) => {
 
   const buffer = await wb.xlsx.writeBuffer();
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  res.setHeader("Content-Disposition", `attachment; filename="notas-${empresaCheck.rows[0].cnpj}.xlsx"`);
+  res.setHeader("Content-Disposition", `attachment; filename="notas-${empresa.cnpj}.xlsx"`);
   res.status(200).end(Buffer.from(buffer));
 };

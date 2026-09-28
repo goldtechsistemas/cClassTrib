@@ -1,7 +1,6 @@
 const { query } = require("./_db");
-const { exigirUsuario } = require("./_nfeHelpers");
-const { gerarPdfResumo } = require("./_pdfResumo");
-const { gerarDanfePdf } = require("./_danfe");
+const { exigirUsuario, exigirEmpresaDoUsuario } = require("./_nfeHelpers");
+const { gerarPdfParaDocumento } = require("./_pdfResumo");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -13,16 +12,12 @@ module.exports = async (req, res) => {
 
   const empresaId = req.query && req.query.empresaId;
   const chNFe = req.query && req.query.chNFe;
-  if (!empresaId || !chNFe) {
-    res.status(400).json({ ok: false, erro: "Informe a empresa e a nota." });
+  if (!chNFe) {
+    res.status(400).json({ ok: false, erro: "Informe a nota." });
     return;
   }
-
-  const empresaCheck = await query("SELECT id FROM nfe_empresas WHERE id = $1 AND usuario_id = $2", [empresaId, usuarioId]);
-  if (!empresaCheck.rows.length) {
-    res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
-    return;
-  }
+  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, "id");
+  if (!empresa) return;
 
   const r = await query("SELECT * FROM nfe_documentos WHERE empresa_id = $1 AND ch_nfe = $2", [empresaId, chNFe]);
   if (!r.rows.length) {
@@ -30,15 +25,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const doc = r.rows[0];
-  let buffer;
-  try {
-    buffer = doc.xml_completo ? await gerarDanfePdf(doc.xml_completo) : await gerarPdfResumo(doc);
-  } catch (e) {
-    console.error(e);
-    // Se o XML completo veio incompleto/inesperado, cai para o resumo em vez de falhar o download.
-    buffer = await gerarPdfResumo(doc);
-  }
+  const buffer = await gerarPdfParaDocumento(r.rows[0]);
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="nota-${chNFe}.pdf"`);

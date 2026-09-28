@@ -22,6 +22,25 @@ async function exigirUsuario(req, res) {
   return registro.id;
 }
 
+/**
+ * Confere que a empresa existe E pertence ao usuário logado — a barreira
+ * que impede um usuário de baixar/sincronizar/excluir dados de outro. Usada
+ * por toda rota que recebe um empresaId. Em caso de falha, já escreve a
+ * resposta 404 e devolve null.
+ */
+async function exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, colunas = "*") {
+  if (!empresaId) {
+    res.status(400).json({ ok: false, erro: "Informe a empresa." });
+    return null;
+  }
+  const r = await query(`SELECT ${colunas} FROM nfe_empresas WHERE id = $1 AND usuario_id = $2`, [empresaId, usuarioId]);
+  if (!r.rows.length) {
+    res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
+    return null;
+  }
+  return r.rows[0];
+}
+
 const DIAS_ALERTA_CERTIFICADO = 30;
 
 function diasRestantesCertificado(certValidUntil) {
@@ -49,4 +68,4 @@ function empresaParaSaida(row) {
   };
 }
 
-module.exports = { exigirUsuario, empresaParaSaida };
+module.exports = { exigirUsuario, exigirEmpresaDoUsuario, empresaParaSaida };

@@ -47,4 +47,19 @@ function gerarPdfResumo(doc) {
   });
 }
 
-module.exports = { gerarPdfResumo };
+// Escolhe DANFE completo (quando já temos o XML completo) ou o resumo
+// simplificado (quando só temos o resumo) — usado tanto pelo download de
+// uma nota só quanto pelo ZIP em lote, pra não duplicar essa decisão e o
+// fallback em dois arquivos.
+async function gerarPdfParaDocumento(doc) {
+  if (!doc.xml_completo) return gerarPdfResumo(doc);
+  try {
+    const { gerarDanfePdf } = require("./_danfe");
+    return await gerarDanfePdf(doc.xml_completo);
+  } catch (e) {
+    console.error(`Falha ao gerar DANFE completo para ${doc.ch_nfe}, caindo para o resumo:`, e.message || e);
+    return gerarPdfResumo(doc);
+  }
+}
+
+module.exports = { gerarPdfResumo, gerarPdfParaDocumento };

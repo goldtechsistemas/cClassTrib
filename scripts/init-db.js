@@ -3,27 +3,10 @@
 //
 // Lê a connection string de .env.local (gerado por `vercel env pull`) — não
 // tem segredo nenhum no código, só no .env.local (que está no .gitignore).
-const fs = require("fs");
-const path = require("path");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const { Pool } = require("pg");
-
-function carregarEnvLocal() {
-  const arquivo = path.join(__dirname, "..", ".env.local");
-  if (!fs.existsSync(arquivo)) return;
-  const conteudo = fs.readFileSync(arquivo, "utf8");
-  conteudo.split("\n").forEach((linha) => {
-    const l = linha.trim();
-    if (!l || l.startsWith("#")) return;
-    const idx = l.indexOf("=");
-    if (idx === -1) return;
-    const chave = l.slice(0, idx).trim();
-    let valor = l.slice(idx + 1).trim();
-    if (valor.startsWith('"') && valor.endsWith('"')) valor = valor.slice(1, -1);
-    if (!(chave in process.env)) process.env[chave] = valor;
-  });
-}
+const { carregarEnvLocal } = require("./_env");
 
 async function main() {
   carregarEnvLocal();
@@ -128,7 +111,15 @@ async function main() {
       docs_novos INTEGER NOT NULL DEFAULT 0
     );
   `);
-  console.log("Tabelas OK.");
+
+  // Índices — Postgres NÃO indexa colunas de chave estrangeira sozinho, e
+  // toda consulta do módulo filtra por empresa_id; sem isso vira table scan
+  // conforme as tabelas crescem.
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_documentos_empresa_dhemi ON nfe_documentos (empresa_id, dh_emi DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_documentos_pendentes ON nfe_documentos (empresa_id, tipo, manifestacao);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_eventos_empresa ON nfe_eventos (empresa_id);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_sync_logs_empresa ON nfe_sync_logs (empresa_id, iniciado_em DESC);`);
+  console.log("Tabelas e índices OK.");
 
   const emailAdmin = process.argv[2] || "goldtechsistemas@gmail.com";
   const { rows } = await pool.query("SELECT id FROM admins WHERE email = $1", [emailAdmin]);

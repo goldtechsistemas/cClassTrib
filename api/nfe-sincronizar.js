@@ -25,7 +25,9 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const resultado = await sincronizarEmpresa(empresa);
+  // Clique manual do próprio usuário — ele pediu explicitamente que a
+  // manifestação automática aconteça junto (ver conversa/decisão do produto).
+  const resultado = await sincronizarEmpresa(empresa, { manifestarAutomaticamente: true });
   if (!resultado.ok) {
     res.status(resultado.aguardando ? 429 : 502).json({ ok: false, erro: resultado.erro });
     return;
