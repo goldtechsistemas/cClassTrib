@@ -142,11 +142,19 @@
         mostrarAviso(dados.erro || "Erro ao sincronizar com a SEFAZ.", "erro");
         return;
       }
-      const msg =
+      const partes = [];
+      partes.push(
         dados.docsNovos > 0
-          ? `${dados.docsNovos} nota(s) nova(s) encontrada(s) para ${nomeEmpresa}.`
-          : `Sincronizado — nenhuma nota nova (SEFAZ: "${dados.xMotivo}").`;
-      mostrarAviso(msg + (dados.temMais ? " Há mais notas disponíveis — sincronize de novo para continuar." : ""), "ok");
+          ? `${dados.docsNovos} nota(s)/evento(s) novo(s) para ${nomeEmpresa}.`
+          : `Nenhuma nota nova (SEFAZ: "${dados.xMotivo}").`
+      );
+      if (dados.manifestadas > 0) {
+        partes.push(`Ciência da Operação dada automaticamente em ${dados.manifestadas} nota(s) — o XML completo delas deve aparecer nesta mesma sincronização ou na próxima.`);
+      }
+      if (dados.atingiuLimiteCiclos) {
+        partes.push("Ainda há mais notas pendentes (o lote era grande) — sincronize de novo para continuar de onde parou.");
+      }
+      mostrarAviso(partes.join(" "), "ok");
       carregarEmpresas();
       if (empresaSelecionadaId === Number(empresaId)) carregarNotas(empresaId, nomeEmpresa);
     } catch (e) {

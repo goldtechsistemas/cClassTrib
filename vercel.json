@@ -4,5 +4,9 @@
       "path": "/api/nfe-cron-sincronizar",
       "schedule": "0 9 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/nfe-sincronizar.js": { "maxDuration": 60 },
+    "api/nfe-cron-sincronizar.js": { "maxDuration": 60 }
+  }
 }

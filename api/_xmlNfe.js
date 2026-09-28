@@ -73,19 +73,43 @@ function interpretarXmlCompleto(xmlTexto) {
       codigo: txt(prod.cProd),
       descricao: txt(prod.xProd),
       ncm: txt(prod.NCM),
+      origem: txt(icms.orig),
+      cst: txt(icms.CST || icms.CSOSN),
       cfop: txt(prod.CFOP),
       unidade: txt(prod.uCom),
       quantidade: num(prod.qCom),
       valorUnitario: num(prod.vUnCom),
       valorTotal: num(prod.vProd),
-      cst: txt(icms.CST || icms.CSOSN),
       baseIcms: num(icms.vBC),
       aliquotaIcms: num(icms.pICMS),
       valorIcms: num(icms.vICMS),
+      baseIcmsSt: num(icms.vBCST),
+      aliquotaIcmsSt: num(icms.pICMSST),
+      valorIcmsSt: num(icms.vICMSST),
       aliquotaIpi: num(ipiTrib.pIPI),
       valorIpi: num(ipiTrib.vIPI),
     };
   });
+
+  const cobr = infNFe.cobr || {};
+  const fat = cobr.fat || null;
+  const duplicatas = paraArray(cobr.dup).map((d) => ({
+    numero: txt(d.nDup),
+    vencimento: d.dVenc ? new Date(`${d.dVenc}T00:00:00`) : null,
+    valor: num(d.vDup),
+  }));
+
+  const transp = infNFe.transp || {};
+  const transporta = transp.transporta || {};
+  const volumes = paraArray(transp.vol).map((v) => ({
+    quantidade: txt(v.qVol),
+    especie: txt(v.esp),
+    marca: txt(v.marca),
+    numeracao: txt(v.nVol),
+    pesoBruto: txt(v.pesoB),
+    pesoLiquido: txt(v.pesoL),
+  }));
+  const MOD_FRETE = { 0: "0 - Emitente", 1: "1 - Destinatário", 2: "2 - Terceiros", 3: "3 - Próprio por conta remetente", 4: "4 - Próprio por conta destinatário", 9: "9 - Sem frete" };
 
   return {
     chave: (infNFe["@_Id"] || "").replace(/^NFe/, ""),
@@ -102,6 +126,7 @@ function interpretarXmlCompleto(xmlTexto) {
       nome: txt(emit.xNome),
       fantasia: txt(emit.xFant),
       ie: txt(emit.IE),
+      ieSt: txt(emit.IEST),
       endereco: extrairEndereco(emit.enderEmit),
     },
     destinatario: {
@@ -113,11 +138,32 @@ function interpretarXmlCompleto(xmlTexto) {
 
     itens,
 
+    fatura: fat ? { numero: txt(fat.nFat), valorOriginal: num(fat.vOrig), valorDesconto: num(fat.vDesc), valorLiquido: num(fat.vLiq) } : null,
+    duplicatas,
+
+    transportador: {
+      modalidadeFrete: MOD_FRETE[String(transp.modFrete)] || txt(transp.modFrete),
+      nome: txt(transporta.xNome),
+      cnpj: txt(transporta.CNPJ || transporta.CPF),
+      ie: txt(transporta.IE),
+      endereco: txt(transporta.xEnder),
+      municipio: txt(transporta.xMun),
+      uf: txt(transporta.UF),
+      volumes,
+    },
+
     totais: {
       baseIcms: num(total.vBC),
       valorIcms: num(total.vICMS),
       baseIcmsSt: num(total.vBCST),
       valorIcmsSt: num(total.vST),
+      valorImportacao: num(total.vII),
+      valorCofins: num(total.vCOFINS),
+      valorPis: num(total.vPIS),
+      valorIcmsUfRemetente: num(total.vICMSUFRemet),
+      valorIcmsUfDestino: num(total.vICMSUFDest),
+      valorFcp: num(total.vFCP),
+      valorTotalTributos: num(total.vTotTrib),
       valorProdutos: num(total.vProd),
       valorFrete: num(total.vFrete),
       valorSeguro: num(total.vSeg),
