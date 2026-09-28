@@ -1,7 +1,7 @@
-const { query } = require("./_db");
-const { exigirUsuario, exigirEmpresaDoUsuario } = require("./_nfeHelpers");
-const { montarFiltroDocumentos } = require("./_nfeFiltros");
-const { gerarPdfParaDocumento } = require("./_pdfResumo");
+const { query } = require("../_db");
+const { exigirUsuario, exigirEmpresaDoUsuario } = require("../_nfeHelpers");
+const { montarFiltroDocumentos } = require("../_nfeFiltros");
+const { gerarPdfParaDocumento } = require("../_pdfResumo");
 const JSZip = require("jszip");
 
 const CONCORRENCIA = 5; // gera até 5 PDFs em paralelo (CPU-bound: barcode + layout) em vez de um por um

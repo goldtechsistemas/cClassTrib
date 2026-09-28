@@ -1,7 +1,7 @@
-const { query } = require("./_db");
-const { exigirUsuario } = require("./_nfeHelpers");
-const { corpoJson } = require("./_lib");
-const { sincronizarEmpresa } = require("./_nfeSync");
+const { query } = require("../_db");
+const { exigirUsuario } = require("../_nfeHelpers");
+const { corpoJson } = require("../_lib");
+const { sincronizarEmpresa } = require("../_nfeSync");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {

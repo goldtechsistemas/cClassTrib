@@ -1,6 +1,6 @@
-const { query } = require("./_db");
-const { exigirUsuario, exigirEmpresaDoUsuario } = require("./_nfeHelpers");
-const { montarFiltroDocumentos } = require("./_nfeFiltros");
+const { query } = require("../_db");
+const { exigirUsuario, exigirEmpresaDoUsuario } = require("../_nfeHelpers");
+const { montarFiltroDocumentos } = require("../_nfeFiltros");
 const JSZip = require("jszip");
 
 module.exports = async (req, res) => {

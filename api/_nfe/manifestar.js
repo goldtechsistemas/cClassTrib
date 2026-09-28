@@ -1,9 +1,9 @@
-const { query } = require("./_db");
-const { exigirUsuario } = require("./_nfeHelpers");
-const { corpoJson } = require("./_lib");
-const { decryptSecret } = require("./_crypto");
-const { extrairParaMtls } = require("./_certUtils");
-const { enviarManifestacaoCiencia, ErroSefaz } = require("./_sefazClient");
+const { query } = require("../_db");
+const { exigirUsuario } = require("../_nfeHelpers");
+const { corpoJson } = require("../_lib");
+const { decryptSecret } = require("../_crypto");
+const { extrairParaMtls } = require("../_certUtils");
+const { enviarManifestacaoCiencia, ErroSefaz } = require("../_sefazClient");
 
 // Rota chamada pelo botao "Dar ciencia" de uma nota especifica na tela.
 module.exports = async (req, res) => {

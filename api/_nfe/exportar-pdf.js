@@ -1,6 +1,6 @@
-const { query } = require("./_db");
-const { exigirUsuario, exigirEmpresaDoUsuario } = require("./_nfeHelpers");
-const { gerarPdfParaDocumento } = require("./_pdfResumo");
+const { query } = require("../_db");
+const { exigirUsuario, exigirEmpresaDoUsuario } = require("../_nfeHelpers");
+const { gerarPdfParaDocumento } = require("../_pdfResumo");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {

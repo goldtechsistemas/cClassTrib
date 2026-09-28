@@ -1,8 +1,8 @@
-const { query } = require("./_db");
-const { exigirUsuario, empresaParaSaida } = require("./_nfeHelpers");
-const { carregarCertificado, CertificadoInvalido } = require("./_certUtils");
-const { encryptSecret } = require("./_crypto");
-const { corpoJson } = require("./_lib");
+const { query } = require("../_db");
+const { exigirUsuario, empresaParaSaida } = require("../_nfeHelpers");
+const { carregarCertificado, CertificadoInvalido } = require("../_certUtils");
+const { encryptSecret } = require("../_crypto");
+const { corpoJson } = require("../_lib");
 
 // Certificados A1 costumam ter uns 4-8KB, mas alguns emissores empacotam a
 // cadeia completa da AC dentro do .pfx e passam disso — 64KB cobre esse caso

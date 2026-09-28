@@ -39,17 +39,41 @@ function lerCorpoJson(req) {
   });
 }
 
+// Espelha os "rewrites" do vercel.json (sem o prefixo /api/) — lá é o que
+// vale em produção, aqui é só pra simular localmente sem `vercel dev`. Se
+// mudar um, muda o outro também.
+const REESCRITAS = {
+  "nfe-empresas": { rota: "empresas" },
+  "nfe-certificado": { rota: "certificado" },
+  "nfe-empresa-excluir": { rota: "empresa-excluir" },
+  "nfe-sincronizar": { rota: "sincronizar" },
+  "nfe-cron-sincronizar": { rota: "cron-sincronizar" },
+  "nfe-manifestar": { rota: "manifestar" },
+  "nfe-documentos": { rota: "documentos" },
+  "nfe-exportar-xml": { rota: "exportar-xml" },
+  "nfe-exportar-excel": { rota: "exportar-excel" },
+  "nfe-exportar-pdf-lote": { rota: "exportar-pdf-lote" },
+  "nfe-exportar-pdf": { rota: "exportar-pdf" },
+};
+
 function resolverHandler(pathname) {
+  if (REESCRITAS[pathname]) {
+    return { arquivo: path.join(ROOT, "api", "nfe.js"), params: REESCRITAS[pathname] };
+  }
+
   const partes = pathname.split("/").filter(Boolean);
   const candidatoExato = path.join(ROOT, "api", ...partes) + ".js";
   if (fs.existsSync(candidatoExato)) {
     return { arquivo: candidatoExato, params: {} };
   }
   if (partes.length) {
-    const semUltimo = partes.slice(0, -1);
-    const candidatoDinamico = path.join(ROOT, "api", ...semUltimo, "[id].js");
-    if (fs.existsSync(candidatoDinamico)) {
-      return { arquivo: candidatoDinamico, params: { id: partes[partes.length - 1] } };
+    const dirPai = path.join(ROOT, "api", ...partes.slice(0, -1));
+    if (fs.existsSync(dirPai)) {
+      const arquivoDinamico = fs.readdirSync(dirPai).find((f) => /^\[.+\]\.js$/.test(f));
+      if (arquivoDinamico) {
+        const nomeParam = arquivoDinamico.slice(1, arquivoDinamico.indexOf("]"));
+        return { arquivo: path.join(dirPai, arquivoDinamico), params: { [nomeParam]: partes[partes.length - 1] } };
+      }
     }
   }
   return null;

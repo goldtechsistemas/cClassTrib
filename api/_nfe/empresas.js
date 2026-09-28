@@ -1,5 +1,5 @@
-const { query } = require("./_db");
-const { exigirUsuario, empresaParaSaida } = require("./_nfeHelpers");
+const { query } = require("../_db");
+const { exigirUsuario, empresaParaSaida } = require("../_nfeHelpers");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {

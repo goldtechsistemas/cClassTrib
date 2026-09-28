@@ -1,5 +1,5 @@
-const { query } = require("./_db");
-const { sincronizarEmpresa } = require("./_nfeSync");
+const { query } = require("../_db");
+const { sincronizarEmpresa } = require("../_nfeSync");
 
 // Disparado pelo Vercel Cron (vercel.json) — varre todas as empresas com
 // certificado cadastrado cuja janela de espera da SEFAZ (se houver) já

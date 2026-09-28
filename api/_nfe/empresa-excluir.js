@@ -1,6 +1,6 @@
-const { query } = require("./_db");
-const { exigirUsuario } = require("./_nfeHelpers");
-const { corpoJson } = require("./_lib");
+const { query } = require("../_db");
+const { exigirUsuario } = require("../_nfeHelpers");
+const { corpoJson } = require("../_lib");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
