@@ -17,8 +17,8 @@ function gerarPdfResumo(doc) {
       .fontSize(9)
       .fillColor("#888888")
       .text(
-        "Este documento NÃO é o DANFE oficial. É um resumo gerado pelo cClassTrib a partir dos dados recebidos " +
-          "da SEFAZ. Para o DANFE oficial, utilize o XML completo (quando disponível) em um emissor/visualizador homologado.",
+        "Esta nota ainda não tem o XML completo (só o resumo) — por isso este PDF é um resumo, não o DANFE. " +
+          'Dê "Ciência da Operação" nesta nota e sincronize de novo: quando o XML completo chegar, o download passa a trazer o DANFE completo automaticamente.',
         { align: "center" }
       );
     pdf.moveDown(2);

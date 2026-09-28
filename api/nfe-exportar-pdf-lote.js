@@ -2,6 +2,7 @@ const { query } = require("./_db");
 const { exigirUsuario } = require("./_nfeHelpers");
 const { montarFiltroDocumentos } = require("./_nfeFiltros");
 const { gerarPdfResumo } = require("./_pdfResumo");
+const { gerarDanfePdf } = require("./_danfe");
 const JSZip = require("jszip");
 
 module.exports = async (req, res) => {
@@ -37,7 +38,13 @@ module.exports = async (req, res) => {
 
   const zip = new JSZip();
   for (const doc of r.rows) {
-    const buffer = await gerarPdfResumo(doc);
+    let buffer;
+    try {
+      buffer = doc.xml_completo ? await gerarDanfePdf(doc.xml_completo) : await gerarPdfResumo(doc);
+    } catch (e) {
+      console.error(e);
+      buffer = await gerarPdfResumo(doc);
+    }
     zip.file(`${doc.ch_nfe}.pdf`, buffer);
   }
   const buffer = await zip.generateAsync({ type: "nodebuffer" });

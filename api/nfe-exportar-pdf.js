@@ -1,6 +1,7 @@
 const { query } = require("./_db");
 const { exigirUsuario } = require("./_nfeHelpers");
 const { gerarPdfResumo } = require("./_pdfResumo");
+const { gerarDanfePdf } = require("./_danfe");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -29,7 +30,16 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const buffer = await gerarPdfResumo(r.rows[0]);
+  const doc = r.rows[0];
+  let buffer;
+  try {
+    buffer = doc.xml_completo ? await gerarDanfePdf(doc.xml_completo) : await gerarPdfResumo(doc);
+  } catch (e) {
+    console.error(e);
+    // Se o XML completo veio incompleto/inesperado, cai para o resumo em vez de falhar o download.
+    buffer = await gerarPdfResumo(doc);
+  }
+
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="nota-${chNFe}.pdf"`);
   res.status(200).end(buffer);
