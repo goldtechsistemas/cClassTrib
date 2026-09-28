@@ -27,6 +27,24 @@ function extrairCnpjDoSubject(cert) {
   return m ? m[0] : null;
 }
 
+// No padrao ICP-Brasil para e-CNPJ, o CN vem como "RAZAO SOCIAL:CNPJ" — a
+// razao social "de verdade" e so a parte antes dos dois-pontos, nao o
+// Subject inteiro (que tambem tem C=, O=, OU=, ST=, L= etc., irrelevantes
+// para exibir como nome da empresa).
+function extrairRazaoSocial(cert) {
+  const cn = cert.subject.getField("CN");
+  if (!cn || !cn.value) return null;
+  const idx = cn.value.indexOf(":");
+  const nome = (idx === -1 ? cn.value : cn.value.slice(0, idx)).trim();
+  return nome || null;
+}
+
+function extrairUf(cert) {
+  const campo = cert.subject.getField("ST") || cert.subject.getField("stateOrProvinceName");
+  const uf = campo && campo.value ? String(campo.value).trim().toUpperCase() : null;
+  return uf && /^[A-Z]{2}$/.test(uf) ? uf : null;
+}
+
 // Tentativa best-effort — a estrutura interna do node-forge para otherName
 // (tipo 0 do SAN) não é totalmente documentada; qualquer erro aqui é
 // silencioso e cai para a extração pelo CN (extrairCnpjDoSubject).
@@ -108,6 +126,8 @@ function carregarCertificado(pfxBuffer, senha) {
 
   return {
     cnpj,
+    razaoSocial: extrairRazaoSocial(cert) || cnpj,
+    uf: extrairUf(cert),
     subject: cert.subject.attributes.map((a) => `${a.shortName || a.name}=${a.value}`).join(", "),
     validFrom: cert.validity.notBefore,
     validUntil: cert.validity.notAfter,

@@ -78,7 +78,13 @@ async function tratarApi(req, res, pathname) {
     return;
   }
 
-  delete require.cache[require.resolve(encontrado.arquivo)];
+  // Limpa do cache o handler E qualquer módulo api/_*.js que ele importa
+  // (senão uma edição num helper compartilhado só valeria depois de
+  // reiniciar o processo inteiro).
+  const pastaApi = path.join(ROOT, "api");
+  Object.keys(require.cache)
+    .filter((p) => p.startsWith(pastaApi))
+    .forEach((p) => delete require.cache[p]);
   const handler = require(encontrado.arquivo);
   req.body = ["POST", "PUT", "PATCH"].includes(req.method) ? await lerCorpoJson(req) : {};
   req.query = encontrado.params;

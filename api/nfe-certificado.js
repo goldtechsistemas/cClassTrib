@@ -63,18 +63,18 @@ module.exports = async (req, res) => {
       }
       const r = await query(
         `UPDATE nfe_empresas
-         SET cnpj = $1, cert_encrypted = $2, cert_password_encrypted = $3, cert_valid_until = $4, cert_subject = $5
-         WHERE id = $6
+         SET cnpj = $1, razao_social = $2, uf = $3, cert_encrypted = $4, cert_password_encrypted = $5, cert_valid_until = $6, cert_subject = $7
+         WHERE id = $8
          RETURNING *`,
-        [info.cnpj, certEncrypted, senhaEncrypted, info.validUntil, info.subject, empresaId]
+        [info.cnpj, info.razaoSocial.slice(0, 255), info.uf, certEncrypted, senhaEncrypted, info.validUntil, info.subject, empresaId]
       );
       row = r.rows[0];
     } else {
       const r = await query(
-        `INSERT INTO nfe_empresas (usuario_id, cnpj, razao_social, cert_encrypted, cert_password_encrypted, cert_valid_until, cert_subject)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO nfe_empresas (usuario_id, cnpj, razao_social, uf, cert_encrypted, cert_password_encrypted, cert_valid_until, cert_subject)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [usuarioId, info.cnpj, info.subject.slice(0, 255), certEncrypted, senhaEncrypted, info.validUntil, info.subject]
+        [usuarioId, info.cnpj, info.razaoSocial.slice(0, 255), info.uf, certEncrypted, senhaEncrypted, info.validUntil, info.subject]
       );
       row = r.rows[0];
     }

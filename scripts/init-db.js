@@ -64,6 +64,7 @@ async function main() {
       usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
       cnpj TEXT NOT NULL,
       razao_social TEXT NOT NULL DEFAULT '',
+      uf CHAR(2),
       cert_encrypted TEXT,
       cert_password_encrypted TEXT,
       cert_valid_until TIMESTAMPTZ,
@@ -77,6 +78,10 @@ async function main() {
       UNIQUE (usuario_id, cnpj)
     );
   `);
+  // ALTER idempotente — cobre bancos onde nfe_empresas já existia antes da
+  // coluna uf ser adicionada (o CREATE TABLE IF NOT EXISTS acima não altera
+  // uma tabela já existente).
+  await pool.query(`ALTER TABLE nfe_empresas ADD COLUMN IF NOT EXISTS uf CHAR(2);`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS nfe_documentos (
       id SERIAL PRIMARY KEY,

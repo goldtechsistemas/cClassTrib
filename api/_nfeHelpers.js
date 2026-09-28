@@ -27,6 +27,7 @@ function empresaParaSaida(row) {
     id: row.id,
     cnpj: row.cnpj,
     razaoSocial: row.razao_social,
+    uf: row.uf,
     ambiente: row.ambiente,
     temCertificado: !!row.cert_encrypted,
     certValidUntil: row.cert_valid_until,
