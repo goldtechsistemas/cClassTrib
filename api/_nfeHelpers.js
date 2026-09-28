@@ -22,7 +22,16 @@ async function exigirUsuario(req, res) {
   return registro.id;
 }
 
+const DIAS_ALERTA_CERTIFICADO = 30;
+
+function diasRestantesCertificado(certValidUntil) {
+  if (!certValidUntil) return null;
+  const ms = new Date(certValidUntil).getTime() - Date.now();
+  return Math.floor(ms / (24 * 60 * 60 * 1000));
+}
+
 function empresaParaSaida(row) {
+  const diasRestantes = diasRestantesCertificado(row.cert_valid_until);
   return {
     id: row.id,
     cnpj: row.cnpj,
@@ -31,7 +40,11 @@ function empresaParaSaida(row) {
     ambiente: row.ambiente,
     temCertificado: !!row.cert_encrypted,
     certValidUntil: row.cert_valid_until,
+    certDiasRestantes: diasRestantes,
+    certVencido: diasRestantes != null && diasRestantes < 0,
+    certPrestesAVencer: diasRestantes != null && diasRestantes >= 0 && diasRestantes <= DIAS_ALERTA_CERTIFICADO,
     ultimaSincronizacao: row.ultima_sincronizacao,
+    proximaConsultaPermitidaEm: row.proxima_consulta_permitida_em,
     manifestacaoAutomatica: row.manifestacao_automatica,
   };
 }

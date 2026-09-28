@@ -18,6 +18,9 @@
   const notasVazio = document.getElementById("notas-vazio");
   const notasWrap = document.getElementById("notas-wrap");
   const notasBody = document.getElementById("notas-body");
+  const notasAcoesLote = document.getElementById("notas-acoes-lote");
+  const linkExportarXml = document.getElementById("link-exportar-xml");
+  const linkExportarExcel = document.getElementById("link-exportar-excel");
 
   let empresaSelecionadaId = null;
   let empresaSelecionadaNome = "";
@@ -69,18 +72,27 @@
     corpoTabela.innerHTML = empresas
       .map((emp) => {
         const ambiente = emp.ambiente === 1 ? "Produção" : "Homologação";
-        const validade = emp.certValidUntil
-          ? `Válido até ${formatarData(emp.certValidUntil)}`
-          : "Sem certificado";
+        let validade = emp.certValidUntil ? `Válido até ${formatarData(emp.certValidUntil)}` : "Sem certificado";
+        if (emp.certVencido) {
+          validade = `<span style="color:var(--vermelho)">⚠ Vencido em ${formatarData(emp.certValidUntil)}</span>`;
+        } else if (emp.certPrestesAVencer) {
+          validade = `<span style="color:var(--amarelo, #c98a1c)">⚠ Vence em ${emp.certDiasRestantes} dia(s) (${formatarData(emp.certValidUntil)})</span>`;
+        }
+
+        const aguardando = emp.proximaConsultaPermitidaEm && new Date(emp.proximaConsultaPermitidaEm) > new Date();
+        const botaoSincronizar = aguardando
+          ? `<button class="btn secondary btn-sm" disabled title="SEFAZ pede para aguardar até ${new Date(emp.proximaConsultaPermitidaEm).toLocaleString("pt-BR")}">Aguardando SEFAZ</button>`
+          : `<button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>`;
+
         return `
           <tr>
             <td class="mono">${esc(formatarCnpj(emp.cnpj))}</td>
             <td>${esc(emp.razaoSocial || "—")}</td>
             <td>${esc(ambiente)}</td>
-            <td>${esc(validade)}</td>
+            <td>${validade}</td>
             <td>${esc(formatarData(emp.ultimaSincronizacao) === "—" ? "Nunca sincronizado" : formatarData(emp.ultimaSincronizacao))}</td>
             <td>
-              <button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>
+              ${botaoSincronizar}
               <button class="btn secondary btn-sm btn-ver-notas" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Ver notas</button>
               <button class="btn secondary btn-sm btn-excluir-empresa" data-id="${esc(emp.id)}" type="button">Excluir</button>
             </td>
@@ -155,16 +167,21 @@
     if (!notas.length) {
       notasVazio.style.display = "";
       notasWrap.style.display = "none";
+      notasAcoesLote.style.display = "none";
       return;
     }
     notasVazio.style.display = "none";
     notasWrap.style.display = "";
+    notasAcoesLote.style.display = "";
+    linkExportarXml.href = `/api/nfe-exportar-xml?empresaId=${encodeURIComponent(empresaId)}`;
+    linkExportarExcel.href = `/api/nfe-exportar-excel?empresaId=${encodeURIComponent(empresaId)}`;
     notasBody.innerHTML = notas
       .map((n) => {
         const acaoManifestacao =
           n.manifestacao === "ciencia"
             ? "Ciência dada"
             : `<button class="btn secondary btn-sm btn-manifestar" data-ch-nfe="${esc(n.chNFe)}" type="button">Dar ciência</button>`;
+        const linkPdf = `/api/nfe-exportar-pdf?empresaId=${encodeURIComponent(empresaId)}&chNFe=${encodeURIComponent(n.chNFe)}`;
         return `
           <tr>
             <td class="mono">${esc(n.numero || "—")}${n.serie ? ` (série ${esc(n.serie)})` : ""}</td>
@@ -176,6 +193,7 @@
             <td>${esc(n.situacao || "—")}</td>
             <td>${esc(n.tipo === "completa" ? "XML completo" : "Resumo")}</td>
             <td>${acaoManifestacao}</td>
+            <td><a class="btn secondary btn-sm" href="${linkPdf}" target="_blank" rel="noopener">Baixar PDF</a></td>
           </tr>`;
       })
       .join("");

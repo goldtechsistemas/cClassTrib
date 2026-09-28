@@ -13,13 +13,14 @@
   <main class="container">
     <section class="hero">
       <h1>Notas Fiscais de Compra</h1>
-      <p>Cadastre o certificado digital A1 da sua empresa para, nas próximas fases, buscar automaticamente na SEFAZ as NF-e emitidas contra o seu CNPJ (notas de compra).</p>
+      <p>Cadastre o certificado digital A1 da sua empresa para buscar automaticamente na SEFAZ as NF-e emitidas contra o seu CNPJ (notas de compra).</p>
     </section>
 
     <div class="aviso-legal">
-      <strong>⚠ Módulo em construção (Fase 2):</strong> a sincronização consulta a SEFAZ de <strong>produção</strong> —
-      são notas fiscais reais. Notas que chegam só como "resumo" ainda não trazem o XML completo nem o PDF (DANFE) —
-      isso depende da manifestação do destinatário, prevista para a próxima fase.
+      <strong>⚠ Ambiente de produção:</strong> a sincronização consulta a SEFAZ de <strong>produção</strong> — são notas
+      fiscais reais, vinculadas ao seu CNPJ. Notas que chegam só como "resumo" não trazem o XML completo nem itens
+      detalhados — clique em "Dar ciência" na nota e sincronize de novo para tentar obter o XML completo. O PDF
+      disponível para download é um <strong>resumo simplificado</strong> gerado pelo site, não o DANFE oficial.
     </div>
 
     <div id="aviso-nfe"></div>
@@ -63,6 +64,10 @@
     <section id="notas-secao" style="display:none">
       <h2 class="section-title" id="notas-titulo">Notas fiscais</h2>
       <div id="notas-vazio" class="hint" style="display:none;">Nenhuma nota encontrada ainda para esta empresa. Clique em "Sincronizar agora".</div>
+      <div id="notas-acoes-lote" class="field-actions" style="display:none;margin-bottom:12px;">
+        <a class="btn secondary btn-sm" id="link-exportar-xml" href="#" target="_blank" rel="noopener">Baixar XMLs (ZIP)</a>
+        <a class="btn secondary btn-sm" id="link-exportar-excel" href="#" target="_blank" rel="noopener">Baixar Excel</a>
+      </div>
       <div class="table-wrap" id="notas-wrap" style="display:none">
         <table>
           <thead>
@@ -76,6 +81,7 @@
               <th>Situação</th>
               <th>Tipo</th>
               <th>Manifestação</th>
+              <th>PDF</th>
             </tr>
           </thead>
           <tbody id="notas-body"></tbody>
