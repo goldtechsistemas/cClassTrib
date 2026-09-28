@@ -5,7 +5,14 @@
   "description": "Site do cClassTrib (estático) + API serverless (Vercel Functions) para login/cadastro e painel admin.",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "bwip-js": "^4.11.4",
+    "exceljs": "^4.4.0",
+    "fast-xml-parser": "^5.11.1",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1"
+    "jszip": "^3.10.2",
+    "node-forge": "^1.4.0",
+    "pdfkit": "^0.20.2",
+    "pg": "^8.13.1",
+    "xml-crypto": "^6.3.2"
   }
 }
