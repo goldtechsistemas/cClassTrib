@@ -29,7 +29,14 @@ const ENDPOINTS_EVENTO = {
 };
 
 const SOAP_ACTION = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
-const SOAP_ACTION_EVENTO = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEvento";
+// O Ambiente Nacional expõe a Manifestação do Destinatário com uma action
+// diferente da usada pelas SEFAZ estaduais de verdade: "nfeRecepcaoEventoNF"
+// (com sufixo "NF"), não "nfeRecepcaoEvento" — confirmado por relatos de
+// quem integra com o AN (ex.: grupo nfephp) e pela resposta real do serviço,
+// que devolve o body como "nfeRecepcaoEventoNFResult". Mandar a action padrão
+// (sem "NF") faz o AN devolver "Unable to handle request. The action ... was
+// not recognized." mesmo com o host certo.
+const SOAP_ACTION_EVENTO = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEventoNF";
 
 // Código IBGE da UF — usado em cUFAutor (UF da base do CNPJ consultante).
 const UF_PARA_CODIGO = {
@@ -347,18 +354,20 @@ function assinarEvento(xmlEvento, certPem, keyPem) {
 }
 
 function montarEnvelopeEvento({ idLote, eventoAssinadoXml }) {
+  // Ao contrário do distDFeInt (que embrulha nfeDadosMsg dentro de um elemento
+  // com o nome da operação), o serviço de eventos do AN espera nfeDadosMsg
+  // direto como filho do Body — sem o wrapper extra — combinando com a
+  // SOAP_ACTION_EVENTO "nfeRecepcaoEventoNF" acima.
   return (
     `<?xml version="1.0" encoding="utf-8"?>` +
     `<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">` +
     `<soap12:Body>` +
-    `<nfeRecepcaoEvento xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4">` +
-    `<nfeDadosMsg>` +
+    `<nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4">` +
     `<envEvento xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.00">` +
     `<idLote>${idLote}</idLote>` +
     eventoAssinadoXml +
     `</envEvento>` +
     `</nfeDadosMsg>` +
-    `</nfeRecepcaoEvento>` +
     `</soap12:Body>` +
     `</soap12:Envelope>`
   );
@@ -376,8 +385,10 @@ function parsearRespostaEvento(xmlTexto) {
   if (body && body.Fault) {
     throw new ErroSefaz(`SEFAZ retornou um erro SOAP: ${extrairMotivoFault(body.Fault)}`);
   }
-  const result = body && body.nfeRecepcaoEventoResponse && body.nfeRecepcaoEventoResponse.nfeRecepcaoEventoResult;
-  const ret = result && result.retEnvEvento;
+  // Resposta também é "bare": vem como nfeRecepcaoEventoNFResult direto no
+  // Body (sem um wrapper "...Response" por fora), espelhando a mesma
+  // convenção sem wrapper da requisição.
+  const ret = body && body.nfeRecepcaoEventoNFResult && body.nfeRecepcaoEventoNFResult.retEnvEvento;
   if (!ret) throw new ErroSefaz("Resposta da SEFAZ em formato inesperado (retEnvEvento não encontrado).");
 
   const retEventoBruto = ret.retEvento;
@@ -399,6 +410,12 @@ function parsearRespostaEvento(xmlTexto) {
 // verdade, é a confirmação de que a manifestação já existe.
 const CSTAT_DUPLICIDADE_EVENTO = "573";
 
+// Código fixo do "órgão" de recepção quando o evento é enviado ao Ambiente
+// Nacional (NT 2020.001, campo cOrgao do evento de Manifestação do
+// Destinatário): 91 = Ambiente Nacional. Não é o código IBGE da UF da
+// empresa — usar a UF ali é rejeitado/mal roteado pelo AN.
+const CORGAO_AMBIENTE_NACIONAL = 91;
+
 /**
  * Envia o evento 210210 (Ciência da Operação) para uma NF-e específica.
  *
@@ -410,10 +427,9 @@ const CSTAT_DUPLICIDADE_EVENTO = "573";
  *
  * @returns {{cStat: string, xMotivo: string, sucesso: boolean, jaManifestada: boolean}}
  */
-async function enviarManifestacaoCiencia({ ambiente, uf, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1 }) {
+async function enviarManifestacaoCiencia({ ambiente, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1 }) {
   const url = ENDPOINTS_EVENTO[ambiente] || ENDPOINTS_EVENTO[2];
-  const cOrgao = UF_PARA_CODIGO[uf] || UF_PARA_CODIGO.DF;
-  const { xml } = montarXmlEvento({ tpAmb: ambiente, cOrgao, cnpj, chNFe, tpEvento: 210210, nSeqEvento });
+  const { xml } = montarXmlEvento({ tpAmb: ambiente, cOrgao: CORGAO_AMBIENTE_NACIONAL, cnpj, chNFe, tpEvento: 210210, nSeqEvento });
   const eventoAssinado = assinarEvento(xml, certPem, keyPem);
   const idLote = String(Date.now()).slice(-15).padStart(15, "0");
   const envelope = montarEnvelopeEvento({ idLote, eventoAssinadoXml: eventoAssinado });
