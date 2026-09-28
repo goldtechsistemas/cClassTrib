@@ -17,8 +17,9 @@
     </section>
 
     <div class="aviso-legal">
-      <strong>⚠ Módulo em construção (Fase 1):</strong> por enquanto é possível cadastrar a empresa e o certificado
-      (guardado criptografado) e ver a lista. A busca das notas na SEFAZ ainda não foi implementada — é a próxima etapa.
+      <strong>⚠ Módulo em construção (Fase 2):</strong> a sincronização já consulta a SEFAZ de verdade (Ambiente Nacional,
+      homologação por padrão). Notas que chegam só como "resumo" ainda não trazem o XML completo nem o PDF (DANFE) —
+      isso depende da manifestação do destinatário, prevista para a próxima fase.
     </div>
 
     <div id="aviso-nfe"></div>
@@ -55,6 +56,28 @@
             </tr>
           </thead>
           <tbody id="empresas-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="notas-secao" style="display:none">
+      <h2 class="section-title" id="notas-titulo">Notas fiscais</h2>
+      <div id="notas-vazio" class="hint" style="display:none;">Nenhuma nota encontrada ainda para esta empresa. Clique em "Sincronizar agora".</div>
+      <div class="table-wrap" id="notas-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Nº NF-e</th>
+              <th>Emitente</th>
+              <th>CNPJ emitente</th>
+              <th>UF</th>
+              <th>Data emissão</th>
+              <th>Valor</th>
+              <th>Situação</th>
+              <th>Tipo</th>
+            </tr>
+          </thead>
+          <tbody id="notas-body"></tbody>
         </table>
       </div>
     </section>

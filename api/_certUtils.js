@@ -73,12 +73,7 @@ function extrairCnpjDoSan(cert) {
   return null;
 }
 
-/**
- * @param {Buffer} pfxBuffer conteúdo bruto do .pfx
- * @param {string} senha
- * @returns {{cnpj: string, subject: string, validFrom: Date, validUntil: Date}}
- */
-function carregarCertificado(pfxBuffer, senha) {
+function _abrirP12(pfxBuffer, senha) {
   let p12;
   try {
     const p12Der = forge.util.createBuffer(pfxBuffer.toString("binary"));
@@ -96,16 +91,31 @@ function carregarCertificado(pfxBuffer, senha) {
   const cert = certBagList[0].cert;
 
   const keyBagTypes = [forge.pki.oids.pkcs8ShroudedKeyBag, forge.pki.oids.keyBag];
-  const temChavePrivada = keyBagTypes.some((tipo) => {
-    const bags = p12.getBags({ bagType: tipo });
-    return (bags[tipo] || []).length > 0;
-  });
-  if (!temChavePrivada) {
+  let privateKey = null;
+  for (const tipo of keyBagTypes) {
+    const bags = (p12.getBags({ bagType: tipo })[tipo] || []);
+    if (bags.length) {
+      privateKey = bags[0].key;
+      break;
+    }
+  }
+  if (!privateKey) {
     throw new CertificadoInvalido(
       "O arquivo não contém uma chave privada exportável — isso indica um certificado A3 (cartão/token). " +
         "Apenas certificados A1 (arquivo) são suportados."
     );
   }
+
+  return { p12, cert, privateKey, certBagList };
+}
+
+/**
+ * @param {Buffer} pfxBuffer conteúdo bruto do .pfx
+ * @param {string} senha
+ * @returns {{cnpj: string, subject: string, validFrom: Date, validUntil: Date}}
+ */
+function carregarCertificado(pfxBuffer, senha) {
+  const { cert } = _abrirP12(pfxBuffer, senha);
 
   const agora = new Date();
   if (agora > cert.validity.notAfter) {
@@ -134,4 +144,29 @@ function carregarCertificado(pfxBuffer, senha) {
   };
 }
 
-module.exports = { carregarCertificado, CertificadoInvalido };
+/**
+ * Extrai o certificado e a chave privada em PEM, para autenticação mTLS
+ * nas chamadas SOAP à SEFAZ (distDFeInt). Inclui, quando presentes no .pfx,
+ * certificados intermediários adicionais (cadeia), concatenados após o
+ * certificado principal — alguns emissores incluem a cadeia da AC no .pfx.
+ *
+ * @param {Buffer} pfxBuffer
+ * @param {string} senha
+ * @returns {{certPem: string, keyPem: string, cnpj: string}}
+ */
+function extrairParaMtls(pfxBuffer, senha) {
+  const { cert, privateKey, certBagList } = _abrirP12(pfxBuffer, senha);
+
+  const outrosCerts = certBagList
+    .slice(1)
+    .map((bag) => bag.cert)
+    .filter(Boolean);
+
+  const certPem = [cert, ...outrosCerts].map((c) => forge.pki.certificateToPem(c)).join("\n");
+  const keyPem = forge.pki.privateKeyToPem(privateKey);
+  const cnpj = extrairCnpjDoSan(cert) || extrairCnpjDoSubject(cert);
+
+  return { certPem, keyPem, cnpj };
+}
+
+module.exports = { carregarCertificado, extrairParaMtls, CertificadoInvalido };

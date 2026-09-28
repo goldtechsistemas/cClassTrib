@@ -13,6 +13,14 @@
   const wrapTabela = document.getElementById("empresas-wrap");
   const corpoTabela = document.getElementById("empresas-body");
 
+  const notasSecao = document.getElementById("notas-secao");
+  const notasTitulo = document.getElementById("notas-titulo");
+  const notasVazio = document.getElementById("notas-vazio");
+  const notasWrap = document.getElementById("notas-wrap");
+  const notasBody = document.getElementById("notas-body");
+
+  let empresaSelecionadaId = null;
+
   function mostrarAviso(mensagem, tipo) {
     if (!mensagem) {
       avisoEl.innerHTML = "";
@@ -70,7 +78,11 @@
             <td>${esc(ambiente)}</td>
             <td>${esc(validade)}</td>
             <td>${esc(formatarData(emp.ultimaSincronizacao) === "—" ? "Nunca sincronizado" : formatarData(emp.ultimaSincronizacao))}</td>
-            <td><button class="btn secondary btn-sm btn-excluir-empresa" data-id="${esc(emp.id)}" type="button">Excluir</button></td>
+            <td>
+              <button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>
+              <button class="btn secondary btn-sm btn-ver-notas" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Ver notas</button>
+              <button class="btn secondary btn-sm btn-excluir-empresa" data-id="${esc(emp.id)}" type="button">Excluir</button>
+            </td>
           </tr>`;
       })
       .join("");
@@ -78,6 +90,96 @@
     corpoTabela.querySelectorAll(".btn-excluir-empresa").forEach((btn) => {
       btn.addEventListener("click", () => excluirEmpresa(btn.dataset.id));
     });
+    corpoTabela.querySelectorAll(".btn-sincronizar").forEach((btn) => {
+      btn.addEventListener("click", () => sincronizarEmpresa(btn.dataset.id, btn.dataset.nome, btn));
+    });
+    corpoTabela.querySelectorAll(".btn-ver-notas").forEach((btn) => {
+      btn.addEventListener("click", () => mostrarNotas(btn.dataset.id, btn.dataset.nome));
+    });
+  }
+
+  async function sincronizarEmpresa(empresaId, nomeEmpresa, botao) {
+    const textoOriginal = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = "Sincronizando...";
+    mostrarAviso("");
+    try {
+      const resposta = await fetch("/api/nfe-sincronizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ empresaId: Number(empresaId) }),
+      });
+      const dados = await resposta.json();
+      if (!dados.ok) {
+        mostrarAviso(dados.erro || "Erro ao sincronizar com a SEFAZ.", "erro");
+        return;
+      }
+      const msg =
+        dados.docsNovos > 0
+          ? `${dados.docsNovos} nota(s) nova(s) encontrada(s) para ${nomeEmpresa}.`
+          : `Sincronizado — nenhuma nota nova (SEFAZ: "${dados.xMotivo}").`;
+      mostrarAviso(msg + (dados.temMais ? " Há mais notas disponíveis — sincronize de novo para continuar." : ""), "ok");
+      carregarEmpresas();
+      if (empresaSelecionadaId === Number(empresaId)) carregarNotas(empresaId, nomeEmpresa);
+    } catch (e) {
+      mostrarAviso("Não foi possível falar com a SEFAZ. Tente novamente.", "erro");
+    } finally {
+      botao.disabled = false;
+      botao.textContent = textoOriginal;
+    }
+  }
+
+  function formatarValor(v) {
+    if (v == null) return "—";
+    return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  async function carregarNotas(empresaId, nomeEmpresa) {
+    notasTitulo.textContent = `Notas fiscais — ${nomeEmpresa}`;
+    let dados;
+    try {
+      const resposta = await fetch(`/api/nfe-documentos?empresaId=${encodeURIComponent(empresaId)}`, { credentials: "same-origin" });
+      dados = await resposta.json();
+    } catch (e) {
+      mostrarAviso("Não foi possível carregar as notas.", "erro");
+      return;
+    }
+    if (!dados.ok) {
+      mostrarAviso(dados.erro || "Erro ao carregar notas.", "erro");
+      return;
+    }
+
+    const notas = dados.documentos || [];
+    if (!notas.length) {
+      notasVazio.style.display = "";
+      notasWrap.style.display = "none";
+      return;
+    }
+    notasVazio.style.display = "none";
+    notasWrap.style.display = "";
+    notasBody.innerHTML = notas
+      .map(
+        (n) => `
+          <tr>
+            <td class="mono">${esc(n.numero || "—")}${n.serie ? ` (série ${esc(n.serie)})` : ""}</td>
+            <td>${esc(n.emitNome || "—")}</td>
+            <td class="mono">${esc(n.emitCnpj ? formatarCnpj(n.emitCnpj) : "—")}</td>
+            <td>${esc(n.emitUf || "—")}</td>
+            <td>${esc(formatarData(n.dhEmi))}</td>
+            <td>${esc(formatarValor(n.vNf))}</td>
+            <td>${esc(n.situacao || "—")}</td>
+            <td>${esc(n.tipo === "completa" ? "XML completo" : "Resumo")}</td>
+          </tr>`
+      )
+      .join("");
+  }
+
+  function mostrarNotas(empresaId, nomeEmpresa) {
+    empresaSelecionadaId = Number(empresaId);
+    notasSecao.style.display = "";
+    notasSecao.scrollIntoView({ behavior: "smooth", block: "start" });
+    carregarNotas(empresaId, nomeEmpresa);
   }
 
   async function excluirEmpresa(empresaId) {

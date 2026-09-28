@@ -70,7 +70,7 @@ function resolverHandler(pathname) {
   return null;
 }
 
-async function tratarApi(req, res, pathname) {
+async function tratarApi(req, res, pathname, searchParams) {
   const encontrado = resolverHandler(pathname.replace(/^\/api\//, ""));
   if (!encontrado) {
     res.writeHead(404, { "Content-Type": "application/json" });
@@ -87,7 +87,7 @@ async function tratarApi(req, res, pathname) {
     .forEach((p) => delete require.cache[p]);
   const handler = require(encontrado.arquivo);
   req.body = ["POST", "PUT", "PATCH"].includes(req.method) ? await lerCorpoJson(req) : {};
-  req.query = encontrado.params;
+  req.query = { ...Object.fromEntries(searchParams.entries()), ...encontrado.params };
 
   const respostaFalsa = {
     _status: 200,
@@ -149,7 +149,7 @@ function servirEstatico(req, res, pathname) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   if (url.pathname.startsWith("/api/")) {
-    await tratarApi(req, res, url.pathname);
+    await tratarApi(req, res, url.pathname, url.searchParams);
     return;
   }
   servirEstatico(req, res, url.pathname);
