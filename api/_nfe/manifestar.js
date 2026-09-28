@@ -88,6 +88,21 @@ module.exports = async (req, res) => {
     return;
   }
 
+  if (resultado.jaManifestada) {
+    // cStat 573 (Duplicidade de Evento): a Ciencia ja existe na SEFAZ (dada
+    // antes por outra ferramenta ou manualmente no site da Receita) — nao e
+    // uma rejeicao de verdade, so nao temos o XML do evento original pra
+    // guardar em nfe_eventos.
+    await query("UPDATE nfe_documentos SET manifestacao = 'ciencia' WHERE id = $1", [documento.id]);
+    res.status(200).json({
+      ok: true,
+      cStat: resultado.cStat,
+      xMotivo: resultado.xMotivo,
+      mensagem: "Esta nota ja tinha Ciencia da Operacao registrada na SEFAZ. Sincronize de novo pra buscar o XML completo.",
+    });
+    return;
+  }
+
   if (!resultado.sucesso) {
     await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [documento.id]).catch(() => {});
     res.status(422).json({ ok: false, erro: `SEFAZ rejeitou o evento (cStat ${resultado.cStat}): ${resultado.xMotivo}` });

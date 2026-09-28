@@ -3,6 +3,7 @@ const { decryptSecret } = require("./_crypto");
 const { extrairParaMtls } = require("./_certUtils");
 const { distribuirDfe, enviarManifestacaoCiencia, ErroSefaz } = require("./_sefazClient");
 
+const TP_EVENTO_CANCELAMENTO = "110111";
 const UMA_HORA_MS = 60 * 60 * 1000;
 const PAUSA_LIMITE_CICLOS_MS = 2 * 60 * 1000; // trava própria (não é exigência da SEFAZ) pra não deixar reclique imediato martelar um backlog gigante
 const LIMITE_CICLOS_DISTRIBUICAO = 15; // trava de segurança — cada ciclo é um lote (~50 docs) da SEFAZ
@@ -39,6 +40,16 @@ async function upsertLote(empresaId, documentos, eventos) {
       `INSERT INTO nfe_eventos (empresa_id, ch_nfe, tp_evento, n_seq_evento, xml, dh_evento) VALUES ($1,$2,$3,$4,$5,$6)`,
       [empresaId, ev.chNFe, ev.tpEvento, ev.nSeqEvento, ev.xml, ev.dhEvento]
     );
+    // Cancelamento não vem como um valor de cSitNFe no resNFe (que só tem
+    // autorizada/denegada) — chega depois como um resEvento à parte. Sem
+    // isto, uma nota cancelada depois de já sincronizada como "autorizada"
+    // ficava com a situação desatualizada pra sempre.
+    if (ev.tpEvento === TP_EVENTO_CANCELAMENTO) {
+      await query(
+        `UPDATE nfe_documentos SET situacao = 'cancelada' WHERE empresa_id = $1 AND ch_nfe = $2`,
+        [empresaId, ev.chNFe]
+      );
+    }
   }
   return docsNovos;
 }
@@ -138,6 +149,17 @@ async function manifestarPendentes({ empresa, certPem, keyPem }) {
             [empresa.id, doc.ch_nfe, "210210", 1, resEvento.eventoAssinadoXml]
           ),
         ]);
+        manifestadas++;
+      } else if (resEvento.jaManifestada) {
+        // cStat 573 (Duplicidade de Evento): a Ciência já existe na SEFAZ
+        // (ex.: dada antes por outra ferramenta ou manualmente no site da
+        // Receita). Não é uma rejeição de verdade — se voltasse pra
+        // 'nenhuma' essa nota tentaria manifestar de novo (e falharia de
+        // novo) em toda sincronização futura, pra sempre. Não temos o XML
+        // do evento original pra gravar em nfe_eventos, então só marcamos a
+        // manifestação como dada e deixamos a Fase 3 tentar buscar o XML
+        // completo normalmente.
+        await query("UPDATE nfe_documentos SET manifestacao = 'ciencia' WHERE id = $1", [doc.id]);
         manifestadas++;
       } else {
         await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [doc.id]);

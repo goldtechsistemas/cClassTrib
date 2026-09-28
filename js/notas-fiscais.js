@@ -232,10 +232,18 @@
 
     notasBody.innerHTML = notas
       .map((n) => {
-        const acaoManifestacao =
-          n.manifestacao === "ciencia"
-            ? "Ciência dada"
-            : `<button class="btn secondary btn-sm btn-manifestar" data-ch-nfe="${esc(n.chNFe)}" type="button">Dar ciência</button>`;
+        // Denegada/cancelada nunca chegam a ter XML completo — Ciência da
+        // Operação não se aplica a elas (a SEFAZ rejeita) — e se já tem
+        // "XML completo" não há nada a manifestar, então nesses casos nem
+        // oferecemos o botão (evita um clique que só ia dar erro à toa).
+        let acaoManifestacao;
+        if (n.manifestacao === "ciencia" || n.tipo === "completa") {
+          acaoManifestacao = "Ciência dada";
+        } else if (n.situacao === "denegada" || n.situacao === "cancelada") {
+          acaoManifestacao = "Não se aplica";
+        } else {
+          acaoManifestacao = `<button class="btn secondary btn-sm btn-manifestar" data-ch-nfe="${esc(n.chNFe)}" type="button">Dar ciência</button>`;
+        }
         const linkPdf = `/api/nfe-exportar-pdf?empresaId=${encodeURIComponent(empresaId)}&chNFe=${encodeURIComponent(n.chNFe)}`;
         return `
           <tr>

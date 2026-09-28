@@ -31,10 +31,12 @@ const UF_PARA_CODIGO = {
 };
 const CODIGO_PARA_UF = Object.fromEntries(Object.entries(UF_PARA_CODIGO).map(([sigla, cod]) => [String(cod), sigla]));
 
+// Domínio oficial do campo cSitNFe do resNFe (schema resNFe_v1.01.xsd): só
+// existem os valores 1 e 2 — "cancelada" NÃO é um valor de cSitNFe, ela chega
+// depois via um resEvento (tpEvento 110111), tratado à parte em _nfeSync.js.
 const SITUACOES = {
   1: "autorizada",
-  2: "cancelada",
-  3: "denegada",
+  2: "denegada",
 };
 
 class ErroSefaz extends Error {}
@@ -363,9 +365,22 @@ function parsearRespostaEvento(xmlTexto) {
   };
 }
 
+// cStat 573 = "Duplicidade de Evento": a SEFAZ já tem essa Ciência da
+// Operação registrada para esta chave (ex.: manifestada antes por outra
+// ferramenta, ou manualmente no site da Receita) — não é uma falha de
+// verdade, é a confirmação de que a manifestação já existe.
+const CSTAT_DUPLICIDADE_EVENTO = "573";
+
 /**
  * Envia o evento 210210 (Ciência da Operação) para uma NF-e específica.
- * @returns {{cStat: string, xMotivo: string, sucesso: boolean}}
+ *
+ * cStat 135 = "Evento registrado e vinculado a NF-e" — sucesso real, o XML
+ * completo passa a ficar disponível. cStat 136 = "registrado, mas NÃO
+ * vinculado" — a SEFAZ aceitou o evento mas NÃO conseguiu linká-lo à nota
+ * (não deve ser tratado como sucesso: o XML completo não vai ser liberado só
+ * com isso, então deixamos cair pra "falha" e ser tentado de novo depois).
+ *
+ * @returns {{cStat: string, xMotivo: string, sucesso: boolean, jaManifestada: boolean}}
  */
 async function enviarManifestacaoCiencia({ ambiente, uf, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1 }) {
   const url = ENDPOINTS_EVENTO[ambiente] || ENDPOINTS_EVENTO[2];
@@ -381,8 +396,15 @@ async function enviarManifestacaoCiencia({ ambiente, uf, cnpj, chNFe, certPem, k
   }
 
   const analisada = parsearRespostaEvento(resposta.body);
-  const sucesso = analisada.cStat === "135" || analisada.cStat === "136";
-  return { cStat: analisada.cStat, xMotivo: analisada.xMotivo, sucesso, eventoAssinadoXml: eventoAssinado };
+  const sucesso = analisada.cStat === "135";
+  const jaManifestada = analisada.cStat === CSTAT_DUPLICIDADE_EVENTO;
+  return {
+    cStat: analisada.cStat,
+    xMotivo: analisada.xMotivo,
+    sucesso,
+    jaManifestada,
+    eventoAssinadoXml: eventoAssinado,
+  };
 }
 
 module.exports = { distribuirDfe, enviarManifestacaoCiencia, ErroSefaz, UF_PARA_CODIGO };

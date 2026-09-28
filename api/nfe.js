@@ -28,5 +28,15 @@ module.exports = async (req, res) => {
     res.status(404).json({ ok: false, erro: "Rota não encontrada." });
     return;
   }
-  return handler(req, res);
+  // Nem toda rota interna tem try/catch próprio (ex.: exportar-pdf.js) — sem
+  // isto, uma exceção não tratada vira a página crua "FUNCTION_INVOCATION_
+  // FAILED" da própria Vercel em vez de um JSON de erro do site.
+  try {
+    await handler(req, res);
+  } catch (e) {
+    console.error(e);
+    if (!res.headersSent) {
+      res.status(500).json({ ok: false, erro: "Erro interno." });
+    }
+  }
 };
