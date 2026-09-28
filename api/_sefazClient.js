@@ -308,7 +308,11 @@ async function distribuirDfe({ ambiente, uf, cnpj, ultNsu, certPem, keyPem }) {
 const DESCRICOES_EVENTO = { 210210: "Ciencia da Operacao" };
 
 function montarXmlEvento({ tpAmb, cOrgao, cnpj, chNFe, tpEvento, nSeqEvento }) {
-  const dh = new Date().toISOString().replace(/\.\d{3}Z$/, "-03:00"); // aproximação; SEFAZ aceita o offset local
+  // Brasil (horário de Brasília) é UTC-3 fixo, sem horário de verão desde 2019 —
+  // por isso é seguro subtrair 3h do relógio UTC e rotular como "-03:00". Sem
+  // o `- 3h`, o valor ficava com os dígitos do relógio UTC mas rotulado como
+  // se já fosse local, ou seja, ~3h no futuro em relação ao instante real.
+  const dh = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "-03:00");
   const id = `ID${tpEvento}${chNFe}${String(nSeqEvento).padStart(2, "0")}`;
   const descEvento = DESCRICOES_EVENTO[tpEvento] || "Evento";
   return {
@@ -411,10 +415,14 @@ function parsearRespostaEvento(xmlTexto) {
 const CSTAT_DUPLICIDADE_EVENTO = "573";
 
 // Código fixo do "órgão" de recepção quando o evento é enviado ao Ambiente
-// Nacional (NT 2020.001, campo cOrgao do evento de Manifestação do
-// Destinatário): 91 = Ambiente Nacional. Não é o código IBGE da UF da
-// empresa — usar a UF ali é rejeitado/mal roteado pelo AN.
-const CORGAO_AMBIENTE_NACIONAL = 91;
+// Nacional. Não é o código IBGE da UF da empresa — usar a UF ali é
+// rejeitado/mal roteado pelo AN. Há uma divergência documental real entre
+// fontes (a NT 2020.001/MOC 7.0 citam "91 = Ambiente Nacional", mas o próprio
+// schema XSD do leiaute do evento, mantido por quem integra ativamente com o
+// AN, documenta "90" para o mesmo propósito, e relatos de outras integrações
+// batendo em cStat 225 com 91 contra este mesmo serviço apontam pra 90 como o
+// valor que esse serviço específico realmente espera).
+const CORGAO_AMBIENTE_NACIONAL = 90;
 
 /**
  * Envia o evento 210210 (Ciência da Operação) para uma NF-e específica.
