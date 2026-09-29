@@ -41,7 +41,14 @@ function gerarPdfResumo(doc) {
     );
     linha("Situação", doc.situacao);
     linha("Tipo de dado disponível", doc.tipo === "completa" ? "XML completo" : "Resumo (sem itens detalhados)");
-    linha("Manifestação do destinatário", doc.manifestacao === "ciencia" ? "Ciência da Operação registrada" : "Não manifestada");
+    linha(
+      "Manifestação do destinatário",
+      doc.manifestacao === "confirmacao"
+        ? "Confirmação da Operação registrada"
+        : doc.manifestacao === "ciencia"
+          ? "Ciência da Operação registrada"
+          : "Não manifestada"
+    );
 
     pdf.end();
   });

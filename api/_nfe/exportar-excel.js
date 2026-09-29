@@ -55,7 +55,8 @@ module.exports = async (req, res) => {
       valor: doc.v_nf != null ? Number(doc.v_nf) : null,
       situacao: doc.situacao,
       tipo: doc.tipo === "completa" ? "XML completo" : "Resumo",
-      manifestacao: doc.manifestacao === "ciencia" ? "Ciência dada" : "Não manifestada",
+      manifestacao:
+        doc.manifestacao === "confirmacao" ? "Confirmação dada" : doc.manifestacao === "ciencia" ? "Ciência dada" : "Não manifestada",
     });
   }
 

@@ -301,8 +301,20 @@ async function distribuirDfe({ ambiente, uf, cnpj, ultNsu, certPem, keyPem }) {
 // um registro permanente no sistema da SEFAZ associado ao CNPJ/certificado
 // — por isso só é disparado por ação explícita do usuário (botão "Dar
 // ciência" por nota), nunca automaticamente.
-
-const DESCRICOES_EVENTO = { 210210: "Ciencia da Operacao" };
+//
+// Ciência da Operação (210210) só é aceita pela SEFAZ até 10 dias após a
+// autorização da NF-e (cStat 596 depois disso) — Confirmação da Operação
+// (210200) cobre o mesmo propósito (libera o XML completo) com prazo bem
+// maior (90–180 dias, dependendo da NT vigente), mas afirma algo fiscalmente
+// mais forte ("essa operação realmente aconteceu"), por isso só é usada como
+// fallback explícito quando a Ciência é rejeitada por prazo — nunca como
+// primeira tentativa.
+const TP_EVENTO_CIENCIA = 210210;
+const TP_EVENTO_CONFIRMACAO = 210200;
+const DESCRICOES_EVENTO = {
+  [TP_EVENTO_CIENCIA]: "Ciencia da Operacao",
+  [TP_EVENTO_CONFIRMACAO]: "Confirmacao da Operacao",
+};
 
 function montarXmlEvento({ tpAmb, cOrgao, cnpj, chNFe, tpEvento, nSeqEvento }) {
   // Brasil (horário de Brasília) é UTC-3 fixo, sem horário de verão desde 2019 —
@@ -435,6 +447,12 @@ function parsearRespostaEvento(xmlTexto) {
 // verdade, é a confirmação de que a manifestação já existe.
 const CSTAT_DUPLICIDADE_EVENTO = "573";
 
+// cStat 596 = "Rejeicao: Evento apresentado apos o prazo permitido para o
+// evento" — Ciência da Operação (210210) só vale até 10 dias após a
+// autorização da NF-e; passado isso, quem chama deve tentar Confirmação da
+// Operação (210200) em vez de Ciência (prazo bem maior, 90–180 dias).
+const CSTAT_PRAZO_EXPIRADO = "596";
+
 // Código fixo do "órgão" de recepção quando o evento é enviado ao Ambiente
 // Nacional. Não é o código IBGE da UF da empresa — usar a UF ali é
 // rejeitado/mal roteado pelo AN. Conferido contra a tabela real da sped-nfe
@@ -444,7 +462,8 @@ const CSTAT_DUPLICIDADE_EVENTO = "573";
 const CORGAO_AMBIENTE_NACIONAL = 91;
 
 /**
- * Envia o evento 210210 (Ciência da Operação) para uma NF-e específica.
+ * Envia um evento de manifestação do destinatário (210210 Ciência ou 210200
+ * Confirmação) para uma NF-e específica.
  *
  * cStat 135 = "Evento registrado e vinculado a NF-e" — sucesso real, o XML
  * completo passa a ficar disponível. cStat 136 = "registrado, mas NÃO
@@ -452,11 +471,11 @@ const CORGAO_AMBIENTE_NACIONAL = 91;
  * (não deve ser tratado como sucesso: o XML completo não vai ser liberado só
  * com isso, então deixamos cair pra "falha" e ser tentado de novo depois).
  *
- * @returns {{cStat: string, xMotivo: string, sucesso: boolean, jaManifestada: boolean}}
+ * @returns {{cStat: string, xMotivo: string, sucesso: boolean, jaManifestada: boolean, prazoExpirado: boolean, tpEvento: number}}
  */
-async function enviarManifestacaoCiencia({ ambiente, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1 }) {
+async function enviarManifestacaoDestinatario({ ambiente, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1, tpEvento = TP_EVENTO_CIENCIA }) {
   const url = ENDPOINTS_EVENTO[ambiente] || ENDPOINTS_EVENTO[2];
-  const { xml } = montarXmlEvento({ tpAmb: ambiente, cOrgao: CORGAO_AMBIENTE_NACIONAL, cnpj, chNFe, tpEvento: 210210, nSeqEvento });
+  const { xml } = montarXmlEvento({ tpAmb: ambiente, cOrgao: CORGAO_AMBIENTE_NACIONAL, cnpj, chNFe, tpEvento, nSeqEvento });
   const eventoAssinado = assinarEvento(xml, certPem, keyPem);
   const idLote = String(Date.now()).slice(-15).padStart(15, "0");
   const envelope = montarEnvelopeEvento({ idLote, eventoAssinadoXml: eventoAssinado });
@@ -469,13 +488,23 @@ async function enviarManifestacaoCiencia({ ambiente, cnpj, chNFe, certPem, keyPe
   const analisada = parsearRespostaEvento(resposta.body);
   const sucesso = analisada.cStat === "135";
   const jaManifestada = analisada.cStat === CSTAT_DUPLICIDADE_EVENTO;
+  const prazoExpirado = analisada.cStat === CSTAT_PRAZO_EXPIRADO;
   return {
     cStat: analisada.cStat,
     xMotivo: analisada.xMotivo,
     sucesso,
     jaManifestada,
+    prazoExpirado,
+    tpEvento,
     eventoAssinadoXml: eventoAssinado,
   };
 }
 
-module.exports = { distribuirDfe, enviarManifestacaoCiencia, ErroSefaz, UF_PARA_CODIGO };
+module.exports = {
+  distribuirDfe,
+  enviarManifestacaoDestinatario,
+  ErroSefaz,
+  UF_PARA_CODIGO,
+  TP_EVENTO_CIENCIA,
+  TP_EVENTO_CONFIRMACAO,
+};

@@ -1,7 +1,7 @@
 const { query } = require("./_db");
 const { decryptSecret } = require("./_crypto");
 const { extrairParaMtls } = require("./_certUtils");
-const { distribuirDfe, enviarManifestacaoCiencia, ErroSefaz } = require("./_sefazClient");
+const { distribuirDfe, enviarManifestacaoDestinatario, ErroSefaz, TP_EVENTO_CIENCIA, TP_EVENTO_CONFIRMACAO } = require("./_sefazClient");
 
 const TP_EVENTO_CANCELAMENTO = "110111";
 const UMA_HORA_MS = 60 * 60 * 1000;
@@ -133,33 +133,49 @@ async function manifestarPendentes({ empresa, certPem, keyPem }) {
     if (!reivindicada.rows.length) continue; // outra sincronização já pegou essa nota
 
     try {
-      const resEvento = await enviarManifestacaoCiencia({
+      let resEvento = await enviarManifestacaoDestinatario({
         ambiente: empresa.ambiente,
-        uf: empresa.uf,
         cnpj: empresa.cnpj,
         chNFe: doc.ch_nfe,
         certPem,
         keyPem,
+        tpEvento: TP_EVENTO_CIENCIA,
       });
+      // Ciência da Operação só vale até 10 dias após a autorização da NF-e
+      // (cStat 596 depois disso, comum em backlogs antigos) — Confirmação da
+      // Operação cobre o mesmo propósito (libera o XML completo) com prazo
+      // bem maior, só tentada como fallback quando a Ciência é rejeitada
+      // especificamente por prazo.
+      if (resEvento.prazoExpirado) {
+        resEvento = await enviarManifestacaoDestinatario({
+          ambiente: empresa.ambiente,
+          cnpj: empresa.cnpj,
+          chNFe: doc.ch_nfe,
+          certPem,
+          keyPem,
+          tpEvento: TP_EVENTO_CONFIRMACAO,
+        });
+      }
+      const statusManifestacao = resEvento.tpEvento === TP_EVENTO_CONFIRMACAO ? "confirmacao" : "ciencia";
       if (resEvento.sucesso) {
         await Promise.all([
-          query("UPDATE nfe_documentos SET manifestacao = 'ciencia' WHERE id = $1", [doc.id]),
+          query("UPDATE nfe_documentos SET manifestacao = $2 WHERE id = $1", [doc.id, statusManifestacao]),
           query(
             "INSERT INTO nfe_eventos (empresa_id, ch_nfe, tp_evento, n_seq_evento, xml, dh_evento) VALUES ($1,$2,$3,$4,$5,now())",
-            [empresa.id, doc.ch_nfe, "210210", 1, resEvento.eventoAssinadoXml]
+            [empresa.id, doc.ch_nfe, String(resEvento.tpEvento), 1, resEvento.eventoAssinadoXml]
           ),
         ]);
         manifestadas++;
       } else if (resEvento.jaManifestada) {
-        // cStat 573 (Duplicidade de Evento): a Ciência já existe na SEFAZ
-        // (ex.: dada antes por outra ferramenta ou manualmente no site da
-        // Receita). Não é uma rejeição de verdade — se voltasse pra
+        // cStat 573 (Duplicidade de Evento): a manifestação já existe na
+        // SEFAZ (ex.: dada antes por outra ferramenta ou manualmente no site
+        // da Receita). Não é uma rejeição de verdade — se voltasse pra
         // 'nenhuma' essa nota tentaria manifestar de novo (e falharia de
         // novo) em toda sincronização futura, pra sempre. Não temos o XML
         // do evento original pra gravar em nfe_eventos, então só marcamos a
         // manifestação como dada e deixamos a Fase 3 tentar buscar o XML
         // completo normalmente.
-        await query("UPDATE nfe_documentos SET manifestacao = 'ciencia' WHERE id = $1", [doc.id]);
+        await query("UPDATE nfe_documentos SET manifestacao = $2 WHERE id = $1", [doc.id, statusManifestacao]);
         manifestadas++;
       } else {
         await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [doc.id]);
@@ -265,7 +281,7 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
           }
 
           const aindaFaltando = await query(
-            "SELECT count(*) FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao = 'ciencia'",
+            "SELECT count(*) FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao IN ('ciencia', 'confirmacao')",
             [empresa.id]
           );
           if (Number(aindaFaltando.rows[0].count) === 0) break;

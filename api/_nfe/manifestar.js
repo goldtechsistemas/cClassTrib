@@ -3,7 +3,7 @@ const { exigirUsuario } = require("../_nfeHelpers");
 const { corpoJson } = require("../_lib");
 const { decryptSecret } = require("../_crypto");
 const { extrairParaMtls } = require("../_certUtils");
-const { enviarManifestacaoCiencia, ErroSefaz } = require("../_sefazClient");
+const { enviarManifestacaoDestinatario, ErroSefaz, TP_EVENTO_CIENCIA, TP_EVENTO_CONFIRMACAO } = require("../_sefazClient");
 
 // Rota chamada pelo botao "Dar ciencia" de uma nota especifica na tela.
 module.exports = async (req, res) => {
@@ -36,13 +36,10 @@ module.exports = async (req, res) => {
     return;
   }
   if (documento.manifestacao !== "nenhuma") {
-    res.status(409).json({
-      ok: false,
-      erro:
-        documento.manifestacao === "ciencia"
-          ? "Esta nota ja teve Ciencia da Operacao registrada."
-          : "Esta nota ja esta sendo manifestada (provavelmente por uma sincronizacao automatica em andamento).",
-    });
+    let erro = "Esta nota ja esta sendo manifestada (provavelmente por uma sincronizacao automatica em andamento).";
+    if (documento.manifestacao === "ciencia") erro = "Esta nota ja teve Ciencia da Operacao registrada.";
+    else if (documento.manifestacao === "confirmacao") erro = "Esta nota ja teve Confirmacao da Operacao registrada.";
+    res.status(409).json({ ok: false, erro });
     return;
   }
 
@@ -72,14 +69,30 @@ module.exports = async (req, res) => {
 
   let resultado;
   try {
-    resultado = await enviarManifestacaoCiencia({
+    resultado = await enviarManifestacaoDestinatario({
       ambiente: empresa.ambiente,
-      uf: empresa.uf,
       cnpj: empresa.cnpj,
       chNFe,
       certPem,
       keyPem,
+      tpEvento: TP_EVENTO_CIENCIA,
     });
+    // Ciencia da Operacao so vale ate 10 dias apos a autorizacao da NF-e
+    // (cStat 596 depois disso). Confirmacao da Operacao cobre o mesmo
+    // proposito (libera o XML completo) com prazo bem maior — so tentada
+    // como fallback explicito quando a Ciencia e rejeitada por prazo, nunca
+    // como primeira tentativa (e uma afirmacao fiscal mais forte: "essa
+    // operacao realmente aconteceu").
+    if (resultado.prazoExpirado) {
+      resultado = await enviarManifestacaoDestinatario({
+        ambiente: empresa.ambiente,
+        cnpj: empresa.cnpj,
+        chNFe,
+        certPem,
+        keyPem,
+        tpEvento: TP_EVENTO_CONFIRMACAO,
+      });
+    }
   } catch (e) {
     const mensagem = e instanceof ErroSefaz ? e.message : "Erro inesperado ao enviar a manifestacao.";
     if (!(e instanceof ErroSefaz)) console.error(e);
@@ -88,17 +101,20 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const statusManifestacao = resultado.tpEvento === TP_EVENTO_CONFIRMACAO ? "confirmacao" : "ciencia";
+  const nomeEvento = resultado.tpEvento === TP_EVENTO_CONFIRMACAO ? "Confirmacao da Operacao" : "Ciencia da Operacao";
+
   if (resultado.jaManifestada) {
-    // cStat 573 (Duplicidade de Evento): a Ciencia ja existe na SEFAZ (dada
-    // antes por outra ferramenta ou manualmente no site da Receita) — nao e
-    // uma rejeicao de verdade, so nao temos o XML do evento original pra
-    // guardar em nfe_eventos.
-    await query("UPDATE nfe_documentos SET manifestacao = 'ciencia' WHERE id = $1", [documento.id]);
+    // cStat 573 (Duplicidade de Evento): a manifestacao ja existe na SEFAZ
+    // (dada antes por outra ferramenta ou manualmente no site da Receita) —
+    // nao e uma rejeicao de verdade, so nao temos o XML do evento original
+    // pra guardar em nfe_eventos.
+    await query("UPDATE nfe_documentos SET manifestacao = $2 WHERE id = $1", [documento.id, statusManifestacao]);
     res.status(200).json({
       ok: true,
       cStat: resultado.cStat,
       xMotivo: resultado.xMotivo,
-      mensagem: "Esta nota ja tinha Ciencia da Operacao registrada na SEFAZ. Sincronize de novo pra buscar o XML completo.",
+      mensagem: `Esta nota ja tinha ${nomeEvento} registrada na SEFAZ. Sincronize de novo pra buscar o XML completo.`,
     });
     return;
   }
@@ -109,16 +125,20 @@ module.exports = async (req, res) => {
     return;
   }
 
-  await query("UPDATE nfe_documentos SET manifestacao = 'ciencia' WHERE id = $1", [documento.id]);
+  await query("UPDATE nfe_documentos SET manifestacao = $2 WHERE id = $1", [documento.id, statusManifestacao]);
   await query(
     "INSERT INTO nfe_eventos (empresa_id, ch_nfe, tp_evento, n_seq_evento, xml, dh_evento) VALUES ($1,$2,$3,$4,$5,now())",
-    [empresaId, chNFe, "210210", 1, resultado.eventoAssinadoXml]
+    [empresaId, chNFe, String(resultado.tpEvento), 1, resultado.eventoAssinadoXml]
   );
 
   res.status(200).json({
     ok: true,
     cStat: resultado.cStat,
     xMotivo: resultado.xMotivo,
-    mensagem: "Ciencia da Operacao registrada. O XML completo costuma ficar disponivel numa proxima sincronizacao.",
+    tpEvento: resultado.tpEvento,
+    mensagem:
+      resultado.tpEvento === TP_EVENTO_CONFIRMACAO
+        ? "Ciencia da Operacao estava fora do prazo (10 dias) — Confirmacao da Operacao foi registrada em vez dela. O XML completo costuma ficar disponivel numa proxima sincronizacao."
+        : "Ciencia da Operacao registrada. O XML completo costuma ficar disponivel numa proxima sincronizacao.",
   });
 };

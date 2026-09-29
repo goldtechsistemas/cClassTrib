@@ -250,7 +250,9 @@
         // "XML completo" não há nada a manifestar, então nesses casos nem
         // oferecemos o botão (evita um clique que só ia dar erro à toa).
         let acaoManifestacao;
-        if (n.manifestacao === "ciencia" || n.tipo === "completa") {
+        if (n.manifestacao === "confirmacao") {
+          acaoManifestacao = "Confirmação dada";
+        } else if (n.manifestacao === "ciencia" || n.tipo === "completa") {
           acaoManifestacao = "Ciência dada";
         } else if (n.situacao === "denegada" || n.situacao === "cancelada") {
           acaoManifestacao = "Não se aplica";
