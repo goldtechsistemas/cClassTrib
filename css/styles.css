@@ -716,3 +716,69 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
   .filtro-grid .filtro-busca { grid-column: 1 / -1; }
   .busca-empresas { flex: 1 1 100%; }
 }
+
+
+/* ---------- Admin: painel "Ver Detalhes" com muitos certificados ---------- */
+.modal-largo {
+  max-width: 760px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+.detalhes-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+.detalhes-grade p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.detalhes-grade .hint { margin: 10px 0 0; }
+.detalhes-subtitulo {
+  margin: 22px 0 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 1rem;
+  color: var(--text-0);
+}
+.cert-resumo {
+  display: flex;
+  gap: 6px 16px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--verde);
+  margin-bottom: 12px;
+}
+.cert-resumo-amarelo { color: var(--amarelo); }
+.cert-resumo-vermelho { color: var(--vermelho); }
+.cert-ferramentas {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cert-ferramentas select { padding-top: 9px; padding-bottom: 9px; }
+.cert-lista {
+  max-height: min(340px, 38vh);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+}
+.cert-lista table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.cert-lista th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-2);
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.cert-lista td { padding: 8px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+.cert-lista td .hint { margin: 2px 0 0; }
+.cert-lista .badge { font-size: 0.72rem; white-space: nowrap; }
+.cert-vazio { padding: 22px; text-align: center; color: var(--text-muted); font-size: 0.88rem; }
+#cert-contagem { margin-top: 8px; }
+@media (max-width: 640px) {
+  .detalhes-grade { grid-template-columns: 1fr; }
+  .cert-ferramentas { grid-template-columns: 1fr; }
+}

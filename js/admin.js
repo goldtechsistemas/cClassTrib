@@ -184,34 +184,121 @@
     }
   }
 
+  const DIAS_ALERTA_CERTIFICADO = 30;
+  let certificadosDoDetalhe = [];
+
+  function normalizarBusca(t) {
+    return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+
+  // Situação de cada certificado, calculada uma vez ao abrir o painel.
+  function prepararCertificados(lista) {
+    const agora = Date.now();
+    return lista.map((c) => {
+      const venc = c.certValidUntil ? new Date(c.certValidUntil).getTime() : null;
+      const dias = venc == null ? null : Math.floor((venc - agora) / 86400000);
+      let situacao = "desconhecida";
+      if (dias != null) situacao = dias < 0 ? "vencido" : dias <= DIAS_ALERTA_CERTIFICADO ? "vencendo" : "valido";
+      return { ...c, _venc: venc, _dias: dias, _situacao: situacao, _busca: normalizarBusca(c.razaoSocial) + " " + String(c.cnpj || "").replace(/\D/g, "") };
+    });
+  }
+
+  function htmlSituacaoCertificado(c) {
+    if (c._situacao === "vencido") return `<span class="badge cor-vermelho">Vencido</span>`;
+    if (c._situacao === "vencendo") return `<span class="badge cor-amarelo">Vence em ${c._dias} dia(s)</span>`;
+    if (c._situacao === "valido") return `<span class="badge cor-verde">Válido</span>`;
+    return `<span class="badge cor-neutro-fraco">Sem validade</span>`;
+  }
+
   function htmlCertificados(u) {
     const lista = u.certificados || [];
     if (!lista.length) return `<p>Nenhum certificado importado.</p>`;
-    const agora = Date.now();
-    const itens = lista.map((c) => {
-      const venc = c.certValidUntil ? new Date(c.certValidUntil).getTime() : null;
-      const validade = venc == null
-        ? "validade desconhecida"
-        : venc < agora
-          ? `<span style="color:var(--vermelho)">vencido em ${esc(formatarDataCurta(c.certValidUntil))}</span>`
-          : `válido até ${esc(formatarDataCurta(c.certValidUntil))}`;
-      const sync = c.ultimaSincronizacao ? `última sincronização ${esc(formatarData(c.ultimaSincronizacao))}` : "nunca sincronizou";
-      return `<li><strong>${esc(c.razaoSocial || "—")}</strong><br><span class="hint">${esc(formatarDocumento(c.cnpj))} · ${validade} · ${sync}</span></li>`;
-    }).join("");
-    return `<ul style="margin:0 0 12px 18px; padding:0;">${itens}</ul>`;
+    certificadosDoDetalhe = prepararCertificados(lista);
+    const n = (sit) => certificadosDoDetalhe.filter((c) => c._situacao === sit).length;
+    const resumo = [
+      `<span>${n("valido")} válido(s)</span>`,
+      `<span class="cert-resumo-amarelo">${n("vencendo")} vencendo em ${DIAS_ALERTA_CERTIFICADO} dias</span>`,
+      `<span class="cert-resumo-vermelho">${n("vencido")} vencido(s)</span>`,
+    ].join("");
+    return `
+      <div class="cert-resumo">${resumo}</div>
+      <div class="cert-ferramentas">
+        <input type="search" id="input-busca-cert" placeholder="Buscar por empresa ou CNPJ" autocomplete="off" />
+        <select id="select-filtro-cert" aria-label="Filtrar situação">
+          <option value="">Todas as situações</option>
+          <option value="valido">Válidos</option>
+          <option value="vencendo">Vencendo em ${DIAS_ALERTA_CERTIFICADO} dias</option>
+          <option value="vencido">Vencidos</option>
+        </select>
+        <select id="select-ordem-cert" aria-label="Ordenar">
+          <option value="nome">Ordem alfabética</option>
+          <option value="vencimento">Vencimento mais próximo</option>
+          <option value="sync">Sincronizado mais recentemente</option>
+        </select>
+      </div>
+      <div class="cert-lista" id="cert-lista"></div>
+      <div class="hint" id="cert-contagem"></div>`;
+  }
+
+  function renderizarListaCertificados() {
+    const termo = normalizarBusca(document.getElementById("input-busca-cert").value.trim());
+    const digitos = termo.replace(/\D/g, "");
+    const filtro = document.getElementById("select-filtro-cert").value;
+    const ordem = document.getElementById("select-ordem-cert").value;
+
+    const lista = certificadosDoDetalhe.filter((c) => {
+      if (filtro && c._situacao !== filtro) return false;
+      if (!termo) return true;
+      if (c._busca.includes(termo)) return true;
+      return !!digitos && /^[\d.\-\/\s]+$/.test(termo) && c._busca.includes(digitos);
+    });
+    const dataSync = (c) => (c.ultimaSincronizacao ? new Date(c.ultimaSincronizacao).getTime() : 0);
+    lista.sort((a, b) => {
+      if (ordem === "vencimento") return (a._venc ?? Infinity) - (b._venc ?? Infinity);
+      if (ordem === "sync") return dataSync(b) - dataSync(a);
+      return String(a.razaoSocial || "").localeCompare(String(b.razaoSocial || ""), "pt-BR");
+    });
+
+    const alvo = document.getElementById("cert-lista");
+    if (!lista.length) {
+      alvo.innerHTML = `<div class="cert-vazio">Nenhum certificado encontrado com esses filtros.</div>`;
+    } else {
+      const linhas = lista.map((c) => `
+        <tr>
+          <td>${esc(c.razaoSocial || "—")}</td>
+          <td class="mono">${esc(formatarDocumento(c.cnpj))}</td>
+          <td>${htmlSituacaoCertificado(c)}<div class="hint">${c.certValidUntil ? "até " + esc(formatarDataCurta(c.certValidUntil)) : ""}</div></td>
+          <td>${c.ultimaSincronizacao ? esc(formatarDataCurta(c.ultimaSincronizacao)) : "Nunca"}</td>
+        </tr>`).join("");
+      alvo.innerHTML = `<table>
+        <thead><tr><th>Empresa</th><th>CNPJ/CPF</th><th>Validade</th><th>Última sync.</th></tr></thead>
+        <tbody>${linhas}</tbody></table>`;
+    }
+    document.getElementById("cert-contagem").textContent =
+      lista.length === certificadosDoDetalhe.length
+        ? `${lista.length} certificado(s)`
+        : `Mostrando ${lista.length} de ${certificadosDoDetalhe.length} certificado(s)`;
   }
 
   function abrirDetalhes(id) {
     const u = usuariosCache.find((x) => x.id === id);
     if (!u) return;
     document.getElementById("corpo-detalhes").innerHTML = `
-      <p class="hint">ID</p><p>${esc(u.id)}</p>
-      <p class="hint">E-mail</p><p>${esc(u.email)}</p>
-      <p class="hint">Nome</p><p>${esc(u.nome)}</p>
-      <p class="hint">Cadastrado em</p><p>${esc(formatarData(u.criado_em))}</p>
-      <p class="hint">Status</p><p>${textoStatus(u)}</p>
-      <p class="hint">Certificados importados (${Number(u.qtdCertificados) || 0})</p>${htmlCertificados(u)}
+      <div class="detalhes-grade">
+        <div><p class="hint">ID</p><p>${esc(u.id)}</p></div>
+        <div><p class="hint">Status</p><p>${textoStatus(u)}</p></div>
+        <div><p class="hint">E-mail</p><p>${esc(u.email)}</p></div>
+        <div><p class="hint">Nome</p><p>${esc(u.nome)}</p></div>
+        <div><p class="hint">Cadastrado em</p><p>${esc(formatarData(u.criado_em))}</p></div>
+      </div>
+      <h3 class="detalhes-subtitulo">Certificados importados (${Number(u.qtdCertificados) || 0})</h3>${htmlCertificados(u)}
     `;
+    if (u.certificados && u.certificados.length) {
+      ["input-busca-cert", "select-filtro-cert", "select-ordem-cert"].forEach((idCampo) => {
+        document.getElementById(idCampo).addEventListener(idCampo === "input-busca-cert" ? "input" : "change", renderizarListaCertificados);
+      });
+      renderizarListaCertificados();
+    }
     document.getElementById("modal-detalhes-overlay").classList.add("aberto");
   }
 
