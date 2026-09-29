@@ -35,14 +35,14 @@
    * volta para "primeira coluna = NCM" (formato simples de uma coluna só).
    * Retorna um array de { ncm, descricao } — nunca strings soltas.
    */
-  function parseCSV(texto) {
+  function parseCSV(texto, delimitadorFixo) {
     const linhasBrutas = String(texto)
       .split(/\r\n|\n|\r/)
       .map((l) => l.trim())
       .filter((l) => l.length > 0);
     if (linhasBrutas.length === 0) return [];
 
-    const delimitador = detectarDelimitador(linhasBrutas[0]);
+    const delimitador = delimitadorFixo || detectarDelimitador(linhasBrutas[0]);
     const cabecalho = splitLinha(linhasBrutas[0], delimitador);
 
     let ncmIdx = cabecalho.findIndex((c) => /ncm/i.test(c));
@@ -85,14 +85,14 @@
    * para usar "a linha não tem dígito" como sinal de cabeçalho, porque
    * descrições de produto raramente têm dígito mesmo sendo dados de verdade.
    */
-  function parseCSVDescricoes(texto) {
+  function parseCSVDescricoes(texto, delimitadorFixo) {
     const linhasBrutas = String(texto)
       .split(/\r\n|\n|\r/)
       .map((l) => l.trim())
       .filter((l) => l.length > 0);
     if (linhasBrutas.length === 0) return [];
 
-    const delimitador = detectarDelimitador(linhasBrutas[0]);
+    const delimitador = delimitadorFixo || detectarDelimitador(linhasBrutas[0]);
     const cabecalho = splitLinha(linhasBrutas[0], delimitador);
     let colIdx = cabecalho.findIndex((c) => /descri|produto|mercadoria|^item$|^nome$/i.test(c));
     let linhasDeDados = linhasBrutas;

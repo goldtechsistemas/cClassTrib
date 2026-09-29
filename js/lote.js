@@ -79,9 +79,25 @@
       if (e.dataTransfer.files && e.dataTransfer.files[0]) lerArquivo(e.dataTransfer.files[0]);
     });
     fileInput.addEventListener("change", () => {
-      if (fileInput.files && fileInput.files[0]) lerArquivo(fileInput.files[0]);
+      if (fileInput.files && fileInput.files[0]) {
+        lerArquivo(fileInput.files[0]);
+        fileInput.value = ""; // permite escolher o mesmo arquivo de novo depois de editá-lo
+      }
     });
     function lerArquivo(file) {
+      const nome = (file.name || "").toLowerCase();
+      if (/\.xls[xm]$/.test(nome)) {
+        file
+          .arrayBuffer()
+          .then((buffer) => window.XlsxUtil.lerPlanilha(buffer))
+          .then((texto) => aoCarregar(texto, null, { delimitador: window.XlsxUtil.DELIMITADOR }))
+          .catch((e) => aoCarregar(null, (e && e.message) || "Não foi possível ler a planilha do Excel."));
+        return;
+      }
+      if (/\.xls$/.test(nome)) {
+        aoCarregar(null, 'Arquivos .xls (Excel antigo) não são suportados. No Excel, use "Salvar como" e escolha "Pasta de Trabalho do Excel (*.xlsx)" ou CSV.');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => aoCarregar(decodificarTexto(e.target.result));
       reader.onerror = () => aoCarregar(null, "Erro ao ler o arquivo.");
@@ -104,17 +120,17 @@
 
     let ultimoResultado = [];
 
-    configurarUpload(dropArea, fileInput, (texto, erro) => {
+    configurarUpload(dropArea, fileInput, (texto, erro, opcoes) => {
       if (erro) { progressLine.textContent = erro; return; }
-      processarTexto(texto);
+      processarTexto(texto, opcoes);
     });
 
     btnExemplo.addEventListener("click", () => {
       processarTexto(["ncm", "1006.20.00", "0401.10.10", "8713.10.00", "2203.00.00", "9999.99.99"].join("\n"));
     });
 
-    async function processarTexto(texto) {
-      const todasLinhas = window.CSVUtil.parseCSV(texto);
+    async function processarTexto(texto, opcoes) {
+      const todasLinhas = window.CSVUtil.parseCSV(texto, opcoes && opcoes.delimitador);
       if (todasLinhas.length === 0) {
         progressLine.textContent = "Nenhum NCM válido encontrado no arquivo. Confira se há uma coluna de NCM preenchida.";
         return;
@@ -208,21 +224,21 @@
 
     let ultimoResultado = [];
 
-    configurarUpload(dropArea, fileInput, (texto, erro) => {
+    configurarUpload(dropArea, fileInput, (texto, erro, opcoes) => {
       if (erro) { progressLine.textContent = erro; return; }
-      processarTexto(texto);
+      processarTexto(texto, opcoes);
     });
 
     btnExemplo.addEventListener("click", () => {
       processarTexto(["produto", "água mineral", "cadeira de rodas", "parafuso sextavado", "notebook", "arroz tipo 1"].join("\n"));
     });
 
-    async function processarTexto(texto) {
+    async function processarTexto(texto, opcoes) {
       if (!window.NCM_TABELA || !window.NcmBusca) {
         progressLine.textContent = "Tabela NCM completa não carregada — verifique se js/ncm-tabela.js está incluído na página.";
         return;
       }
-      const todosProdutos = window.CSVUtil.parseCSVDescricoes(texto);
+      const todosProdutos = window.CSVUtil.parseCSVDescricoes(texto, opcoes && opcoes.delimitador);
       if (todosProdutos.length === 0) {
         progressLine.textContent = "Nenhum produto encontrado no arquivo. Confira se há uma coluna de descrição preenchida.";
         return;
