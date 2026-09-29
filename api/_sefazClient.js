@@ -75,8 +75,13 @@ function tagDocumento(cnpj) {
   return cnpj && String(cnpj).length === 11 ? `<CPF>${cnpj}</CPF>` : `<CNPJ>${cnpj}</CNPJ>`;
 }
 
-function montarEnvelope({ tpAmb, cUFAutor, cnpj, ultNsu }) {
-  const ultNsuFormatado = String(ultNsu || "0").replace(/\D/g, "").padStart(15, "0");
+function montarEnvelope({ tpAmb, cUFAutor, cnpj, ultNsu, chNFe }) {
+  // consChNFe busca uma nota específica pela chave (devolve o XML completo se
+  // a manifestação já foi registrada) — independe do feed por NSU e da espera
+  // de 1h que a SEFAZ impõe entre consultas distNSU sem novidades.
+  const consulta = chNFe
+    ? `<consChNFe><chNFe>${chNFe}</chNFe></consChNFe>`
+    : `<distNSU><ultNSU>${String(ultNsu || "0").replace(/\D/g, "").padStart(15, "0")}</ultNSU></distNSU>`;
   return (
     `<?xml version="1.0" encoding="utf-8"?>` +
     `<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">` +
@@ -87,7 +92,7 @@ function montarEnvelope({ tpAmb, cUFAutor, cnpj, ultNsu }) {
     `<tpAmb>${tpAmb}</tpAmb>` +
     `<cUFAutor>${cUFAutor}</cUFAutor>` +
     tagDocumento(cnpj) +
-    `<distNSU><ultNSU>${ultNsuFormatado}</ultNSU></distNSU>` +
+    consulta +
     `</distDFeInt>` +
     `</nfeDadosMsg>` +
     `</nfeDistDFeInteresse>` +
@@ -262,10 +267,10 @@ function normalizarDocumento(item) {
  * Consulta um lote de documentos a partir do ultNSU informado.
  * @returns {{cStat: string, xMotivo: string, ultNSU: string, maxNSU: string, documentos: object[], eventos: object[]}}
  */
-async function distribuirDfe({ ambiente, uf, cnpj, ultNsu, certPem, keyPem }) {
+async function distribuirDfe({ ambiente, uf, cnpj, ultNsu, chNFe, certPem, keyPem }) {
   const url = ENDPOINTS[ambiente] || ENDPOINTS[2];
   const cUFAutor = UF_PARA_CODIGO[uf] || UF_PARA_CODIGO.DF; // fallback neutro se a UF não veio do certificado
-  const envelope = montarEnvelope({ tpAmb: ambiente, cUFAutor, cnpj, ultNsu });
+  const envelope = montarEnvelope({ tpAmb: ambiente, cUFAutor, cnpj, ultNsu, chNFe });
 
   const resposta = await enviarSoap({ url, certPem, keyPem, envelopeXml: envelope });
   if (resposta.statusCode >= 400 && resposta.statusCode !== 500) {

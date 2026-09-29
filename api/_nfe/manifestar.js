@@ -4,6 +4,7 @@ const { corpoJson } = require("../_lib");
 const { decryptSecret } = require("../_crypto");
 const { extrairParaMtls } = require("../_certUtils");
 const { enviarManifestacaoDestinatario, ErroSefaz, TP_EVENTO_CIENCIA, TP_EVENTO_CONFIRMACAO } = require("../_sefazClient");
+const { completarXmlPorChave, esperar } = require("../_nfeSync");
 
 // Rota chamada pelo botao "Dar ciencia" de uma nota especifica na tela.
 module.exports = async (req, res) => {
@@ -110,11 +111,15 @@ module.exports = async (req, res) => {
     // nao e uma rejeicao de verdade, so nao temos o XML do evento original
     // pra guardar em nfe_eventos.
     await query("UPDATE nfe_documentos SET manifestacao = $2 WHERE id = $1", [documento.id, statusManifestacao]);
+    const xmlObtido = await tentarTrazerXmlCompleto(empresa, documento.id, { certPem, keyPem });
     res.status(200).json({
       ok: true,
       cStat: resultado.cStat,
       xMotivo: resultado.xMotivo,
-      mensagem: `Esta nota ja tinha ${nomeEvento} registrada na SEFAZ. Sincronize de novo pra buscar o XML completo.`,
+      xmlCompleto: xmlObtido,
+      mensagem: xmlObtido
+        ? `Esta nota ja tinha ${nomeEvento} registrada na SEFAZ. XML completo baixado.`
+        : `Esta nota ja tinha ${nomeEvento} registrada na SEFAZ. O XML completo sera buscado ao baixar o PDF.`,
     });
     return;
   }
@@ -131,14 +136,32 @@ module.exports = async (req, res) => {
     [empresaId, chNFe, String(resultado.tpEvento), 1, resultado.eventoAssinadoXml]
   );
 
+  const xmlObtido = await tentarTrazerXmlCompleto(empresa, documento.id, { certPem, keyPem });
+  const prefixo =
+    resultado.tpEvento === TP_EVENTO_CONFIRMACAO
+      ? "Ciencia da Operacao estava fora do prazo (10 dias) — Confirmacao da Operacao foi registrada em vez dela."
+      : "Ciencia da Operacao registrada.";
   res.status(200).json({
     ok: true,
     cStat: resultado.cStat,
     xMotivo: resultado.xMotivo,
     tpEvento: resultado.tpEvento,
-    mensagem:
-      resultado.tpEvento === TP_EVENTO_CONFIRMACAO
-        ? "Ciencia da Operacao estava fora do prazo (10 dias) — Confirmacao da Operacao foi registrada em vez dela. O XML completo costuma ficar disponivel numa proxima sincronizacao."
-        : "Ciencia da Operacao registrada. O XML completo costuma ficar disponivel numa proxima sincronizacao.",
+    xmlCompleto: xmlObtido,
+    mensagem: xmlObtido
+      ? `${prefixo} XML completo baixado — o PDF ja sai como DANFE.`
+      : `${prefixo} A SEFAZ ainda nao liberou o XML completo; ele sera buscado automaticamente ao baixar o PDF.`,
   });
 };
+
+// A SEFAZ costuma levar alguns segundos entre registrar o evento (cStat 135)
+// e liberar o XML completo na consulta por chave — uma espera curta antes da
+// unica tentativa aqui; se ainda nao vier, o download do PDF tenta de novo.
+const ESPERA_ANTES_DE_BUSCAR_XML_MS = 2000;
+
+async function tentarTrazerXmlCompleto(empresa, documentoId, cert) {
+  await esperar(ESPERA_ANTES_DE_BUSCAR_XML_MS);
+  const r = await query("SELECT * FROM nfe_documentos WHERE id = $1", [documentoId]);
+  if (!r.rows.length) return false;
+  const atualizado = await completarXmlPorChave(empresa, r.rows[0], cert);
+  return !!atualizado.xml_completo;
+}

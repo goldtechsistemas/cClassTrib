@@ -2,9 +2,15 @@ const { query } = require("../_db");
 const { exigirUsuario, exigirEmpresaDoUsuario } = require("../_nfeHelpers");
 const { montarFiltroDocumentos } = require("../_nfeFiltros");
 const { gerarPdfParaDocumento } = require("../_pdfResumo");
+const { completarXmlPorChave, certificadoDaEmpresa, esperar } = require("../_nfeSync");
 const JSZip = require("jszip");
 
 const CONCORRENCIA = 5; // gera até 5 PDFs em paralelo (CPU-bound: barcode + layout) em vez de um por um
+// Cada busca por chave é uma chamada à SEFAZ (~1-3s + pausa) — limitado pra
+// não estourar o tempo máximo da função; as que sobrarem saem como resumo e
+// podem ser baixadas de novo (ou individualmente) em seguida.
+const LIMITE_BUSCAS_POR_CHAVE = 10;
+const PAUSA_ENTRE_BUSCAS_MS = 1000;
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -15,7 +21,7 @@ module.exports = async (req, res) => {
   if (usuarioId == null) return;
 
   const empresaId = req.query && req.query.empresaId;
-  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, "id, cnpj");
+  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId);
   if (!empresa) return;
 
   const params = [empresaId];
@@ -27,6 +33,25 @@ module.exports = async (req, res) => {
   if (!r.rows.length) {
     res.status(404).json({ ok: false, erro: "Nenhuma nota encontrada para gerar PDF." });
     return;
+  }
+
+  const pendentesDeXml = r.rows
+    .map((doc, i) => ({ doc, i }))
+    .filter(({ doc }) => !doc.xml_completo && ["ciencia", "confirmacao"].includes(doc.manifestacao))
+    .slice(0, LIMITE_BUSCAS_POR_CHAVE);
+  if (pendentesDeXml.length) {
+    let cert = null;
+    try {
+      cert = certificadoDaEmpresa(empresa);
+    } catch (e) {
+      console.error("Nao foi possivel carregar o certificado para buscar XML por chave:", e.message || e);
+    }
+    if (cert) {
+      for (const [n, { doc, i }] of pendentesDeXml.entries()) {
+        if (n > 0) await esperar(PAUSA_ENTRE_BUSCAS_MS);
+        r.rows[i] = await completarXmlPorChave(empresa, doc, cert);
+      }
+    }
   }
 
   const zip = new JSZip();

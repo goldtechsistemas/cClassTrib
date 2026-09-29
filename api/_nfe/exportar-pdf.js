@@ -1,6 +1,7 @@
 const { query } = require("../_db");
 const { exigirUsuario, exigirEmpresaDoUsuario } = require("../_nfeHelpers");
 const { gerarPdfParaDocumento } = require("../_pdfResumo");
+const { completarXmlPorChave } = require("../_nfeSync");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -16,7 +17,7 @@ module.exports = async (req, res) => {
     res.status(400).json({ ok: false, erro: "Informe a nota." });
     return;
   }
-  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, "id");
+  const empresa = await exigirEmpresaDoUsuario(req, res, usuarioId, empresaId);
   if (!empresa) return;
 
   const r = await query("SELECT * FROM nfe_documentos WHERE empresa_id = $1 AND ch_nfe = $2", [empresaId, chNFe]);
@@ -25,7 +26,10 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const buffer = await gerarPdfParaDocumento(r.rows[0]);
+  // Nota já manifestada mas ainda em "Resumo": busca o XML completo pela
+  // chave na hora, pra entregar o DANFE em vez do PDF resumo.
+  const documento = await completarXmlPorChave(empresa, r.rows[0]);
+  const buffer = await gerarPdfParaDocumento(documento);
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="nota-${chNFe}.pdf"`);

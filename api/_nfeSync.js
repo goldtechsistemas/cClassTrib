@@ -322,4 +322,46 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
   }
 }
 
-module.exports = { sincronizarEmpresa };
+const MANIFESTACOES_QUE_LIBERAM_XML = ["ciencia", "confirmacao"];
+
+function certificadoDaEmpresa(empresa) {
+  const pfxBuffer = decryptSecret(empresa.cert_encrypted);
+  const senha = decryptSecret(empresa.cert_password_encrypted).toString("utf8");
+  const { certPem, keyPem } = extrairParaMtls(pfxBuffer, senha);
+  return { certPem, keyPem };
+}
+
+/**
+ * Busca o XML completo de UMA nota já manifestada direto pela chave
+ * (consChNFe), sem depender do feed por NSU — que só entrega o XML numa
+ * sincronização posterior e fica bloqueado por até 1h quando a SEFAZ devolve
+ * "nenhum documento". Nunca lança: se não der (nota não manifestada, SEFAZ
+ * fora, consumo indevido), devolve o documento como estava e quem chamou cai
+ * no PDF resumo.
+ */
+async function completarXmlPorChave(empresa, doc, cert) {
+  if (doc.xml_completo || !MANIFESTACOES_QUE_LIBERAM_XML.includes(doc.manifestacao)) return doc;
+  try {
+    const { certPem, keyPem } = cert || certificadoDaEmpresa(empresa);
+    const resultado = await distribuirDfe({
+      ambiente: empresa.ambiente,
+      uf: empresa.uf,
+      cnpj: empresa.cnpj,
+      chNFe: doc.ch_nfe,
+      certPem,
+      keyPem,
+    });
+    const completa = resultado.documentos.find((d) => d.tipo === "completa" && d.chNFe === doc.ch_nfe && d.xmlCompleto);
+    if (!completa) return doc;
+    const r = await query(
+      "UPDATE nfe_documentos SET xml_completo = $2, tipo = 'completa', dest_cnpj = COALESCE(dest_cnpj, $3) WHERE id = $1 RETURNING *",
+      [doc.id, completa.xmlCompleto, completa.destCnpj]
+    );
+    return r.rows[0] || doc;
+  } catch (e) {
+    console.error(`Falha ao buscar XML completo por chave (${doc.ch_nfe}):`, e.message || e);
+    return doc;
+  }
+}
+
+module.exports = { sincronizarEmpresa, completarXmlPorChave, certificadoDaEmpresa, esperar };

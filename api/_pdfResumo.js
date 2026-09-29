@@ -17,8 +17,11 @@ function gerarPdfResumo(doc) {
       .fontSize(9)
       .fillColor("#888888")
       .text(
-        "Esta nota ainda não tem o XML completo (só o resumo) — por isso este PDF é um resumo, não o DANFE. " +
-          'Dê "Ciência da Operação" nesta nota e sincronize de novo: quando o XML completo chegar, o download passa a trazer o DANFE completo automaticamente.',
+        doc.manifestacao === "ciencia" || doc.manifestacao === "confirmacao"
+          ? "Esta nota já foi manifestada, mas a SEFAZ ainda não liberou o XML completo — por isso este PDF é um resumo, não o DANFE. " +
+              "Tente baixar de novo em alguns minutos: o sistema busca o XML completo automaticamente a cada download."
+          : "Esta nota ainda não tem o XML completo (só o resumo) — por isso este PDF é um resumo, não o DANFE. " +
+              'Clique em "Dar ciência" nesta nota: depois disso, o download passa a trazer o DANFE completo automaticamente.',
         { align: "center" }
       );
     pdf.moveDown(2);
