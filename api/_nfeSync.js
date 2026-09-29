@@ -217,12 +217,16 @@ async function manifestarPendentes({ empresa, certPem, keyPem, prazoFinal }) {
  * Busca pela chave o XML completo das notas já manifestadas que ainda estão
  * só com resumo — em vez de esperar o feed por NSU, que fica bloqueado por
  * 1h depois de um cStat 137. Para na primeira falha (serviço de distribuição
- * lento/fora do ar: as seguintes falhariam igual) ou no fim do orçamento.
+ * lento/fora do ar ou cota de consulta por chave esgotada: as seguintes
+ * falhariam igual) ou no fim do orçamento. Usa só parte da cota horária de
+ * consulta por chave — o resto fica pros downloads de PDF; as notas que
+ * sobrarem chegam de qualquer forma pelo feed por NSU (que não tem essa cota).
  */
 async function completarManifestadasPorChave(empresa, cert, prazoFinal) {
+  if (consultaPorChaveBloqueada(empresa)) return 0;
   const docs = await query(
-    "SELECT * FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao IN ('ciencia', 'confirmacao') LIMIT $2",
-    [empresa.id, LIMITE_MANIFESTACOES_POR_CHAMADA]
+    "SELECT * FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao IN ('ciencia', 'confirmacao') ORDER BY dh_emi DESC NULLS LAST LIMIT $2",
+    [empresa.id, LIMITE_BUSCAS_POR_CHAVE_SINCRONIZACAO]
   );
   let completados = 0;
   for (const [n, doc] of docs.rows.entries()) {
@@ -367,6 +371,12 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
     return { ok: false, erro: erroDistribuicao };
   }
 
+  const rAguardando = await query(
+    "SELECT count(*) FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao IN ('ciencia', 'confirmacao')",
+    [empresa.id]
+  ).catch(() => null);
+  const aguardandoXml = rAguardando ? Number(rAguardando.rows[0].count) : 0;
+
   return {
     ok: true,
     cStat: fase1 ? fase1.ultimoCStat : null,
@@ -375,6 +385,7 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
     manifestadas,
     pendentesDeManifestacao,
     xmlsCompletados,
+    aguardandoXml,
     aguardandoSefaz: emEspera || !!(fase1 && fase1.pararPorSefaz),
     atingiuLimiteCiclos: !!(fase1 && fase1.atingiuLimiteCiclos),
     avisoDistribuicao: avisoEspera || (erroDistribuicao ? `Não foi possível buscar notas novas agora (${erroDistribuicao}).` : null),
@@ -382,6 +393,19 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
 }
 
 const MANIFESTACOES_QUE_LIBERAM_XML = ["ciencia", "confirmacao"];
+// A SEFAZ limita a consulta por chave (consChNFe) a 20 por hora por CNPJ —
+// passando disso responde cStat 656 ("Ultrapassou o limite de 20 consultas
+// por hora"), e insistir durante o bloqueio é justamente o "consumo
+// indevido" que ela pune. Por isso: a sincronização usa no máximo metade da
+// cota, e ao receber 656 a empresa fica sem consulta por chave por 1h.
+const LIMITE_BUSCAS_POR_CHAVE_SINCRONIZACAO = 10;
+const CSTAT_CONSUMO_INDEVIDO = "656";
+
+class CotaConsultaPorChaveEsgotada extends Error {}
+
+function consultaPorChaveBloqueada(empresa) {
+  return !!empresa.consulta_chave_bloqueada_ate && new Date(empresa.consulta_chave_bloqueada_ate) > new Date();
+}
 // Quando o serviço de distribuição da SEFAZ está saudável a consulta por
 // chave responde em 1-2s; quando está instável ele simplesmente não responde.
 // Como essa busca é um "bônus" (sem ela o PDF só sai como resumo), não vale
@@ -405,6 +429,7 @@ function certificadoDaEmpresa(empresa) {
  */
 async function completarXmlPorChave(empresa, doc, cert) {
   if (doc.xml_completo || !MANIFESTACOES_QUE_LIBERAM_XML.includes(doc.manifestacao)) return doc;
+  if (consultaPorChaveBloqueada(empresa)) return doc;
   try {
     return (await buscarXmlPorChave(empresa, doc, cert)) || doc;
   } catch (e) {
@@ -413,9 +438,12 @@ async function completarXmlPorChave(empresa, doc, cert) {
   }
 }
 
-// Lança em falha de comunicação com a SEFAZ; devolve null se a SEFAZ
-// respondeu mas o XML completo ainda não está disponível pra essa chave.
+// Lança em falha de comunicação com a SEFAZ ou cota esgotada; devolve null
+// se a SEFAZ respondeu mas o XML completo ainda não está disponível.
 async function buscarXmlPorChave(empresa, doc, cert) {
+  if (consultaPorChaveBloqueada(empresa)) {
+    throw new CotaConsultaPorChaveEsgotada("Cota de consulta por chave da SEFAZ esgotada nesta hora.");
+  }
   const { certPem, keyPem } = cert || certificadoDaEmpresa(empresa);
   const resultado = await distribuirDfe({
     ambiente: empresa.ambiente,
@@ -426,6 +454,14 @@ async function buscarXmlPorChave(empresa, doc, cert) {
     keyPem,
     timeoutMs: TIMEOUT_BUSCA_POR_CHAVE_MS,
   });
+  if (resultado.cStat === CSTAT_CONSUMO_INDEVIDO) {
+    const bloqueadaAte = new Date(Date.now() + UMA_HORA_MS);
+    await query("UPDATE nfe_empresas SET consulta_chave_bloqueada_ate = $2 WHERE id = $1", [empresa.id, bloqueadaAte]);
+    // O mesmo objeto é reaproveitado no resto da requisição (lote, sync) —
+    // marca aqui também pra ninguém mais tentar nesta chamada.
+    empresa.consulta_chave_bloqueada_ate = bloqueadaAte;
+    throw new CotaConsultaPorChaveEsgotada(`SEFAZ: ${resultado.xMotivo}`);
+  }
   const completa = resultado.documentos.find((d) => d.tipo === "completa" && d.chNFe === doc.ch_nfe && d.xmlCompleto);
   if (!completa) return null;
   const r = await query(
@@ -435,4 +471,4 @@ async function buscarXmlPorChave(empresa, doc, cert) {
   return r.rows[0] || null;
 }
 
-module.exports = { sincronizarEmpresa, completarXmlPorChave, certificadoDaEmpresa, esperar };
+module.exports = { sincronizarEmpresa, completarXmlPorChave, certificadoDaEmpresa, esperar, consultaPorChaveBloqueada };

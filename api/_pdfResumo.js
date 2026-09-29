@@ -19,7 +19,7 @@ function gerarPdfResumo(doc) {
       .text(
         doc.manifestacao === "ciencia" || doc.manifestacao === "confirmacao"
           ? "Esta nota já foi manifestada, mas a SEFAZ ainda não liberou o XML completo — por isso este PDF é um resumo, não o DANFE. " +
-              "Tente baixar de novo em alguns minutos: o sistema busca o XML completo automaticamente a cada download."
+              'O XML completo chega pelas próximas sincronizações (a SEFAZ limita quantas notas podem ser buscadas por hora) — clique em "Sincronizar agora" mais tarde e baixe de novo.'
           : "Esta nota ainda não tem o XML completo (só o resumo) — por isso este PDF é um resumo, não o DANFE. " +
               'Clique em "Dar ciência" nesta nota: depois disso, o download passa a trazer o DANFE completo automaticamente.',
         { align: "center" }

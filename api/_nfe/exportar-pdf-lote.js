@@ -6,10 +6,10 @@ const { completarXmlPorChave, certificadoDaEmpresa, esperar } = require("../_nfe
 const JSZip = require("jszip");
 
 const CONCORRENCIA = 5; // gera até 5 PDFs em paralelo (CPU-bound: barcode + layout) em vez de um por um
-// Cada busca por chave é uma chamada à SEFAZ (~1-3s + pausa) — limitado pra
-// não estourar o tempo máximo da função; as que sobrarem saem como resumo e
-// podem ser baixadas de novo (ou individualmente) em seguida.
-const LIMITE_BUSCAS_POR_CHAVE = 10;
+// Cada busca por chave é uma chamada à SEFAZ e consome a cota de 20 consultas
+// por hora por CNPJ — limitado pra não esgotar a cota num só download; as que
+// sobrarem saem como resumo e chegam pela sincronização (feed por NSU).
+const LIMITE_BUSCAS_POR_CHAVE = 5;
 const PAUSA_ENTRE_BUSCAS_MS = 1000;
 // Teto de tempo total gasto buscando XML por chave num lote — se a SEFAZ
 // estiver lenta, para de tentar e entrega o ZIP com o que já tiver, em vez de

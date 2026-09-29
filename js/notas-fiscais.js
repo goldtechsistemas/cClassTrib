@@ -181,6 +181,11 @@
       if (dados.pendentesDeManifestacao > 0 || dados.atingiuLimiteCiclos) {
         partes.push("Ainda há notas pendentes — clique em sincronizar de novo para continuar de onde parou.");
       }
+      if (dados.aguardandoXml > 0) {
+        partes.push(
+          `${dados.aguardandoXml} nota(s) já manifestada(s) ainda aguardam o XML completo da SEFAZ — ele chega nas próximas sincronizações (a SEFAZ limita quantas notas podem ser buscadas por hora).`
+        );
+      }
       mostrarAviso(partes.join(" "), "ok");
       carregarEmpresas();
       if (empresaSelecionadaId === Number(empresaId)) carregarNotas(empresaId, nomeEmpresa);
