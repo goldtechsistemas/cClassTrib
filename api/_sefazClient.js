@@ -331,12 +331,24 @@ function montarXmlEvento({ tpAmb, cOrgao, cnpj, chNFe, tpEvento, nSeqEvento }) {
   };
 }
 
+// certPem (usado no mTLS da conexão) traz a cadeia inteira do certificado
+// (folha + intermediárias/raiz, concatenadas por extrairParaMtls) — mas o
+// <KeyInfo> da assinatura do evento deve conter só o certificado da própria
+// empresa, não a cadeia (é o que a sped-nfe, referência real de mercado,
+// faz em Signer.php). Mandar a cadeia inteira ali é aceito pelo schema
+// (X509Data permite múltiplos X509Certificate) mas não é o que a SEFAZ
+// espera nesse campo.
+function extrairPrimeiroCertificadoPem(certPem) {
+  const match = certPem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/);
+  return match ? match[0] : certPem;
+}
+
 // A NF-e ainda exige SHA-1 no XMLDSig (padrão legado do schema oficial,
 // não é escolha nossa) — RSA-SHA1 + digest SHA1, canonicalização C14N.
 function assinarEvento(xmlEvento, certPem, keyPem) {
   const sig = new SignedXml({
     privateKey: keyPem,
-    publicCert: certPem,
+    publicCert: extrairPrimeiroCertificadoPem(certPem),
     signatureAlgorithm: "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
     canonicalizationAlgorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
   });
