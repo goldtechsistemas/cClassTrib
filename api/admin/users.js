@@ -61,7 +61,31 @@ module.exports = async (req, res) => {
     const resultado = await query(
       "SELECT id, email, nome, bloqueado, precisa_trocar_senha, criado_em FROM usuarios ORDER BY criado_em DESC"
     );
-    res.status(200).json({ ok: true, usuarios: resultado.rows });
+
+    // Certificados importados por usuário (módulo Notas Fiscais): só o que o
+    // admin precisa pra controle — nome, CNPJ, validade e última
+    // sincronização. O conteúdo do certificado e a senha nunca saem daqui.
+    const empresas = await query(
+      `SELECT usuario_id, razao_social, cnpj, cert_valid_until, ultima_sincronizacao
+         FROM nfe_empresas
+        WHERE cert_encrypted IS NOT NULL
+        ORDER BY razao_social`
+    );
+    const porUsuario = new Map();
+    for (const e of empresas.rows) {
+      if (!porUsuario.has(e.usuario_id)) porUsuario.set(e.usuario_id, []);
+      porUsuario.get(e.usuario_id).push({
+        razaoSocial: e.razao_social,
+        cnpj: e.cnpj,
+        certValidUntil: e.cert_valid_until,
+        ultimaSincronizacao: e.ultima_sincronizacao,
+      });
+    }
+    const usuarios = resultado.rows.map((u) => {
+      const certificados = porUsuario.get(u.id) || [];
+      return { ...u, qtdCertificados: certificados.length, certificados };
+    });
+    res.status(200).json({ ok: true, usuarios });
   } catch (e) {
     console.error(e);
     res.status(500).json({ ok: false, erro: "Erro interno." });

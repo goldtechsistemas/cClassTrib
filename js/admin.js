@@ -125,6 +125,7 @@
         <td>${esc(u.nome)}</td>
         <td>${esc(formatarData(u.criado_em))}</td>
         <td>${statusBadge}</td>
+        <td title="Certificados A1 importados no módulo Notas Fiscais">${Number(u.qtdCertificados) || 0}</td>
         <td>
           <div class="tabela-acoes">
             ${botaoBloqueio}
@@ -140,16 +141,16 @@
 
   async function carregarUsuarios() {
     const corpo = document.getElementById("tabela-usuarios-body");
-    corpo.innerHTML = `<tr><td colspan="5">Carregando...</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="6">Carregando...</td></tr>`;
     const resultado = await chamarApi("/api/admin/users");
     if (resultado.status === 401) { voltarParaLogin(); return; }
     if (!resultado.ok) {
-      corpo.innerHTML = `<tr><td colspan="5">Erro ao carregar usuários.</td></tr>`;
+      corpo.innerHTML = `<tr><td colspan="6">Erro ao carregar usuários.</td></tr>`;
       return;
     }
     usuariosCache = resultado.usuarios || [];
     if (!usuariosCache.length) {
-      corpo.innerHTML = `<tr><td colspan="5">Nenhum usuário cadastrado ainda.</td></tr>`;
+      corpo.innerHTML = `<tr><td colspan="6">Nenhum usuário cadastrado ainda.</td></tr>`;
       return;
     }
     corpo.innerHTML = usuariosCache.map(linhaUsuario).join("");
@@ -168,6 +169,38 @@
     carregarUsuarios();
   }
 
+  function formatarDocumento(d) {
+    const n = String(d || "").replace(/\D/g, "");
+    if (n.length === 14) return n.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    if (n.length === 11) return n.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+    return d || "—";
+  }
+
+  function formatarDataCurta(iso) {
+    try {
+      return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function htmlCertificados(u) {
+    const lista = u.certificados || [];
+    if (!lista.length) return `<p>Nenhum certificado importado.</p>`;
+    const agora = Date.now();
+    const itens = lista.map((c) => {
+      const venc = c.certValidUntil ? new Date(c.certValidUntil).getTime() : null;
+      const validade = venc == null
+        ? "validade desconhecida"
+        : venc < agora
+          ? `<span style="color:var(--vermelho)">vencido em ${esc(formatarDataCurta(c.certValidUntil))}</span>`
+          : `válido até ${esc(formatarDataCurta(c.certValidUntil))}`;
+      const sync = c.ultimaSincronizacao ? `última sincronização ${esc(formatarData(c.ultimaSincronizacao))}` : "nunca sincronizou";
+      return `<li><strong>${esc(c.razaoSocial || "—")}</strong><br><span class="hint">${esc(formatarDocumento(c.cnpj))} · ${validade} · ${sync}</span></li>`;
+    }).join("");
+    return `<ul style="margin:0 0 12px 18px; padding:0;">${itens}</ul>`;
+  }
+
   function abrirDetalhes(id) {
     const u = usuariosCache.find((x) => x.id === id);
     if (!u) return;
@@ -177,6 +210,7 @@
       <p class="hint">Nome</p><p>${esc(u.nome)}</p>
       <p class="hint">Cadastrado em</p><p>${esc(formatarData(u.criado_em))}</p>
       <p class="hint">Status</p><p>${textoStatus(u)}</p>
+      <p class="hint">Certificados importados (${Number(u.qtdCertificados) || 0})</p>${htmlCertificados(u)}
     `;
     document.getElementById("modal-detalhes-overlay").classList.add("aberto");
   }
