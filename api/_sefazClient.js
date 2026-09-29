@@ -461,12 +461,7 @@ async function enviarManifestacaoCiencia({ ambiente, cnpj, chNFe, certPem, keyPe
   const idLote = String(Date.now()).slice(-15).padStart(15, "0");
   const envelope = montarEnvelopeEvento({ idLote, eventoAssinadoXml: eventoAssinado });
 
-  // DEBUG TEMPORARIO — remover depois de descobrir a causa do cStat 225.
-  console.error("[DEBUG manifestacao] url=", url, "soapAction=", SOAP_ACTION_EVENTO);
-  console.error("[DEBUG manifestacao] envelope enviado=", envelope);
-
   const resposta = await enviarSoap({ url, certPem, keyPem, envelopeXml: envelope, soapAction: SOAP_ACTION_EVENTO });
-  console.error("[DEBUG manifestacao] statusCode=", resposta.statusCode, "body=", resposta.body);
   if (resposta.statusCode >= 400 && resposta.statusCode !== 500) {
     throw new ErroSefaz(`SEFAZ respondeu HTTP ${resposta.statusCode}.`);
   }
