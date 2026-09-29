@@ -28,7 +28,7 @@
       <p class="tab-instrucao">Para descobrir o cClassTrib do produto, basta digitar o NCM no campo abaixo e clicar em "Consultar".</p>
       <div class="card">
         <label for="input-ncm">Código NCM</label>
-        <input type="text" id="input-ncm" placeholder="Ex.: 1006.20.00 ou 10062000" />
+        <input type="text" id="input-ncm" name="ncm-consulta" placeholder="Ex.: 1006.20.00 ou 10062000" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" />
         <div class="field-actions">
           <button class="btn" id="btn-buscar-ncm">Consultar</button>
         </div>
@@ -44,7 +44,7 @@
       <p class="tab-instrucao">Não sabe o NCM do produto? Descreva-o abaixo (ex.: "parafuso sextavado") e o site encontra o código mais provável na tabela oficial completa.</p>
       <div class="card">
         <label for="input-descobrir-ncm">Descreva o produto (ex.: água, parafuso, notebook...)</label>
-        <input type="text" id="input-descobrir-ncm" placeholder="Ex.: água mineral" />
+        <input type="text" id="input-descobrir-ncm" name="descricao-produto" placeholder="Ex.: água mineral" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" />
         <div class="field-actions">
           <button class="btn" id="btn-descobrir-ncm">Buscar NCM</button>
         </div>

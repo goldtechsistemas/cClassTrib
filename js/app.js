@@ -24,9 +24,25 @@
     container.innerHTML = resultados.map(renderResultado).join("");
   }
 
+  // Navegadores/gerenciadores de senha às vezes enfiam o e-mail do login no
+  // primeiro campo de texto da página, mesmo com autocomplete="off". Um NCM
+  // ou uma descrição de produto nunca tem "@" — se aparecer, é autofill.
+  function bloquearAutopreenchimentoDeEmail(input) {
+    if (!input) return;
+    const limparSeForEmail = () => {
+      if (input.value.includes("@")) input.value = "";
+    };
+    limparSeForEmail();
+    input.addEventListener("input", limparSeForEmail);
+    input.addEventListener("change", limparSeForEmail);
+    window.addEventListener("load", limparSeForEmail);
+    window.addEventListener("pageshow", limparSeForEmail);
+  }
+
   // --- Consultar cClassTrib: só por NCM (busca exata dentro dos Anexos).
   const inputNcm = document.getElementById("input-ncm");
   const resultadoNcm = document.getElementById("resultado-ncm");
+  bloquearAutopreenchimentoDeEmail(inputNcm);
 
   function buscarCclasstrib() {
     const ncm = inputNcm.value.trim();
@@ -53,6 +69,7 @@
   // --- Descobrir NCM (tabela oficial completa) ---
   const inputDescobrirNcm = document.getElementById("input-descobrir-ncm");
   const resultadoDescobrirNcm = document.getElementById("resultado-descobrir-ncm");
+  bloquearAutopreenchimentoDeEmail(inputDescobrirNcm);
   const ncmTabelaInfoEl = document.getElementById("ncm-tabela-info");
 
   if (window.NCM_TABELA_META && ncmTabelaInfoEl) {
