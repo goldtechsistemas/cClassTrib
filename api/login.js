@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 const { query } = require("./_db");
-const { corpoJson, iniciarSessaoUsuario } = require("./_lib");
+const { corpoJson, iniciarSessaoUsuario, iniciarTrocaSenha } = require("./_lib");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
 
   try {
     const resultado = await query(
-      "SELECT nome, senha_hash, bloqueado FROM usuarios WHERE email = $1",
+      "SELECT nome, senha_hash, bloqueado, precisa_trocar_senha FROM usuarios WHERE email = $1",
       [email]
     );
     const registro = resultado.rows[0];
@@ -36,6 +36,14 @@ module.exports = async (req, res) => {
 
     if (registro.bloqueado) {
       res.status(403).json({ ok: false, erro: "Esta conta está bloqueada. Fale com o suporte." });
+      return;
+    }
+
+    // Conta criada pelo administrador, ainda com a senha provisória: sem
+    // sessão normal — só a permissão curta pra definir a senha própria.
+    if (registro.precisa_trocar_senha) {
+      iniciarTrocaSenha(res, { email, lembrar });
+      res.status(200).json({ ok: true, trocarSenha: true, email, nome: registro.nome });
       return;
     }
 

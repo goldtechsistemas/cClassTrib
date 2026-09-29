@@ -43,6 +43,39 @@
 
     <div id="aviso-admin"></div>
 
+    <div class="card" style="margin-bottom:20px;">
+      <h2 class="modal-titulo" style="margin-top:0;">Novo usuário</h2>
+      <p class="hint" style="margin-top:0;">A conta é criada com uma senha provisória. No primeiro acesso, o próprio usuário é obrigado a criar a senha dele.</p>
+      <div id="erro-novo-usuario" class="aviso-legal" style="display:none;"></div>
+      <div class="grid-3">
+        <div>
+          <label for="input-novo-email">E-mail</label>
+          <input type="email" id="input-novo-email" name="novo-usuario-email" placeholder="usuario@exemplo.com" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+        </div>
+        <div>
+          <label for="input-novo-nome">Nome</label>
+          <input type="text" id="input-novo-nome" name="novo-usuario-nome" placeholder="Nome do usuário" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+        </div>
+        <div>
+          <label for="input-novo-senha">Senha provisória (opcional)</label>
+          <input type="text" id="input-novo-senha" name="novo-usuario-senha" placeholder="Em branco = gerar automaticamente" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+        </div>
+      </div>
+      <div class="field-actions">
+        <button class="btn" id="btn-criar-usuario" type="button">Criar usuário</button>
+      </div>
+
+      <div id="resultado-novo-usuario" style="display:none; margin-top:16px;">
+        <div class="aviso-legal" style="border-color:var(--verde);">
+          <strong>Usuário criado.</strong> Passe estes dados para ele — a senha provisória só aparece agora, depois não dá pra ver de novo:
+          <div style="margin-top:10px;">E-mail: <strong id="resultado-email"></strong></div>
+          <div>Senha provisória: <strong class="mono" id="resultado-senha"></strong></div>
+          <div class="hint" style="margin-top:6px;">Endereço de acesso: <span id="resultado-link"></span></div>
+          <div class="field-actions"><button class="btn secondary btn-sm" id="btn-copiar-dados" type="button">Copiar dados</button></div>
+        </div>
+      </div>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>

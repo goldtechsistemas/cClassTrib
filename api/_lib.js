@@ -86,6 +86,34 @@ function lerSessaoUsuario(req) {
   }
 }
 
+// Primeiro acesso de uma conta criada pelo administrador: depois de acertar a
+// senha provisória o usuário NÃO recebe a sessão normal — só esta permissão
+// curta, que vale apenas pra definir a senha nova (api/conta/senha-inicial).
+// Tem tipo próprio ("troca-senha"), então lerSessaoUsuario() (que exige
+// tipo "usuario") a ignora em todas as outras rotas.
+const NOME_COOKIE_TROCA = "cclasstrib_troca_senha";
+const SEGUNDOS_TROCA_SENHA = 60 * 15;
+
+function iniciarTrocaSenha(res, dados) {
+  const token = jwt.sign({ tipo: "troca-senha", ...dados }, segredo(), { expiresIn: SEGUNDOS_TROCA_SENHA });
+  adicionarSetCookie(res, montarSetCookie(NOME_COOKIE_TROCA, token, SEGUNDOS_TROCA_SENHA));
+}
+
+function encerrarTrocaSenha(res) {
+  adicionarSetCookie(res, montarClearCookie(NOME_COOKIE_TROCA));
+}
+
+function lerTrocaSenha(req) {
+  const token = lerCookies(req)[NOME_COOKIE_TROCA];
+  if (!token) return null;
+  try {
+    const dados = jwt.verify(token, segredo());
+    return dados.tipo === "troca-senha" ? dados : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function iniciarSessaoAdmin(res, dados) {
   const token = jwt.sign({ tipo: "admin", ...dados }, segredo(), { expiresIn: "12h" });
   adicionarSetCookie(res, montarSetCookie(NOME_COOKIE_ADMIN, token, 60 * 60 * 12));
@@ -125,6 +153,9 @@ module.exports = {
   iniciarSessaoUsuario,
   encerrarSessaoUsuario,
   lerSessaoUsuario,
+  iniciarTrocaSenha,
+  encerrarTrocaSenha,
+  lerTrocaSenha,
   iniciarSessaoAdmin,
   encerrarSessaoAdmin,
   lerSessaoAdmin,

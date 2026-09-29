@@ -1,8 +1,9 @@
 /*
  * Painel administrativo (admin.html) — login próprio (conta separada dos
  * usuários comuns, tabela `admins` no Postgres) e gestão de usuários:
- * listar, bloquear/desbloquear, ver detalhes e excluir (com confirmação
- * dupla: modal + digitar o e-mail da conta).
+ * criar (com senha provisória — o usuário define a própria no primeiro
+ * acesso), listar, bloquear/desbloquear, ver detalhes e excluir (com
+ * confirmação dupla: modal + digitar o e-mail da conta).
  */
 (function () {
   "use strict";
@@ -103,10 +104,17 @@
     carregarUsuarios();
   }
 
+  function textoStatus(u) {
+    if (u.bloqueado) return "Bloqueado";
+    return u.precisa_trocar_senha ? "Aguardando 1º acesso" : "Ativo";
+  }
+
   function linhaUsuario(u) {
     const statusBadge = u.bloqueado
       ? `<span class="badge cor-vermelho">Bloqueado</span>`
-      : `<span class="badge cor-verde">Ativo</span>`;
+      : u.precisa_trocar_senha
+        ? `<span class="badge cor-amarelo" title="Ainda não entrou com a senha provisória e criou a própria senha">Aguardando 1º acesso</span>`
+        : `<span class="badge cor-verde">Ativo</span>`;
     const botaoBloqueio = u.bloqueado
       ? `<button class="btn secondary btn-sm" data-acao="desbloquear" data-id="${u.id}">Desbloquear</button>`
       : `<button class="btn secondary btn-sm" data-acao="bloquear" data-id="${u.id}">Bloquear</button>`;
@@ -166,7 +174,7 @@
       <p class="hint">E-mail</p><p>${esc(u.email)}</p>
       <p class="hint">Nome</p><p>${esc(u.nome)}</p>
       <p class="hint">Cadastrado em</p><p>${esc(formatarData(u.criado_em))}</p>
-      <p class="hint">Status</p><p>${u.bloqueado ? "Bloqueado" : "Ativo"}</p>
+      <p class="hint">Status</p><p>${textoStatus(u)}</p>
     `;
     document.getElementById("modal-detalhes-overlay").classList.add("aberto");
   }
@@ -213,6 +221,61 @@
     }
   }
 
+  // ---------- Novo usuário ----------
+
+  let dadosParaCopiar = "";
+
+  function mostrarErroNovoUsuario(msg) {
+    const el = document.getElementById("erro-novo-usuario");
+    el.textContent = msg;
+    el.style.display = msg ? "block" : "none";
+  }
+
+  async function criarUsuario() {
+    mostrarErroNovoUsuario("");
+    document.getElementById("resultado-novo-usuario").style.display = "none";
+    const email = document.getElementById("input-novo-email").value.trim();
+    const nome = document.getElementById("input-novo-nome").value.trim();
+    const senhaProvisoria = document.getElementById("input-novo-senha").value;
+    if (!email || !nome) { mostrarErroNovoUsuario("Preencha o e-mail e o nome."); return; }
+
+    const btn = document.getElementById("btn-criar-usuario");
+    btn.disabled = true;
+    btn.textContent = "Criando...";
+    try {
+      const resultado = await chamarApi("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, nome, senhaProvisoria }),
+      });
+      if (resultado.status === 401) { voltarParaLogin(); return; }
+      if (!resultado.ok) { mostrarErroNovoUsuario(resultado.erro || "Não foi possível criar o usuário."); return; }
+
+      const link = location.origin + "/login.html";
+      document.getElementById("resultado-email").textContent = resultado.usuario.email;
+      document.getElementById("resultado-senha").textContent = resultado.senhaProvisoria;
+      document.getElementById("resultado-link").textContent = link;
+      dadosParaCopiar = `Acesso ao cClassTrib\nEndereço: ${link}\nE-mail: ${resultado.usuario.email}\nSenha provisória: ${resultado.senhaProvisoria}\n(no primeiro acesso você vai criar a sua própria senha)`;
+      document.getElementById("resultado-novo-usuario").style.display = "block";
+      ["input-novo-email", "input-novo-nome", "input-novo-senha"].forEach((id) => { document.getElementById(id).value = ""; });
+      carregarUsuarios();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Criar usuário";
+    }
+  }
+
+  async function copiarDados() {
+    const btn = document.getElementById("btn-copiar-dados");
+    try {
+      await navigator.clipboard.writeText(dadosParaCopiar);
+      btn.textContent = "Copiado!";
+    } catch (e) {
+      btn.textContent = "Selecione e copie manualmente";
+    }
+    setTimeout(() => { btn.textContent = "Copiar dados"; }, 2500);
+  }
+
   function voltarParaLogin() {
     viewPainel.style.display = "none";
     viewLogin.style.display = "";
@@ -227,6 +290,11 @@
   });
 
   document.getElementById("btn-admin-atualizar").addEventListener("click", carregarUsuarios);
+  document.getElementById("btn-criar-usuario").addEventListener("click", criarUsuario);
+  document.getElementById("btn-copiar-dados").addEventListener("click", copiarDados);
+  ["input-novo-email", "input-novo-nome", "input-novo-senha"].forEach((id) => {
+    document.getElementById(id).addEventListener("keydown", (e) => { if (e.key === "Enter") criarUsuario(); });
+  });
 
   document.getElementById("btn-admin-sair").addEventListener("click", async (e) => {
     e.preventDefault();

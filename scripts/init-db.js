@@ -30,6 +30,11 @@ async function main() {
       criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // Conta criada pelo admin com senha provisória: o usuário é obrigado a
+  // definir a própria senha no primeiro login (ver api/login.js).
+  await pool.query(`
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS precisa_trocar_senha BOOLEAN NOT NULL DEFAULT FALSE;
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admins (
       id SERIAL PRIMARY KEY,

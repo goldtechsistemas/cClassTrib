@@ -1,5 +1,7 @@
 /*
- * Autenticação — login/criação de conta.
+ * Autenticação — login. Não há cadastro público: as contas são criadas pelo
+ * administrador (admin.html) e o usuário define a própria senha no primeiro
+ * acesso.
  *
  * Reescrito para falar com o backend real (api/*.js, Vercel Functions +
  * Postgres) em vez de guardar contas no localStorage. Motivo: o painel
@@ -44,12 +46,15 @@
     return dados;
   }
 
-  function criarConta(email, senha, nome) {
-    return postJson("/api/register", { email, senha, nome });
-  }
-
   function login(email, senha, lembrar) {
     return postJson("/api/login", { email, senha, lembrar });
+  }
+
+  // Primeiro acesso de conta criada pelo administrador: depois de entrar
+  // com a senha provisória (login() devolve trocarSenha: true), o usuário
+  // define a própria senha e só então a sessão normal é aberta.
+  function definirSenhaInicial(novaSenha) {
+    return postJson("/api/conta/senha-inicial", { novaSenha });
   }
 
   async function logout() {
@@ -137,8 +142,8 @@
 
   global.Auth = {
     emailValido,
-    criarConta,
     login,
+    definirSenhaInicial,
     logout,
     sessaoAtual,
     alterarNome,

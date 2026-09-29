@@ -40,7 +40,6 @@ cclasstrib-app/
 ├── lote.html            # Consulta em lote via CSV — 2 abas: Classificar cClasstrib e Descobrir NCM por descrição
 ├── sobre.html            # Explicação IBS/CBS/IS + FAQ + aviso legal
 ├── login.html            # Login — obrigatório antes de index/lote/sobre (ver js/auth.js)
-├── registro.html         # Criação de conta (nome, e-mail, senha, confirmar senha)
 ├── admin.html            # Painel administrativo — login próprio, lista/bloqueia/exclui usuários (ver seção própria)
 ├── versao.json           # Versão publicada atual — lida por js/atualizador.js (ver seção própria)
 ├── package.json          # Dependências do backend (pg, bcryptjs, jsonwebtoken) — só usadas por api/*.js e scripts/init-db.js
@@ -48,14 +47,13 @@ cclasstrib-app/
 ├── api/                  # Backend (Vercel Functions, Node) — ver seções "Login" e "Painel administrativo"
 │   ├── _db.js                  # Pool de conexão Postgres compartilhado (prefixo _ = não vira rota, convenção da Vercel)
 │   ├── _lib.js                 # Cookies de sessão (JWT assinado), leitura de corpo JSON
-│   ├── register.js, login.js, logout.js, session.js   # Auth de usuário comum
-│   ├── conta/nome.js, email.js, senha.js               # Alterar dados da conta logada
+│   ├── login.js, logout.js, session.js                # Auth de usuário comum (sem cadastro público)
+│   ├── conta/[campo].js                                # nome, senha e senha-inicial (1º acesso)
 │   └── admin/login.js, logout.js, session.js, users.js, users/[id].js   # Auth e gestão de usuários do painel admin
 ├── js/
 │   ├── auth.js                 # Login/conta — fala com api/*.js (fetch); ver seção própria
 │   ├── login.js                # Lógica da página login.html
-│   ├── registro.js             # Lógica da página registro.html
-│   ├── conta.js                 # Menu "Minha conta" (nome no cabeçalho → trocar nome/e-mail/senha)
+│   ├── conta.js                 # Menu "Minha conta" (nome no cabeçalho → trocar nome/senha)
 │   ├── admin.js                 # Lógica de admin.html (login admin + tabela de usuários + bloquear/excluir)
 │   ├── tema.js                  # Alternância claro/escuro (botão no cabeçalho, preferência em localStorage)
 │   ├── data.js                # CAMADA DE DADOS — Anexos I-XVII extraídos da LC 214/2025
@@ -398,11 +396,16 @@ o painel administrativo (ver seção seguinte), que precisa enxergar e
 gerenciar todas as contas cadastradas — algo impossível enquanto cada conta
 vivia isolada no navegador de quem se cadastrou.
 
-- `login.html`: e-mail + senha + "Deseja salvar seu login?". Link "Criar
-  conta" pra quem não tem.
-- `registro.html`: nome, e-mail, senha, confirmar senha. Ao criar a conta,
-  já loga automaticamente e manda pra `index.html`.
-- `index.html`, `lote.html`, `sobre.html`, `login.html` e `registro.html`
+- `login.html`: e-mail + senha + "Deseja salvar seu login?". **Não há cadastro
+  público**: as contas são criadas pelo administrador no painel (`admin.html`,
+  "Novo usuário") com uma senha provisória (digitada ou gerada). No primeiro
+  login, o servidor aceita a senha provisória mas **não abre a sessão**: só
+  entrega uma permissão de 15 min (cookie `cclasstrib_troca_senha`, JWT de tipo
+  próprio, ignorado por todas as outras rotas) que serve apenas pra
+  `POST /api/conta/senha-inicial` — o usuário cria a própria senha (diferente
+  da provisória) e só então recebe a sessão normal. A coluna
+  `usuarios.precisa_trocar_senha` controla isso.
+- `index.html`, `lote.html`, `sobre.html` e `login.html`
   chamam `Auth.protegerPagina()` / `Auth.redirecionarSeLogado()`
   (`js/auth.js`) no fim do `<body>`: como a sessão agora é conferida no
   servidor (`GET /api/session`, assíncrono), não dá mais pra bloquear a
@@ -412,7 +415,7 @@ vivia isolada no navegador de quem se cadastrou.
   conteúdo protegido (ou do formulário de login por cima de uma sessão já
   ativa).
 - Backend (`api/*.js`, funções serverless da Vercel, Node + `pg`):
-  - `POST /api/register`, `POST /api/login`, `POST /api/logout`,
+  - `POST /api/login`, `POST /api/logout`,
     `GET /api/session` — a senha é hasheada com `bcryptjs` (custo 12) e
     **nunca** sai do servidor; a sessão é um cookie `HttpOnly` assinado
     (JWT, `jsonwebtoken`, segredo em `SESSION_SECRET`), não algo que o
@@ -420,23 +423,23 @@ vivia isolada no navegador de quem se cadastrou.
   - "Deseja salvar seu login?" vira o `Max-Age` do cookie: marcado = 180
     dias (sobrevive fechar/abrir o navegador); desmarcado = cookie de
     sessão (some ao fechar o navegador).
-  - `POST /api/conta/{nome,email,senha}` — trocar e-mail ou senha exige
-    reconfirmar a senha atual; a conta ativa é sempre a do cookie da
-    requisição, nunca um e-mail vindo do corpo do POST.
+  - `POST /api/conta/{nome,senha}` — trocar a senha exige reconfirmar a senha
+    atual; a conta ativa é sempre a do cookie da requisição, nunca um e-mail
+    vindo do corpo do POST. Não existe troca de e-mail pelo usuário.
   - Tabela `usuarios` no Postgres: `id, email, nome, senha_hash, bloqueado,
-    criado_em`. Criada por `scripts/init-db.js` (ver seção do painel admin).
+    criado_em, precisa_trocar_senha`. Criada por `scripts/init-db.js` (ver seção do painel admin).
 - No cabeçalho, o nome do usuário e "Sair" ficam à direita do botão de
   tema (claro/escuro) — injetados por `Auth.protegerPagina()` depois de
   confirmar a sessão, não mais por `Components.renderHeader()` (que voltou a
   ser síncrona/sem sessão). Clicar no nome abre um menu suspenso
-  (`js/conta.js`) com "Alterar nome de usuário" / "Alterar e-mail" /
-  "Alterar senha", cada um abrindo um modal com abas.
-- Testes em `tests/tests.js`: como `criarConta`/`login`/`sessaoAtual`/etc.
+  (`js/conta.js`) com "Alterar nome de usuário" / "Alterar senha", cada um
+  abrindo um modal com abas.
+- Testes em `tests/tests.js`: como `login`/`sessaoAtual`/etc.
   viraram chamadas de rede (exigem servidor + banco rodando), a suíte
   offline (`tests/tests.html`, aberta direto no navegador) só cobre o que
   continua 100% client-side (`emailValido`). O fluxo completo foi testado
-  manualmente ponta a ponta com `vercel dev` antes do deploy (cadastro,
-  login, trocar senha, bloqueio via admin barra login, exclusão).
+  manualmente ponta a ponta com `vercel dev` antes do deploy (criação de
+  conta pelo admin, primeiro login, trocar senha, bloqueio via admin barra login, exclusão).
 - **Atenção — app desktop (`cClassTrib-Desktop`)**: essa migração **quebra o
   login no `.exe`**. O app desktop serve os mesmos arquivos deste site
   através de um servidor HTTP local em Python (`app.py`), que não tem (nem
