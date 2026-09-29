@@ -1,12 +1,21 @@
 const bcrypt = require("bcryptjs");
 const { query } = require("./_db");
-const { corpoJson, iniciarSessaoUsuario } = require("./_lib");
+const { corpoJson, lerSessaoAdmin } = require("./_lib");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ ok: false, erro: "Método não permitido." });
+    return;
+  }
+
+  // Cadastro fechado ao público: esta rota é acessível por qualquer pessoa
+  // na internet (mesmo sem o link na tela de login), então só quem está
+  // logado como administrador pode criar contas.
+  const adminCriando = !!lerSessaoAdmin(req);
+  if (!adminCriando) {
+    res.status(403).json({ ok: false, erro: "Cadastro fechado. As contas são criadas pelo administrador." });
     return;
   }
 
@@ -41,9 +50,8 @@ module.exports = async (req, res) => {
       [email, nome, hash]
     );
 
-    // Sessão sempre "lembrada" logo após criar a conta — a pessoa acabou de
-    // provar quem é preenchendo o cadastro, não faz sentido pedir de novo.
-    iniciarSessaoUsuario(res, { email, nome }, true);
+    // Quem cria a conta é o administrador, não o dono dela — não abre
+    // sessão do novo usuário no navegador do administrador.
     res.status(201).json({ ok: true, email, nome });
   } catch (e) {
     console.error(e);

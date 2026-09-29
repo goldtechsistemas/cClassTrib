@@ -107,15 +107,38 @@ header.site {
   backdrop-filter: blur(6px);
 }
 
+/* Três zonas: marca no canto esquerdo, menu centralizado no meio da página
+   e ações (tema + usuário) no canto direito, todas centralizadas na vertical.
+   As colunas laterais têm a mesma largura (1fr), então o menu fica no centro
+   real da tela, não só "no que sobrou" entre a marca e as ações. */
 .nav-inner {
-  max-width: 1080px;
   margin: 0 auto;
-  padding: 16px 20px;
+  padding: 14px 28px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand { justify-self: start; }
+.header-acoes {
+  justify-self: end;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
-  flex-wrap: wrap;
+}
+.header-acoes a { color: var(--text-1); font-size: 0.92rem; font-weight: 500; }
+
+/* Sem espaço pras três zonas lado a lado: marca e ações na primeira linha,
+   menu centralizado embaixo. */
+@media (max-width: 1180px) {
+  .nav-inner { grid-template-columns: 1fr auto; }
+  nav.links { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+}
+@media (max-width: 560px) {
+  .nav-inner { padding: 12px 16px; }
+  .brand small { display: none; }
+  nav.links { gap: 14px 18px; flex-wrap: wrap; justify-content: center; }
 }
 
 .brand {
@@ -139,7 +162,7 @@ header.site {
   font-size: 0.75rem;
 }
 
-nav.links { display: flex; align-items: center; gap: 22px; }
+nav.links { display: flex; align-items: center; justify-content: center; gap: 26px; }
 nav.links a { color: var(--text-1); font-size: 0.92rem; font-weight: 500; }
 nav.links a.active, nav.links a:hover { color: var(--gold); }
 
@@ -264,6 +287,7 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 /* ---------- Login / criar conta ---------- */
 .auth-container { max-width: 420px; padding-top: 48px; }
 .auth-card { margin-top: 8px; }
+.auth-card .field-actions { justify-content: center; }
 .auth-switch { text-align: center; margin-top: 18px; margin-bottom: 0; }
 .auth-switch a { font-weight: 600; }
 

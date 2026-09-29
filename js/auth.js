@@ -79,10 +79,10 @@
   }
 
   function montarMenuUsuario(sessao) {
-    const nav = document.querySelector("#header .links");
-    if (!nav || document.getElementById("btn-usuario-menu")) return;
+    const acoes = document.querySelector("#header .header-acoes");
+    if (!acoes || document.getElementById("btn-usuario-menu")) return;
     const esc = (global.Components && global.Components.esc) || ((s) => String(s == null ? "" : s));
-    nav.insertAdjacentHTML(
+    acoes.insertAdjacentHTML(
       "beforeend",
       `<div class="usuario-menu">
          <button class="usuario-logado" id="btn-usuario-menu" type="button">${esc(sessao.nome || sessao.email)}</button>
