@@ -70,10 +70,6 @@
     return postJson("/api/conta/nome", { nome: novoNome });
   }
 
-  function alterarEmail(novoEmail, senhaAtual) {
-    return postJson("/api/conta/email", { novoEmail, senhaAtual });
-  }
-
   function alterarSenha(senhaAtual, novaSenha) {
     return postJson("/api/conta/senha", { senhaAtual, novaSenha });
   }
@@ -88,7 +84,6 @@
          <button class="usuario-logado" id="btn-usuario-menu" type="button">${esc(sessao.nome || sessao.email)}</button>
          <div class="usuario-dropdown" id="usuario-dropdown">
            <a href="#" id="link-conta-nome">Alterar nome de usuário</a>
-           <a href="#" id="link-conta-email">Alterar e-mail</a>
            <a href="#" id="link-conta-senha">Alterar senha</a>
          </div>
        </div>
@@ -147,7 +142,6 @@
     logout,
     sessaoAtual,
     alterarNome,
-    alterarEmail,
     alterarSenha,
     protegerPagina,
     redirecionarSeLogado,

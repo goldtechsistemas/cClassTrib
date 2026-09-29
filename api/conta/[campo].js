@@ -1,11 +1,10 @@
-// Rota dinâmica: /api/conta/nome, /api/conta/email, /api/conta/senha —
-// consolidadas num arquivo só (Vercel Hobby limita a 12 Serverless
-// Functions por deploy; eram 3 arquivos separados, agora contam como 1).
+// Rota dinâmica: /api/conta/nome e /api/conta/senha — consolidadas num
+// arquivo só (Vercel Hobby limita a 12 Serverless Functions por deploy).
+// Não há rota de e-mail de propósito: o e-mail é o login e só o
+// administrador cria/gerencia as contas.
 const bcrypt = require("bcryptjs");
 const { query } = require("../_db");
 const { corpoJson, lerSessaoUsuario, iniciarSessaoUsuario } = require("../_lib");
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function alterarNome(req, res, sessao) {
   const novoNome = String(corpoJson(req).nome || "").trim();
@@ -16,37 +15,6 @@ async function alterarNome(req, res, sessao) {
   await query("UPDATE usuarios SET nome = $1 WHERE email = $2", [novoNome, sessao.email]);
   iniciarSessaoUsuario(res, { email: sessao.email, nome: novoNome }, sessao.lembrar);
   res.status(200).json({ ok: true });
-}
-
-async function alterarEmail(req, res, sessao) {
-  const corpo = corpoJson(req);
-  const novoEmail = String(corpo.novoEmail || "").trim().toLowerCase();
-  const senhaAtual = String(corpo.senhaAtual || "");
-
-  if (!EMAIL_REGEX.test(novoEmail)) {
-    res.status(400).json({ ok: false, erro: "Preencha um e-mail válido." });
-    return;
-  }
-  if (novoEmail === sessao.email) {
-    res.status(400).json({ ok: false, erro: "Esse já é o e-mail atual." });
-    return;
-  }
-
-  const atual = await query("SELECT senha_hash FROM usuarios WHERE email = $1", [sessao.email]);
-  if (!atual.rows.length || !(await bcrypt.compare(senhaAtual, atual.rows[0].senha_hash))) {
-    res.status(401).json({ ok: false, erro: "Senha atual incorreta." });
-    return;
-  }
-
-  const existente = await query("SELECT id FROM usuarios WHERE email = $1", [novoEmail]);
-  if (existente.rows.length) {
-    res.status(409).json({ ok: false, erro: "Já existe uma conta com este e-mail." });
-    return;
-  }
-
-  await query("UPDATE usuarios SET email = $1 WHERE email = $2", [novoEmail, sessao.email]);
-  iniciarSessaoUsuario(res, { email: novoEmail, nome: sessao.nome }, sessao.lembrar);
-  res.status(200).json({ ok: true, email: novoEmail });
 }
 
 async function alterarSenha(req, res, sessao) {
@@ -70,7 +38,7 @@ async function alterarSenha(req, res, sessao) {
   res.status(200).json({ ok: true });
 }
 
-const ACOES = { nome: alterarNome, email: alterarEmail, senha: alterarSenha };
+const ACOES = { nome: alterarNome, senha: alterarSenha };
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {

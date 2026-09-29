@@ -1,6 +1,7 @@
 /*
- * Menu "minha conta" (nome no cabeçalho → menu suspenso → modal com 3
- * abas: nome, e-mail, senha). Diferente de js/tema.js/js/auth.js, não se
+ * Menu "minha conta" (nome no cabeçalho → menu suspenso → modal com 2
+ * abas: nome e senha — o e-mail é o login e só o administrador cria contas,
+ * então o usuário não o altera). Diferente de js/tema.js/js/auth.js, não se
  * auto-inicia sozinho: Auth.protegerPagina() (js/auth.js) chama
  * Conta.iniciar(sessao) explicitamente depois de confirmar a sessão no
  * servidor e injetar o botão do usuário no header — antes disso o botão
@@ -18,7 +19,6 @@
         <h2 class="modal-titulo">Minha conta</h2>
         <div class="tabs modal-tabs">
           <button class="tab-btn active" data-modal-tab="nome" type="button">Nome</button>
-          <button class="tab-btn" data-modal-tab="email" type="button">E-mail</button>
           <button class="tab-btn" data-modal-tab="senha" type="button">Senha</button>
         </div>
 
@@ -27,16 +27,6 @@
           <label for="input-conta-nome">Nome</label>
           <input type="text" id="input-conta-nome" />
           <div class="field-actions"><button class="btn" id="btn-salvar-nome" type="button">Salvar</button></div>
-        </div>
-
-        <div class="panel" id="modal-panel-email">
-          <div id="erro-conta-email" class="aviso-legal" style="display:none;"></div>
-          <p class="hint">E-mail atual: <strong id="texto-email-atual"></strong></p>
-          <label for="input-conta-email">Novo e-mail</label>
-          <input type="email" id="input-conta-email" placeholder="voce@exemplo.com" />
-          <label for="input-conta-email-senha" style="margin-top:14px;">Senha atual (para confirmar)</label>
-          <input type="password" id="input-conta-email-senha" autocomplete="current-password" />
-          <div class="field-actions"><button class="btn" id="btn-salvar-email" type="button">Salvar</button></div>
         </div>
 
         <div class="panel" id="modal-panel-senha">
@@ -59,7 +49,7 @@
   }
 
   function limparErros() {
-    ["erro-conta-nome", "erro-conta-email", "erro-conta-senha"].forEach((id) => {
+    ["erro-conta-nome", "erro-conta-senha"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.style.display = "none";
     });
@@ -74,9 +64,6 @@
     if (!sessaoAtual) return;
     limparErros();
     document.getElementById("input-conta-nome").value = sessaoAtual.nome || "";
-    document.getElementById("texto-email-atual").textContent = sessaoAtual.email || "";
-    document.getElementById("input-conta-email").value = "";
-    document.getElementById("input-conta-email-senha").value = "";
     document.getElementById("input-conta-senha-atual").value = "";
     document.getElementById("input-conta-senha-nova").value = "";
     document.getElementById("input-conta-senha-confirmar").value = "";
@@ -93,16 +80,6 @@
     const novoNome = document.getElementById("input-conta-nome").value.trim();
     const resultado = await window.Auth.alterarNome(novoNome);
     if (!resultado.ok) { mostrarErro("erro-conta-nome", resultado.erro); return; }
-    location.reload();
-  }
-
-  async function salvarEmail() {
-    limparErros();
-    const novoEmail = document.getElementById("input-conta-email").value.trim();
-    const senha = document.getElementById("input-conta-email-senha").value;
-    if (!novoEmail || !senha) { mostrarErro("erro-conta-email", "Preencha o novo e-mail e a senha atual."); return; }
-    const resultado = await window.Auth.alterarEmail(novoEmail, senha);
-    if (!resultado.ok) { mostrarErro("erro-conta-email", resultado.erro); return; }
     location.reload();
   }
 
@@ -143,7 +120,6 @@
     dropdown.addEventListener("click", (e) => e.stopPropagation());
 
     document.getElementById("link-conta-nome").addEventListener("click", (e) => { e.preventDefault(); dropdown.classList.remove("aberto"); abrirModal("nome"); });
-    document.getElementById("link-conta-email").addEventListener("click", (e) => { e.preventDefault(); dropdown.classList.remove("aberto"); abrirModal("email"); });
     document.getElementById("link-conta-senha").addEventListener("click", (e) => { e.preventDefault(); dropdown.classList.remove("aberto"); abrirModal("senha"); });
 
     document.querySelectorAll(".modal-tabs .tab-btn").forEach((btn) => {
@@ -156,7 +132,6 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModal(); });
 
     document.getElementById("btn-salvar-nome").addEventListener("click", salvarNome);
-    document.getElementById("btn-salvar-email").addEventListener("click", salvarEmail);
     document.getElementById("btn-salvar-senha").addEventListener("click", salvarSenha);
   }
 
