@@ -216,6 +216,19 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
     return { ok: false, erro: "Não foi possível carregar o certificado salvo." };
   }
 
+  // Reivindicações órfãs: se uma sincronização anterior for encerrada no meio
+  // (ex.: limite de tempo da função serverless, crash) enquanto manifestava
+  // uma nota, ela fica travada para sempre em 'enviando' — nada mais a
+  // reivindica de volta, já que manifestarPendentes só pega 'nenhuma'. Como
+  // sincronizarEmpresa nunca roda em paralelo pra uma mesma empresa vindo da
+  // UI (clique manual) ou do cron isoladamente, qualquer 'enviando' que ainda
+  // exista no início de uma nova chamada só pode ser resíduo de uma chamada
+  // anterior que não terminou — devolve pra 'nenhuma' pra ser tentada de
+  // novo (reenviar é seguro: a SEFAZ já trata reenvio com cStat 573).
+  await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE empresa_id = $1 AND manifestacao = 'enviando'", [
+    empresa.id,
+  ]).catch((e) => console.error("Falha ao reivindicar manifestacoes orfas:", e));
+
   try {
     // --- Fase 1: puxar tudo que estiver pendente ---
     const fase1 = await distribuirAteCaughtUp({ empresa, ultNsuInicial: empresa.ult_nsu, certPem, keyPem });
