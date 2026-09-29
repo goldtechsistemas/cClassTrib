@@ -29,14 +29,11 @@ const ENDPOINTS_EVENTO = {
 };
 
 const SOAP_ACTION = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe/nfeDistDFeInteresse";
-// O Ambiente Nacional expõe a Manifestação do Destinatário com uma action
-// diferente da usada pelas SEFAZ estaduais de verdade: "nfeRecepcaoEventoNF"
-// (com sufixo "NF"), não "nfeRecepcaoEvento" — confirmado por relatos de
-// quem integra com o AN (ex.: grupo nfephp) e pela resposta real do serviço,
-// que devolve o body como "nfeRecepcaoEventoNFResult". Mandar a action padrão
-// (sem "NF") faz o AN devolver "Unable to handle request. The action ... was
-// not recognized." mesmo com o host certo.
-const SOAP_ACTION_EVENTO = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEventoNF";
+// Conferido byte-a-byte contra o código-fonte real da sped-nfe (biblioteca
+// PHP usada em produção pela imensa maioria das integrações NFe do Brasil,
+// que envia manifestação do destinatário para uf="AN"): a action é a mesma
+// convenção "padrão" das SEFAZ estaduais, sem sufixo — "nfeRecepcaoEvento".
+const SOAP_ACTION_EVENTO = "http://www.portalfiscal.inf.br/nfe/wsdl/NFeRecepcaoEvento4/nfeRecepcaoEvento";
 
 // Código IBGE da UF — usado em cUFAutor (UF da base do CNPJ consultante).
 const UF_PARA_CODIGO = {
@@ -389,10 +386,22 @@ function parsearRespostaEvento(xmlTexto) {
   if (body && body.Fault) {
     throw new ErroSefaz(`SEFAZ retornou um erro SOAP: ${extrairMotivoFault(body.Fault)}`);
   }
-  // Resposta também é "bare": vem como nfeRecepcaoEventoNFResult direto no
-  // Body (sem um wrapper "...Response" por fora), espelhando a mesma
-  // convenção sem wrapper da requisição.
-  const ret = body && body.nfeRecepcaoEventoNFResult && body.nfeRecepcaoEventoNFResult.retEnvEvento;
+  // Resposta é "bare" (sem wrapper "...Response" por fora, espelhando a
+  // mesma convenção sem wrapper da requisição), mas o nome do elemento que
+  // embrulha retEnvEvento varia entre implementações observadas do AN
+  // (nfeRecepcaoEventoResult, nfeResultMsg, nfeRecepcaoEventoNFResult...) —
+  // em vez de apostar num nome fixo, procura retEnvEvento em qualquer filho
+  // direto do Body.
+  let ret = null;
+  if (body) {
+    for (const chave of Object.keys(body)) {
+      const valor = body[chave];
+      if (valor && typeof valor === "object" && valor.retEnvEvento) {
+        ret = valor.retEnvEvento;
+        break;
+      }
+    }
+  }
   if (!ret) throw new ErroSefaz("Resposta da SEFAZ em formato inesperado (retEnvEvento não encontrado).");
 
   const retEventoBruto = ret.retEvento;
@@ -416,13 +425,11 @@ const CSTAT_DUPLICIDADE_EVENTO = "573";
 
 // Código fixo do "órgão" de recepção quando o evento é enviado ao Ambiente
 // Nacional. Não é o código IBGE da UF da empresa — usar a UF ali é
-// rejeitado/mal roteado pelo AN. Há uma divergência documental real entre
-// fontes (a NT 2020.001/MOC 7.0 citam "91 = Ambiente Nacional", mas o próprio
-// schema XSD do leiaute do evento, mantido por quem integra ativamente com o
-// AN, documenta "90" para o mesmo propósito, e relatos de outras integrações
-// batendo em cStat 225 com 91 contra este mesmo serviço apontam pra 90 como o
-// valor que esse serviço específico realmente espera).
-const CORGAO_AMBIENTE_NACIONAL = 90;
+// rejeitado/mal roteado pelo AN. Conferido contra a tabela real da sped-nfe
+// (UFList: 91 => 'AN') e a NT 2020.001/MOC 7.0 ("91 = Ambiente Nacional") —
+// o "90" que aparece solto no comentário de um dos XSDs é outra coisa (RFB),
+// não o Ambiente Nacional; era a fonte errada.
+const CORGAO_AMBIENTE_NACIONAL = 91;
 
 /**
  * Envia o evento 210210 (Ciência da Operação) para uma NF-e específica.
