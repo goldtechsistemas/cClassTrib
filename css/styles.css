@@ -54,6 +54,13 @@
 
 * { box-sizing: border-box; }
 
+/* Ícone do calendário e "x" do campo de busca acompanham o tema. */
+input[type="date"], input[type="search"] { color-scheme: dark; }
+:root[data-theme="light"] input[type="date"], :root[data-theme="light"] input[type="search"] { color-scheme: light; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) input[type="date"], :root:not([data-theme]) input[type="search"] { color-scheme: light; }
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -268,7 +275,7 @@ label {
   margin-bottom: 6px;
 }
 
-input[type="text"], input[type="email"], input[type="password"], select, textarea {
+input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="date"], select, textarea {
   width: 100%;
   background: var(--bg-0);
   border: 1px solid var(--border);
@@ -278,7 +285,7 @@ input[type="text"], input[type="email"], input[type="password"], select, textare
   font-family: var(--font);
   font-size: 0.95rem;
 }
-input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
+input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="search"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.18);
@@ -640,4 +647,72 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
 @keyframes aviso-atualizacao-entrada {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ---------- Notas fiscais: busca de empresas e cartão de filtro ---------- */
+.secao-cabecalho {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  margin: 32px 0 12px;
+}
+.secao-cabecalho .section-title { margin: 0; }
+.busca-empresas { flex: 0 1 340px; min-width: 220px; }
+.busca-empresas label { margin-bottom: 4px; }
+
+.filtro-card { margin: 8px 0 18px; padding: 20px 22px; }
+.filtro-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.filtro-topo strong { font-size: 1.02rem; color: var(--text-0); }
+.filtro-topo .hint { margin: 0; }
+.filtro-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(150px, 1fr) minmax(150px, 1fr);
+  gap: 14px 16px;
+}
+.filtro-grid > div { min-width: 0; }
+.filtro-grid label { margin-bottom: 4px; }
+.filtro-grid input[type="date"] { min-width: 0; padding-left: 10px; padding-right: 10px; }
+.filtro-atalhos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.filtro-atalhos .filtro-rotulo { font-size: 0.82rem; color: var(--text-muted); margin-right: 2px; }
+.chip {
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.chip:hover { border-color: var(--gold); color: var(--gold); }
+.filtro-botoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.filtro-nota { margin: 12px 0 0; }
+@media (max-width: 640px) {
+  .filtro-grid { grid-template-columns: 1fr 1fr; }
+  .filtro-grid .filtro-busca { grid-column: 1 / -1; }
+  .busca-empresas { flex: 1 1 100%; }
 }

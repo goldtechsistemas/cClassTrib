@@ -12,6 +12,9 @@
   const wrapVazio = document.getElementById("empresas-vazio");
   const wrapTabela = document.getElementById("empresas-wrap");
   const corpoTabela = document.getElementById("empresas-body");
+  const wrapBuscaEmpresas = document.getElementById("busca-empresas");
+  const inputBuscaEmpresas = document.getElementById("input-busca-empresas");
+  const empresasSemResultado = document.getElementById("empresas-sem-resultado");
 
   const notasSecao = document.getElementById("notas-secao");
   const notasTitulo = document.getElementById("notas-titulo");
@@ -23,6 +26,8 @@
   const linkExportarExcel = document.getElementById("link-exportar-excel");
   const linkExportarPdfLote = document.getElementById("link-exportar-pdf-lote");
   const notasSelecaoInfo = document.getElementById("notas-selecao-info");
+  const inputBuscaNotas = document.getElementById("input-busca-notas");
+  const notasResumo = document.getElementById("notas-resumo");
   const inputDataInicio = document.getElementById("input-data-inicio");
   const inputDataFim = document.getElementById("input-data-fim");
   const btnFiltrarPeriodo = document.getElementById("btn-filtrar-periodo");
@@ -32,6 +37,9 @@
   let empresaSelecionadaId = null;
   let empresaSelecionadaNome = "";
   let notasSelecionadas = new Set();
+  let empresasCache = [];
+  let carregamentoNotasSeq = 0;
+  const LIMITE_NOTAS_LISTA = 500;
 
   function mostrarAviso(mensagem, tipo) {
     if (!mensagem) {
@@ -81,13 +89,47 @@
       return;
     }
 
-    const empresas = dados.empresas || [];
-    if (!empresas.length) {
+    empresasCache = dados.empresas || [];
+    renderizarEmpresas();
+  }
+
+  // Sem acento e sem maiúsculas, pra "acai" achar "AÇAÍ".
+  function normalizarTexto(texto) {
+    return String(texto || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
+  function empresaCombinaComBusca(emp, termo) {
+    if (!termo) return true;
+    if (normalizarTexto(emp.razaoSocial).includes(normalizarTexto(termo))) return true;
+    // Só procura no documento se o termo parece um CNPJ/CPF (dígitos e
+    // pontuação) — "2000" numa busca por nome não deve casar com o número.
+    const digitos = termo.replace(/\D/g, "");
+    return !!digitos && /^[\d.\-\/\s]+$/.test(termo) && String(emp.cnpj || "").replace(/\D/g, "").includes(digitos);
+  }
+
+  function renderizarEmpresas() {
+    const termo = inputBuscaEmpresas.value.trim();
+    if (!empresasCache.length) {
       wrapVazio.style.display = "";
       wrapTabela.style.display = "none";
+      wrapBuscaEmpresas.style.display = "none";
+      empresasSemResultado.style.display = "none";
       return;
     }
     wrapVazio.style.display = "none";
+    wrapBuscaEmpresas.style.display = "";
+
+    const empresas = empresasCache.filter((emp) => empresaCombinaComBusca(emp, termo));
+    if (!empresas.length) {
+      wrapTabela.style.display = "none";
+      empresasSemResultado.textContent = `Nenhuma empresa encontrada para "${termo}".`;
+      empresasSemResultado.style.display = "";
+      return;
+    }
+    empresasSemResultado.style.display = "none";
     wrapTabela.style.display = "";
 
     corpoTabela.innerHTML = empresas
@@ -206,7 +248,13 @@
     const params = new URLSearchParams();
     if (inputDataInicio.value) params.set("dataInicio", inputDataInicio.value);
     if (inputDataFim.value) params.set("dataFim", inputDataFim.value);
+    const busca = inputBuscaNotas.value.trim();
+    if (busca) params.set("busca", busca);
     return params;
+  }
+
+  function filtroNotasAtivo() {
+    return !!(inputBuscaNotas.value.trim() || inputDataInicio.value || inputDataFim.value);
   }
 
   function atualizarLinksExportacao(empresaId) {
@@ -217,7 +265,7 @@
       params.set("chaves", Array.from(notasSelecionadas).join(","));
       notasSelecaoInfo.textContent = `${notasSelecionadas.size} nota(s) selecionada(s) — os downloads abaixo usam só a seleção.`;
     } else {
-      notasSelecaoInfo.textContent = "Nenhuma nota selecionada — os downloads abaixo usam todas as notas visíveis (respeitando o filtro de período).";
+      notasSelecaoInfo.textContent = "Nenhuma nota selecionada — os downloads abaixo usam todas as notas visíveis (respeitando os filtros aplicados).";
     }
 
     linkExportarXml.href = `/api/nfe-exportar-xml?${params.toString()}`;
@@ -233,21 +281,35 @@
     const params = montarQueryFiltro();
     params.set("empresaId", empresaId);
 
+    // Se o usuário digita rápido, duas buscas ficam no ar — só a última vale.
+    const minhaVez = ++carregamentoNotasSeq;
     let dados;
     try {
       const resposta = await fetch(`/api/nfe-documentos?${params.toString()}`, { credentials: "same-origin" });
       dados = await resposta.json();
     } catch (e) {
-      mostrarAviso("Não foi possível carregar as notas.", "erro");
+      if (minhaVez === carregamentoNotasSeq) mostrarAviso("Não foi possível carregar as notas.", "erro");
       return;
     }
+    if (minhaVez !== carregamentoNotasSeq) return;
     if (!dados.ok) {
       mostrarAviso(dados.erro || "Erro ao carregar notas.", "erro");
       return;
     }
 
     const notas = dados.documentos || [];
+    const filtrando = filtroNotasAtivo();
+    if (notas.length >= LIMITE_NOTAS_LISTA) {
+      notasResumo.textContent = `Mostrando as ${LIMITE_NOTAS_LISTA} notas mais recentes — refine o filtro para ver as demais.`;
+    } else if (notas.length) {
+      notasResumo.textContent = `${notas.length} nota(s) ${filtrando ? "encontrada(s)" : "sincronizada(s)"}`;
+    } else {
+      notasResumo.textContent = "";
+    }
     if (!notas.length) {
+      notasVazio.textContent = filtrando
+        ? "Nenhuma nota encontrada com esses filtros."
+        : 'Nenhuma nota encontrada ainda para esta empresa. Clique em "Sincronizar agora".';
       notasVazio.style.display = "";
       notasWrap.style.display = "none";
       notasAcoesLote.style.display = "none";
@@ -447,9 +509,55 @@
     if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
   });
   btnLimparPeriodo.addEventListener("click", () => {
+    inputBuscaNotas.value = "";
     inputDataInicio.value = "";
     inputDataFim.value = "";
     if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
+  });
+
+  // Busca de empresas: filtra a lista já carregada, enquanto digita.
+  inputBuscaEmpresas.addEventListener("input", renderizarEmpresas);
+
+  // Busca de notas: espera o usuário parar de digitar (ou Enter) antes de
+  // consultar o servidor.
+  let esperaBuscaNotas = null;
+  inputBuscaNotas.addEventListener("input", () => {
+    clearTimeout(esperaBuscaNotas);
+    esperaBuscaNotas = setTimeout(() => {
+      if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
+    }, 400);
+  });
+  [inputBuscaNotas, inputDataInicio, inputDataFim].forEach((campo) => {
+    campo.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      clearTimeout(esperaBuscaNotas);
+      if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
+    });
+  });
+
+  function dataIso(d) {
+    const dois = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
+  }
+  document.querySelectorAll(".chip[data-periodo]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const hoje = new Date();
+      let inicio;
+      let fim;
+      if (chip.dataset.periodo === "mes-atual") {
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        fim = hoje;
+      } else if (chip.dataset.periodo === "mes-anterior") {
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+        fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+      } else {
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 29);
+        fim = hoje;
+      }
+      inputDataInicio.value = dataIso(inicio);
+      inputDataFim.value = dataIso(fim);
+      if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
+    });
   });
 
   carregarEmpresas();
