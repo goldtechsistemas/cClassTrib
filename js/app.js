@@ -39,10 +39,36 @@
     window.addEventListener("pageshow", limparSeForEmail);
   }
 
+  // O código NCM/NBS só tem dígitos (e pontos, se digitado formatado) — a
+  // busca já ignora o resto. Filtrar na digitação também impede que o
+  // autofill do navegador deixe um e-mail no campo.
+  function aceitarSoNumerosEPontos(input) {
+    if (!input) return;
+    const filtrar = () => {
+      const antes = input.value;
+      const soNumerosEPontos = antes.replace(/[^\d.]/g, "");
+      // Sem nenhum dígito (ex.: e-mail do autofill vira só "."), esvazia.
+      const limpo = /\d/.test(soNumerosEPontos) ? soNumerosEPontos : "";
+      if (limpo === antes) return;
+      const cursor = input.selectionStart;
+      const removidosAntesDoCursor = cursor == null ? 0 : antes.slice(0, cursor).replace(/[\d.]/g, "").length;
+      input.value = limpo;
+      if (cursor != null && document.activeElement === input) {
+        const novaPosicao = cursor - removidosAntesDoCursor;
+        input.setSelectionRange(novaPosicao, novaPosicao);
+      }
+    };
+    filtrar();
+    input.addEventListener("input", filtrar);
+    input.addEventListener("change", filtrar);
+    window.addEventListener("load", filtrar);
+    window.addEventListener("pageshow", filtrar);
+  }
+
   // --- Consultar cClassTrib: só por NCM (busca exata dentro dos Anexos).
   const inputNcm = document.getElementById("input-ncm");
   const resultadoNcm = document.getElementById("resultado-ncm");
-  bloquearAutopreenchimentoDeEmail(inputNcm);
+  aceitarSoNumerosEPontos(inputNcm);
 
   function buscarCclasstrib() {
     const ncm = inputNcm.value.trim();
