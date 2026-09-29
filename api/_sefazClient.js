@@ -267,12 +267,12 @@ function normalizarDocumento(item) {
  * Consulta um lote de documentos a partir do ultNSU informado.
  * @returns {{cStat: string, xMotivo: string, ultNSU: string, maxNSU: string, documentos: object[], eventos: object[]}}
  */
-async function distribuirDfe({ ambiente, uf, cnpj, ultNsu, chNFe, certPem, keyPem }) {
+async function distribuirDfe({ ambiente, uf, cnpj, ultNsu, chNFe, certPem, keyPem, timeoutMs }) {
   const url = ENDPOINTS[ambiente] || ENDPOINTS[2];
   const cUFAutor = UF_PARA_CODIGO[uf] || UF_PARA_CODIGO.DF; // fallback neutro se a UF não veio do certificado
   const envelope = montarEnvelope({ tpAmb: ambiente, cUFAutor, cnpj, ultNsu, chNFe });
 
-  const resposta = await enviarSoap({ url, certPem, keyPem, envelopeXml: envelope });
+  const resposta = await enviarSoap({ url, certPem, keyPem, envelopeXml: envelope, timeoutMs });
   if (resposta.statusCode >= 400 && resposta.statusCode !== 500) {
     // A SEFAZ frequentemente devolve SOAP Fault com status 500 mesmo para
     // erros "normais" (ex.: certificado não habilitado) — só trata como

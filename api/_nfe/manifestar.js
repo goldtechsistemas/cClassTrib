@@ -149,14 +149,14 @@ module.exports = async (req, res) => {
     xmlCompleto: xmlObtido,
     mensagem: xmlObtido
       ? `${prefixo} XML completo baixado — o PDF ja sai como DANFE.`
-      : `${prefixo} A SEFAZ ainda nao liberou o XML completo; ele sera buscado automaticamente ao baixar o PDF.`,
+      : `${prefixo} Nao foi possivel trazer o XML completo agora (a SEFAZ ainda esta liberando ou o servico de distribuicao esta lento); ele sera buscado de novo automaticamente ao baixar o PDF.`,
   });
 };
 
 // A SEFAZ costuma levar alguns segundos entre registrar o evento (cStat 135)
 // e liberar o XML completo na consulta por chave — uma espera curta antes da
 // unica tentativa aqui; se ainda nao vier, o download do PDF tenta de novo.
-const ESPERA_ANTES_DE_BUSCAR_XML_MS = 2000;
+const ESPERA_ANTES_DE_BUSCAR_XML_MS = 1500;
 
 async function tentarTrazerXmlCompleto(empresa, documentoId, cert) {
   await esperar(ESPERA_ANTES_DE_BUSCAR_XML_MS);

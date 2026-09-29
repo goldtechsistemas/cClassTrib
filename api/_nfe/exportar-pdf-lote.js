@@ -11,6 +11,10 @@ const CONCORRENCIA = 5; // gera até 5 PDFs em paralelo (CPU-bound: barcode + la
 // podem ser baixadas de novo (ou individualmente) em seguida.
 const LIMITE_BUSCAS_POR_CHAVE = 10;
 const PAUSA_ENTRE_BUSCAS_MS = 1000;
+// Teto de tempo total gasto buscando XML por chave num lote — se a SEFAZ
+// estiver lenta, para de tentar e entrega o ZIP com o que já tiver, em vez de
+// deixar o usuário esperando (ou estourar o tempo máximo da função).
+const ORCAMENTO_BUSCAS_MS = 20000;
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -47,9 +51,14 @@ module.exports = async (req, res) => {
       console.error("Nao foi possivel carregar o certificado para buscar XML por chave:", e.message || e);
     }
     if (cert) {
+      const prazoFinal = Date.now() + ORCAMENTO_BUSCAS_MS;
       for (const [n, { doc, i }] of pendentesDeXml.entries()) {
+        if (Date.now() >= prazoFinal) break;
         if (n > 0) await esperar(PAUSA_ENTRE_BUSCAS_MS);
         r.rows[i] = await completarXmlPorChave(empresa, doc, cert);
+        // Primeira busca falhou (normalmente timeout = serviço de distribuição
+        // lento) — as demais quase certamente também falhariam; não insiste.
+        if (n === 0 && !r.rows[i].xml_completo) break;
       }
     }
   }

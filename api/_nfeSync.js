@@ -323,6 +323,11 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
 }
 
 const MANIFESTACOES_QUE_LIBERAM_XML = ["ciencia", "confirmacao"];
+// Quando o serviço de distribuição da SEFAZ está saudável a consulta por
+// chave responde em 1-2s; quando está instável ele simplesmente não responde.
+// Como essa busca é um "bônus" (sem ela o PDF só sai como resumo), não vale
+// prender o usuário nos 25s do timeout padrão — desiste cedo.
+const TIMEOUT_BUSCA_POR_CHAVE_MS = 6000;
 
 function certificadoDaEmpresa(empresa) {
   const pfxBuffer = decryptSecret(empresa.cert_encrypted);
@@ -350,6 +355,7 @@ async function completarXmlPorChave(empresa, doc, cert) {
       chNFe: doc.ch_nfe,
       certPem,
       keyPem,
+      timeoutMs: TIMEOUT_BUSCA_POR_CHAVE_MS,
     });
     const completa = resultado.documentos.find((d) => d.tipo === "completa" && d.chNFe === doc.ch_nfe && d.xmlCompleto);
     if (!completa) return doc;
