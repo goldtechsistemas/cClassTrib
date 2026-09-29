@@ -29,7 +29,6 @@ module.exports = async (req, res) => {
   const wb = new ExcelJS.Workbook();
   const sheet = wb.addWorksheet("Notas Fiscais");
   sheet.columns = [
-    { header: "Chave de Acesso", key: "chave", width: 46 },
     { header: "Número", key: "numero", width: 12 },
     { header: "Série", key: "serie", width: 8 },
     { header: "Emitente", key: "emitente", width: 40 },
@@ -40,6 +39,7 @@ module.exports = async (req, res) => {
     { header: "Situação", key: "situacao", width: 14 },
     { header: "Tipo de dado", key: "tipo", width: 14 },
     { header: "Manifestação", key: "manifestacao", width: 16 },
+    { header: "Chave de Acesso", key: "chave", width: 46 },
   ];
   sheet.getRow(1).font = { bold: true };
 
@@ -51,7 +51,7 @@ module.exports = async (req, res) => {
       emitente: doc.emit_nome,
       cnpj: doc.emit_cnpj,
       uf: doc.emit_uf,
-      dhEmi: doc.dh_emi ? new Date(doc.dh_emi).toLocaleString("pt-BR") : "",
+      dhEmi: doc.dh_emi ? new Date(doc.dh_emi).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
       valor: doc.v_nf != null ? Number(doc.v_nf) : null,
       situacao: doc.situacao,
       tipo: doc.tipo === "completa" ? "XML completo" : "Resumo",
