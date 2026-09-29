@@ -2,7 +2,8 @@
  * Painel administrativo (admin.html) — login próprio (conta separada dos
  * usuários comuns, tabela `admins` no Postgres) e gestão de usuários:
  * criar (com senha provisória — o usuário define a própria no primeiro
- * acesso), listar, bloquear/desbloquear, ver detalhes e excluir (com
+ * acesso), redefinir senha (nova provisória, mesmo fluxo), listar,
+ * bloquear/desbloquear, ver detalhes e excluir (com
  * confirmação dupla: modal + digitar o e-mail da conta).
  */
 (function () {
@@ -127,6 +128,7 @@
         <td>
           <div class="tabela-acoes">
             ${botaoBloqueio}
+            <button class="btn secondary btn-sm" data-acao="redefinir" data-id="${u.id}">Redefinir senha</button>
             <button class="btn secondary btn-sm" data-acao="detalhes" data-id="${u.id}">Ver Detalhes</button>
             <button class="btn perigo btn-sm" data-acao="excluir" data-id="${u.id}">Excluir</button>
           </div>
@@ -231,6 +233,37 @@
     el.style.display = msg ? "block" : "none";
   }
 
+  // Caixa com e-mail + senha provisória, usada ao criar um usuário e ao
+  // redefinir a senha de um existente.
+  function mostrarCredenciais(titulo, email, senhaProvisoria) {
+    const link = location.origin + "/login.html";
+    document.getElementById("resultado-titulo").textContent = titulo;
+    document.getElementById("resultado-email").textContent = email;
+    document.getElementById("resultado-senha").textContent = senhaProvisoria;
+    document.getElementById("resultado-link").textContent = link;
+    dadosParaCopiar = `Acesso ao cClassTrib\nEndereço: ${link}\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n(no primeiro acesso você vai criar a sua própria senha)`;
+    const caixa = document.getElementById("resultado-novo-usuario");
+    caixa.style.display = "block";
+    caixa.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function redefinirSenha(id) {
+    const u = usuariosCache.find((x) => x.id === id);
+    if (!u) return;
+    if (!confirm(`Redefinir a senha de ${u.email}?\n\nA senha atual deixa de funcionar, quem estiver logado é deslogado, e o usuário precisará criar uma nova senha no próximo acesso, usando a senha provisória que será gerada.`)) return;
+    mostrarAvisoPainel("");
+    document.getElementById("resultado-novo-usuario").style.display = "none";
+    const resultado = await chamarApi(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ redefinirSenha: true }),
+    });
+    if (resultado.status === 401) { voltarParaLogin(); return; }
+    if (!resultado.ok) { mostrarAvisoPainel(resultado.erro || "Não foi possível redefinir a senha.", "erro"); return; }
+    mostrarCredenciais("Senha redefinida.", resultado.usuario.email, resultado.senhaProvisoria);
+    carregarUsuarios();
+  }
+
   async function criarUsuario() {
     mostrarErroNovoUsuario("");
     document.getElementById("resultado-novo-usuario").style.display = "none";
@@ -251,12 +284,7 @@
       if (resultado.status === 401) { voltarParaLogin(); return; }
       if (!resultado.ok) { mostrarErroNovoUsuario(resultado.erro || "Não foi possível criar o usuário."); return; }
 
-      const link = location.origin + "/login.html";
-      document.getElementById("resultado-email").textContent = resultado.usuario.email;
-      document.getElementById("resultado-senha").textContent = resultado.senhaProvisoria;
-      document.getElementById("resultado-link").textContent = link;
-      dadosParaCopiar = `Acesso ao cClassTrib\nEndereço: ${link}\nE-mail: ${resultado.usuario.email}\nSenha provisória: ${resultado.senhaProvisoria}\n(no primeiro acesso você vai criar a sua própria senha)`;
-      document.getElementById("resultado-novo-usuario").style.display = "block";
+      mostrarCredenciais("Usuário criado.", resultado.usuario.email, resultado.senhaProvisoria);
       ["input-novo-email", "input-novo-nome", "input-novo-senha"].forEach((id) => { document.getElementById(id).value = ""; });
       carregarUsuarios();
     } finally {
@@ -309,6 +337,7 @@
     const acao = btn.dataset.acao;
     if (acao === "bloquear") alternarBloqueio(id, true);
     else if (acao === "desbloquear") alternarBloqueio(id, false);
+    else if (acao === "redefinir") redefinirSenha(id);
     else if (acao === "detalhes") abrirDetalhes(id);
     else if (acao === "excluir") abrirExclusao(id);
   });

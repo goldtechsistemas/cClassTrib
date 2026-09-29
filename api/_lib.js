@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
 const NOME_COOKIE_USUARIO = "cclasstrib_sessao";
@@ -136,6 +137,15 @@ function lerSessaoAdmin(req) {
   }
 }
 
+// Sem caracteres que se confundem ao ler/copiar (0/O, 1/l/I).
+const ALFABETO_SENHA = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+
+function gerarSenhaProvisoria(tamanho = 12) {
+  let senha = "";
+  for (let i = 0; i < tamanho; i++) senha += ALFABETO_SENHA[crypto.randomInt(ALFABETO_SENHA.length)];
+  return senha;
+}
+
 function corpoJson(req) {
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string" && req.body.length) {
@@ -150,6 +160,7 @@ function corpoJson(req) {
 
 module.exports = {
   corpoJson,
+  gerarSenhaProvisoria,
   iniciarSessaoUsuario,
   encerrarSessaoUsuario,
   lerSessaoUsuario,

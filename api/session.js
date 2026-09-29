@@ -13,11 +13,13 @@ module.exports = async (req, res) => {
     // bloquear alguém que já está com sessão aberta, o acesso cai na
     // próxima navegação, não só no próximo login.
     const resultado = await query(
-      "SELECT nome, bloqueado FROM usuarios WHERE email = $1",
+      "SELECT nome, bloqueado, precisa_trocar_senha FROM usuarios WHERE email = $1",
       [sessao.email]
     );
     const registro = resultado.rows[0];
-    if (!registro || registro.bloqueado) {
+    // precisa_trocar_senha: o admin redefiniu a senha desta conta — a sessão
+    // antiga cai e só um novo login (com a senha provisória) volta a valer.
+    if (!registro || registro.bloqueado || registro.precisa_trocar_senha) {
       encerrarSessaoUsuario(res);
       res.status(200).json({ logado: false });
       return;

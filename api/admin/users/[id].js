@@ -1,5 +1,8 @@
+const bcrypt = require("bcryptjs");
 const { query } = require("../../_db");
-const { corpoJson, lerSessaoAdmin } = require("../../_lib");
+const { corpoJson, lerSessaoAdmin, gerarSenhaProvisoria } = require("../../_lib");
+
+const TAMANHO_MINIMO_SENHA = 6;
 
 module.exports = async (req, res) => {
   if (!lerSessaoAdmin(req)) {
@@ -10,6 +13,38 @@ module.exports = async (req, res) => {
   const id = Number(req.query.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ ok: false, erro: "Id inválido." });
+    return;
+  }
+
+  if (req.method === "PATCH" && corpoJson(req).redefinirSenha) {
+    // Esqueceu a senha (não há recuperação por e-mail): o admin gera uma nova
+    // senha provisória e a conta volta ao estado de "primeiro acesso" — o
+    // usuário é obrigado a criar a própria senha no próximo login. Também
+    // derruba as sessões abertas (api/session.js e exigirUsuario tratam
+    // "precisa trocar a senha" como deslogado), senão a sessão antiga
+    // continuaria valendo por até 180 dias.
+    const digitada = String(corpoJson(req).senhaProvisoria || "");
+    if (digitada && digitada.length < TAMANHO_MINIMO_SENHA) {
+      res.status(400).json({ ok: false, erro: `A senha provisória precisa ter no mínimo ${TAMANHO_MINIMO_SENHA} caracteres.` });
+      return;
+    }
+    try {
+      const senhaProvisoria = digitada || gerarSenhaProvisoria();
+      const hash = await bcrypt.hash(senhaProvisoria, 12);
+      const resultado = await query(
+        `UPDATE usuarios SET senha_hash = $1, precisa_trocar_senha = true WHERE id = $2
+         RETURNING id, email, nome, bloqueado, precisa_trocar_senha, criado_em`,
+        [hash, id]
+      );
+      if (!resultado.rows.length) {
+        res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
+        return;
+      }
+      res.status(200).json({ ok: true, usuario: resultado.rows[0], senhaProvisoria });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ ok: false, erro: "Erro interno." });
+    }
     return;
   }
 

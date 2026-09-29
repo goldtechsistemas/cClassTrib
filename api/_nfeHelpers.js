@@ -13,9 +13,9 @@ async function exigirUsuario(req, res) {
     res.status(401).json({ ok: false, erro: "Não autenticado." });
     return null;
   }
-  const r = await query("SELECT id, bloqueado FROM usuarios WHERE email = $1", [sessao.email]);
+  const r = await query("SELECT id, bloqueado, precisa_trocar_senha FROM usuarios WHERE email = $1", [sessao.email]);
   const registro = r.rows[0];
-  if (!registro || registro.bloqueado) {
+  if (!registro || registro.bloqueado || registro.precisa_trocar_senha) {
     res.status(401).json({ ok: false, erro: "Não autenticado." });
     return null;
   }

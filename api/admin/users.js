@@ -1,19 +1,9 @@
-const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const { query } = require("../_db");
-const { corpoJson, lerSessaoAdmin } = require("../_lib");
+const { corpoJson, lerSessaoAdmin, gerarSenhaProvisoria } = require("../_lib");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TAMANHO_MINIMO_SENHA = 6;
-
-// Sem caracteres que se confundem ao ler/copiar (0/O, 1/l/I).
-const ALFABETO_SENHA = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-
-function gerarSenhaProvisoria(tamanho = 12) {
-  let senha = "";
-  for (let i = 0; i < tamanho; i++) senha += ALFABETO_SENHA[crypto.randomInt(ALFABETO_SENHA.length)];
-  return senha;
-}
 
 async function criarUsuario(req, res) {
   const corpo = corpoJson(req);
