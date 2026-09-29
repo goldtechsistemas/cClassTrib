@@ -478,14 +478,14 @@ const CORGAO_AMBIENTE_NACIONAL = 91;
  *
  * @returns {{cStat: string, xMotivo: string, sucesso: boolean, jaManifestada: boolean, prazoExpirado: boolean, tpEvento: number}}
  */
-async function enviarManifestacaoDestinatario({ ambiente, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1, tpEvento = TP_EVENTO_CIENCIA }) {
+async function enviarManifestacaoDestinatario({ ambiente, cnpj, chNFe, certPem, keyPem, nSeqEvento = 1, tpEvento = TP_EVENTO_CIENCIA, timeoutMs }) {
   const url = ENDPOINTS_EVENTO[ambiente] || ENDPOINTS_EVENTO[2];
   const { xml } = montarXmlEvento({ tpAmb: ambiente, cOrgao: CORGAO_AMBIENTE_NACIONAL, cnpj, chNFe, tpEvento, nSeqEvento });
   const eventoAssinado = assinarEvento(xml, certPem, keyPem);
   const idLote = String(Date.now()).slice(-15).padStart(15, "0");
   const envelope = montarEnvelopeEvento({ idLote, eventoAssinadoXml: eventoAssinado });
 
-  const resposta = await enviarSoap({ url, certPem, keyPem, envelopeXml: envelope, soapAction: SOAP_ACTION_EVENTO });
+  const resposta = await enviarSoap({ url, certPem, keyPem, envelopeXml: envelope, soapAction: SOAP_ACTION_EVENTO, timeoutMs });
   if (resposta.statusCode >= 400 && resposta.statusCode !== 500) {
     throw new ErroSefaz(`SEFAZ respondeu HTTP ${resposta.statusCode}.`);
   }

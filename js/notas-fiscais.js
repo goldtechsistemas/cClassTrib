@@ -100,16 +100,19 @@
           validade = `<span style="color:var(--amarelo, #c98a1c)">⚠ Vence em ${emp.certDiasRestantes} dia(s) (${formatarData(emp.certValidUntil)})</span>`;
         }
 
+        // A espera exigida pela SEFAZ só vale pra busca de notas NOVAS — a
+        // sincronização ainda manifesta pendentes e baixa XML completo nesse
+        // período, então o botão fica sempre ativo, só com o aviso do horário.
         const aguardando = emp.proximaConsultaPermitidaEm && new Date(emp.proximaConsultaPermitidaEm) > new Date();
-        const botaoSincronizar = aguardando
-          ? (() => {
-              const espera = new Date(emp.proximaConsultaPermitidaEm);
-              const horaCurta = espera.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-              const mesmoDia = espera.toDateString() === new Date().toDateString();
-              const rotulo = mesmoDia ? `Libera às ${horaCurta}` : `Libera em ${espera.toLocaleString("pt-BR")}`;
-              return `<button class="btn secondary btn-sm" disabled title="SEFAZ pede para aguardar até ${espera.toLocaleString("pt-BR")} antes de consultar de novo">${esc(rotulo)}</button>`;
-            })()
-          : `<button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>`;
+        let avisoEspera = "";
+        if (aguardando) {
+          const espera = new Date(emp.proximaConsultaPermitidaEm);
+          const horaCurta = espera.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+          const mesmoDia = espera.toDateString() === new Date().toDateString();
+          const quando = mesmoDia ? `às ${horaCurta}` : `em ${espera.toLocaleString("pt-BR")}`;
+          avisoEspera = `<br><span style="font-size:0.85em;opacity:0.75" title="A SEFAZ pede para aguardar antes de buscar notas novas">Notas novas liberam ${esc(quando)}</span>`;
+        }
+        const botaoSincronizar = `<button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>${avisoEspera}`;
 
         const avisoUf = emp.uf
           ? ""
@@ -160,16 +163,23 @@
         return;
       }
       const partes = [];
-      partes.push(
-        dados.docsNovos > 0
-          ? `${dados.docsNovos} nota(s)/evento(s) novo(s) para ${nomeEmpresa}.`
-          : `Nenhuma nota nova (SEFAZ: "${dados.xMotivo}").`
-      );
-      if (dados.manifestadas > 0) {
-        partes.push(`Ciência da Operação dada automaticamente em ${dados.manifestadas} nota(s) — o XML completo delas deve aparecer nesta mesma sincronização ou na próxima.`);
+      if (dados.avisoDistribuicao) {
+        partes.push(dados.avisoDistribuicao);
+      } else {
+        partes.push(
+          dados.docsNovos > 0
+            ? `${dados.docsNovos} nota(s)/evento(s) novo(s) para ${nomeEmpresa}.`
+            : `Nenhuma nota nova (SEFAZ: "${dados.xMotivo}").`
+        );
       }
-      if (dados.atingiuLimiteCiclos) {
-        partes.push("Ainda há mais notas pendentes (o lote era grande) — sincronize de novo para continuar de onde parou.");
+      if (dados.manifestadas > 0) {
+        partes.push(`Manifestação (Ciência ou Confirmação da Operação) registrada automaticamente em ${dados.manifestadas} nota(s).`);
+      }
+      if (dados.xmlsCompletados > 0) {
+        partes.push(`XML completo baixado para ${dados.xmlsCompletados} nota(s) — o PDF delas já sai como DANFE.`);
+      }
+      if (dados.pendentesDeManifestacao > 0 || dados.atingiuLimiteCiclos) {
+        partes.push("Ainda há notas pendentes — clique em sincronizar de novo para continuar de onde parou.");
       }
       mostrarAviso(partes.join(" "), "ok");
       carregarEmpresas();

@@ -9,6 +9,14 @@ const PAUSA_LIMITE_CICLOS_MS = 2 * 60 * 1000; // trava própria (não é exigên
 const LIMITE_CICLOS_DISTRIBUICAO = 15; // trava de segurança — cada ciclo é um lote (~50 docs) da SEFAZ
 const LIMITE_MANIFESTACOES_POR_CHAMADA = 30; // idem, pra não deixar a chamada eterna num backlog gigante
 const PAUSA_ENTRE_CHAMADAS_MS = 1500; // a SEFAZ pede um intervalo mínimo entre chamadas do mesmo lote
+// A função serverless morre em 60s (maxDuration em vercel.json) sem chance
+// de limpar nada — a sincronização inteira para de começar trabalho novo
+// depois desse orçamento e cada chamada à SEFAZ tem timeout próprio curto,
+// pra que o pior caso (última chamada começando no fim do orçamento e
+// estourando o timeout) ainda termine antes dos 60s.
+const ORCAMENTO_SINCRONIZACAO_MS = 40000;
+const TIMEOUT_DISTRIBUICAO_MS = 12000;
+const TIMEOUT_MANIFESTACAO_MS = 10000;
 
 function esperar(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,7 +67,7 @@ async function upsertLote(empresaId, documentos, eventos) {
  * não ter mais nada pendente (ultNSU === maxNSU) ou até a SEFAZ pedir espera
  * (cStat 137/656) ou até a trava de segurança de ciclos.
  */
-async function distribuirAteCaughtUp({ empresa, ultNsuInicial, certPem, keyPem }) {
+async function distribuirAteCaughtUp({ empresa, ultNsuInicial, certPem, keyPem, prazoFinal }) {
   let ultNsuAtual = ultNsuInicial;
   let docsNovosTotal = 0;
   let ultimoCStat = null;
@@ -68,6 +76,10 @@ async function distribuirAteCaughtUp({ empresa, ultNsuInicial, certPem, keyPem }
   let atingiuLimiteCiclos = false;
 
   for (let ciclo = 0; ciclo < LIMITE_CICLOS_DISTRIBUICAO; ciclo++) {
+    if (Date.now() >= prazoFinal) {
+      atingiuLimiteCiclos = true;
+      break;
+    }
     const resultado = await distribuirDfe({
       ambiente: empresa.ambiente,
       uf: empresa.uf,
@@ -75,6 +87,7 @@ async function distribuirAteCaughtUp({ empresa, ultNsuInicial, certPem, keyPem }
       ultNsu: ultNsuAtual,
       certPem,
       keyPem,
+      timeoutMs: TIMEOUT_DISTRIBUICAO_MS,
     });
 
     // docsNovosDoCiclo é só o delta deste lote — nfe_sync_logs.docs_novos
@@ -90,6 +103,10 @@ async function distribuirAteCaughtUp({ empresa, ultNsuInicial, certPem, keyPem }
     ultimoCStat = resultado.cStat;
     ultimoXMotivo = resultado.xMotivo;
     ultNsuAtual = resultado.ultNSU || ultNsuAtual;
+    // Grava o progresso a cada lote: se a chamada seguinte falhar (SEFAZ
+    // instável) ou a função for encerrada, a próxima sincronização continua
+    // daqui em vez de rebaixar o backlog inteiro desde o NSU inicial.
+    await query("UPDATE nfe_empresas SET ult_nsu = $1 WHERE id = $2", [ultNsuAtual, empresa.id]);
 
     // cStat 137 (nada novo) e 656 (consumo indevido) são os dois casos em
     // que a própria SEFAZ exige aguardar 1h antes de consultar de novo —
@@ -118,14 +135,19 @@ async function distribuirAteCaughtUp({ empresa, ultNsuInicial, certPem, keyPem }
  * rodarem ao mesmo tempo — sem isso, os dois processos podem ler
  * "manifestacao = nenhuma" antes de qualquer um gravar o resultado.
  */
-async function manifestarPendentes({ empresa, certPem, keyPem }) {
+async function manifestarPendentes({ empresa, certPem, keyPem, prazoFinal }) {
   const pendentes = await query(
-    "SELECT id, ch_nfe FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao = 'nenhuma' LIMIT $2",
+    "SELECT id, ch_nfe FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao = 'nenhuma' AND COALESCE(situacao, '') NOT IN ('denegada', 'cancelada') ORDER BY dh_emi DESC NULLS LAST LIMIT $2",
     [empresa.id, LIMITE_MANIFESTACOES_POR_CHAMADA]
   );
 
   let manifestadas = 0;
-  for (const doc of pendentes.rows) {
+  let restantes = 0;
+  for (const [n, doc] of pendentes.rows.entries()) {
+    if (Date.now() >= prazoFinal) {
+      restantes = pendentes.rows.length - n;
+      break;
+    }
     const reivindicada = await query(
       "UPDATE nfe_documentos SET manifestacao = 'enviando' WHERE id = $1 AND manifestacao = 'nenhuma' RETURNING id",
       [doc.id]
@@ -140,6 +162,7 @@ async function manifestarPendentes({ empresa, certPem, keyPem }) {
         certPem,
         keyPem,
         tpEvento: TP_EVENTO_CIENCIA,
+        timeoutMs: TIMEOUT_MANIFESTACAO_MS,
       });
       // Ciência da Operação só vale até 10 dias após a autorização da NF-e
       // (cStat 596 depois disso, comum em backlogs antigos) — Confirmação da
@@ -154,6 +177,7 @@ async function manifestarPendentes({ empresa, certPem, keyPem }) {
           certPem,
           keyPem,
           tpEvento: TP_EVENTO_CONFIRMACAO,
+          timeoutMs: TIMEOUT_MANIFESTACAO_MS,
         });
       }
       const statusManifestacao = resEvento.tpEvento === TP_EVENTO_CONFIRMACAO ? "confirmacao" : "ciencia";
@@ -186,7 +210,32 @@ async function manifestarPendentes({ empresa, certPem, keyPem }) {
     }
     await esperar(PAUSA_ENTRE_CHAMADAS_MS);
   }
-  return manifestadas;
+  return { manifestadas, restantes };
+}
+
+/**
+ * Busca pela chave o XML completo das notas já manifestadas que ainda estão
+ * só com resumo — em vez de esperar o feed por NSU, que fica bloqueado por
+ * 1h depois de um cStat 137. Para na primeira falha (serviço de distribuição
+ * lento/fora do ar: as seguintes falhariam igual) ou no fim do orçamento.
+ */
+async function completarManifestadasPorChave(empresa, cert, prazoFinal) {
+  const docs = await query(
+    "SELECT * FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao IN ('ciencia', 'confirmacao') LIMIT $2",
+    [empresa.id, LIMITE_MANIFESTACOES_POR_CHAMADA]
+  );
+  let completados = 0;
+  for (const [n, doc] of docs.rows.entries()) {
+    if (Date.now() >= prazoFinal) break;
+    if (n > 0) await esperar(PAUSA_ENTRE_CHAMADAS_MS);
+    try {
+      if (await buscarXmlPorChave(empresa, doc, cert)) completados++;
+    } catch (e) {
+      console.error(`Falha ao buscar XML completo por chave (${doc.ch_nfe}):`, e.message || e);
+      break;
+    }
+  }
+  return completados;
 }
 
 /**
@@ -196,7 +245,12 @@ async function manifestarPendentes({ empresa, certPem, keyPem }) {
  *     em toda nota que ainda só tem resumo (sem isso o XML completo nunca
  *     chega — é assim que a SEFAZ funciona: resumo até o destinatário
  *     manifestar);
- *  3) puxa mais ciclos pra tentar já trazer o XML completo resultante.
+ *  3) busca pela chave o XML completo das notas já manifestadas.
+ *
+ * As etapas são independentes: a espera de 1h que a SEFAZ impõe após um
+ * cStat 137/656 (ou uma falha do serviço de distribuição) só bloqueia a
+ * etapa 1 — a manifestação usa outro serviço e a busca por chave não entra
+ * nessa regra, então continuam rodando.
  *
  * `manifestarAutomaticamente` (padrão true) existe pra diferenciar clique
  * manual do usuário (que pediu explicitamente essa automação) de uma
@@ -213,13 +267,16 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
   if (!empresa.cert_encrypted || !empresa.cert_password_encrypted) {
     return { ok: false, erro: "Empresa sem certificado cadastrado." };
   }
-  if (empresa.proxima_consulta_permitida_em && new Date(empresa.proxima_consulta_permitida_em) > new Date()) {
-    const espera = new Date(empresa.proxima_consulta_permitida_em);
-    return {
-      ok: false,
-      erro: `A SEFAZ pede para aguardar antes de consultar de novo. Próxima tentativa permitida às ${espera.toLocaleString("pt-BR")}.`,
-      aguardando: true,
-    };
+  const emEspera = !!empresa.proxima_consulta_permitida_em && new Date(empresa.proxima_consulta_permitida_em) > new Date();
+  const avisoEspera = emEspera
+    ? `A SEFAZ pede para aguardar antes de buscar notas novas. Próxima busca permitida às ${new Date(
+        empresa.proxima_consulta_permitida_em
+      ).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`
+    : null;
+  // Sem manifestação automática (cron padrão) não há mais nada a fazer
+  // durante a espera.
+  if (emEspera && !manifestarAutomaticamente) {
+    return { ok: false, erro: avisoEspera, aguardando: true };
   }
 
   let certPem, keyPem;
@@ -245,81 +302,83 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
     empresa.id,
   ]).catch((e) => console.error("Falha ao reivindicar manifestacoes orfas:", e));
 
-  try {
-    // --- Fase 1: puxar tudo que estiver pendente ---
-    const fase1 = await distribuirAteCaughtUp({ empresa, ultNsuInicial: empresa.ult_nsu, certPem, keyPem });
+  const inicio = Date.now();
+  const prazoFinal = inicio + ORCAMENTO_SINCRONIZACAO_MS;
+  // Metade do orçamento pra etapa 1 — num backlog grande ela sozinha
+  // consumiria tudo e a manifestação nunca rodaria; o que sobrar de notas
+  // novas continua na próxima sincronização (o progresso é salvo por lote).
+  const prazoDistribuicao = inicio + ORCAMENTO_SINCRONIZACAO_MS / 2;
 
-    let docsNovosTotal = fase1.docsNovosTotal;
-    let manifestadas = 0;
-    let ultNsuAtual = fase1.ultNsuFinal;
-    let ultimoCStat = fase1.ultimoCStat;
-    let ultimoXMotivo = fase1.ultimoXMotivo;
-    let pararPorSefaz = fase1.pararPorSefaz;
-    let atingiuLimiteCiclos = fase1.atingiuLimiteCiclos;
-
-    // --- Fase 2: manifestação automática das notas que só têm resumo ---
-    if (manifestarAutomaticamente && !pararPorSefaz) {
-      manifestadas = await manifestarPendentes({ empresa, certPem, keyPem });
-
-      // --- Fase 3: mais ciclos pra tentar já trazer o XML completo
-      // resultante. A SEFAZ às vezes demora alguns segundos a mais pra
-      // processar UM evento específico (mesmo com os outros já prontos) —
-      // por isso tenta de novo com uma pausa maior se ainda sobrar alguma
-      // nota manifestada sem XML.
-      if (manifestadas > 0) {
-        for (const esperaMs of [2000, 4000, 6000]) {
-          await esperar(esperaMs);
-          const faseExtra = await distribuirAteCaughtUp({ empresa, ultNsuInicial: ultNsuAtual, certPem, keyPem });
-          docsNovosTotal += faseExtra.docsNovosTotal;
-          ultNsuAtual = faseExtra.ultNsuFinal;
-          ultimoCStat = faseExtra.ultimoCStat;
-          ultimoXMotivo = faseExtra.ultimoXMotivo;
-          atingiuLimiteCiclos = atingiuLimiteCiclos || faseExtra.atingiuLimiteCiclos;
-          if (faseExtra.pararPorSefaz) {
-            pararPorSefaz = true;
-            break;
-          }
-
-          const aindaFaltando = await query(
-            "SELECT count(*) FROM nfe_documentos WHERE empresa_id = $1 AND tipo = 'resumo' AND manifestacao IN ('ciencia', 'confirmacao')",
-            [empresa.id]
-          );
-          if (Number(aindaFaltando.rows[0].count) === 0) break;
-        }
-      }
+  // --- Etapa 1: notas novas pelo feed por NSU (bloqueada durante a espera) ---
+  let fase1 = null;
+  let erroDistribuicao = null;
+  if (!emEspera) {
+    try {
+      fase1 = await distribuirAteCaughtUp({
+        empresa,
+        ultNsuInicial: empresa.ult_nsu,
+        certPem,
+        keyPem,
+        prazoFinal: prazoDistribuicao,
+      });
+    } catch (e) {
+      erroDistribuicao = e instanceof ErroSefaz ? e.message : "Erro inesperado ao buscar notas novas.";
+      if (!(e instanceof ErroSefaz)) console.error(e);
+      await query("INSERT INTO nfe_sync_logs (empresa_id, c_stat, x_motivo, docs_novos) VALUES ($1, $2, $3, 0)", [
+        empresa.id,
+        null,
+        erroDistribuicao,
+      ]).catch((erroLog) => console.error("Falha ao gravar log de sincronização:", erroLog));
     }
+  }
 
-    const agora = new Date();
+  // --- Etapas 2 e 3: manifestação + XML completo por chave ---
+  let manifestadas = 0;
+  let pendentesDeManifestacao = 0;
+  let xmlsCompletados = 0;
+  if (manifestarAutomaticamente) {
+    try {
+      const resultadoManifestacao = await manifestarPendentes({ empresa, certPem, keyPem, prazoFinal });
+      manifestadas = resultadoManifestacao.manifestadas;
+      pendentesDeManifestacao = resultadoManifestacao.restantes;
+      xmlsCompletados = await completarManifestadasPorChave(empresa, { certPem, keyPem }, prazoFinal);
+    } catch (e) {
+      console.error("Falha na manifestação/busca de XML durante a sincronização:", e);
+    }
+  }
+
+  if (fase1) {
     // proxima_consulta_permitida_em: 1h quando a própria SEFAZ pediu (regra
     // dela, não é opcional); alguns minutos quando fomos NÓS que paramos por
-    // segurança (limite de ciclos) — evita reclique imediato martelando um
-    // backlog grande, sem impor a espera de 1h que não foi exigida pela SEFAZ.
+    // segurança (limite de ciclos/tempo) — evita reclique imediato
+    // martelando um backlog grande, sem impor a espera de 1h que não foi
+    // exigida pela SEFAZ.
+    const agora = new Date();
     let proximaConsulta = null;
-    if (pararPorSefaz) proximaConsulta = new Date(agora.getTime() + UMA_HORA_MS);
-    else if (atingiuLimiteCiclos) proximaConsulta = new Date(agora.getTime() + PAUSA_LIMITE_CICLOS_MS);
-
+    if (fase1.pararPorSefaz) proximaConsulta = new Date(agora.getTime() + UMA_HORA_MS);
+    else if (fase1.atingiuLimiteCiclos) proximaConsulta = new Date(agora.getTime() + PAUSA_LIMITE_CICLOS_MS);
     await query(
       `UPDATE nfe_empresas SET ult_nsu = $1, ultima_sincronizacao = $2, proxima_consulta_permitida_em = $3 WHERE id = $4`,
-      [ultNsuAtual, agora, proximaConsulta, empresa.id]
+      [fase1.ultNsuFinal, agora, proximaConsulta, empresa.id]
     );
-
-    return {
-      ok: true,
-      cStat: ultimoCStat,
-      xMotivo: ultimoXMotivo,
-      docsNovos: docsNovosTotal,
-      manifestadas,
-      aguardandoSefaz: pararPorSefaz,
-      atingiuLimiteCiclos,
-    };
-  } catch (e) {
-    const mensagem = e instanceof ErroSefaz ? e.message : "Erro inesperado ao sincronizar.";
-    if (!(e instanceof ErroSefaz)) console.error(e);
-    await query("INSERT INTO nfe_sync_logs (empresa_id, c_stat, x_motivo, docs_novos) VALUES ($1, $2, $3, 0)", [empresa.id, null, mensagem]).catch(
-      (erroLog) => console.error("Falha ao gravar log de sincronização:", erroLog)
-    );
-    return { ok: false, erro: mensagem };
   }
+
+  if (erroDistribuicao && !manifestadas && !xmlsCompletados) {
+    return { ok: false, erro: erroDistribuicao };
+  }
+
+  return {
+    ok: true,
+    cStat: fase1 ? fase1.ultimoCStat : null,
+    xMotivo: fase1 ? fase1.ultimoXMotivo : null,
+    docsNovos: fase1 ? fase1.docsNovosTotal : 0,
+    manifestadas,
+    pendentesDeManifestacao,
+    xmlsCompletados,
+    aguardandoSefaz: emEspera || !!(fase1 && fase1.pararPorSefaz),
+    atingiuLimiteCiclos: !!(fase1 && fase1.atingiuLimiteCiclos),
+    avisoDistribuicao: avisoEspera || (erroDistribuicao ? `Não foi possível buscar notas novas agora (${erroDistribuicao}).` : null),
+  };
 }
 
 const MANIFESTACOES_QUE_LIBERAM_XML = ["ciencia", "confirmacao"];
@@ -347,27 +406,33 @@ function certificadoDaEmpresa(empresa) {
 async function completarXmlPorChave(empresa, doc, cert) {
   if (doc.xml_completo || !MANIFESTACOES_QUE_LIBERAM_XML.includes(doc.manifestacao)) return doc;
   try {
-    const { certPem, keyPem } = cert || certificadoDaEmpresa(empresa);
-    const resultado = await distribuirDfe({
-      ambiente: empresa.ambiente,
-      uf: empresa.uf,
-      cnpj: empresa.cnpj,
-      chNFe: doc.ch_nfe,
-      certPem,
-      keyPem,
-      timeoutMs: TIMEOUT_BUSCA_POR_CHAVE_MS,
-    });
-    const completa = resultado.documentos.find((d) => d.tipo === "completa" && d.chNFe === doc.ch_nfe && d.xmlCompleto);
-    if (!completa) return doc;
-    const r = await query(
-      "UPDATE nfe_documentos SET xml_completo = $2, tipo = 'completa', dest_cnpj = COALESCE(dest_cnpj, $3) WHERE id = $1 RETURNING *",
-      [doc.id, completa.xmlCompleto, completa.destCnpj]
-    );
-    return r.rows[0] || doc;
+    return (await buscarXmlPorChave(empresa, doc, cert)) || doc;
   } catch (e) {
     console.error(`Falha ao buscar XML completo por chave (${doc.ch_nfe}):`, e.message || e);
     return doc;
   }
+}
+
+// Lança em falha de comunicação com a SEFAZ; devolve null se a SEFAZ
+// respondeu mas o XML completo ainda não está disponível pra essa chave.
+async function buscarXmlPorChave(empresa, doc, cert) {
+  const { certPem, keyPem } = cert || certificadoDaEmpresa(empresa);
+  const resultado = await distribuirDfe({
+    ambiente: empresa.ambiente,
+    uf: empresa.uf,
+    cnpj: empresa.cnpj,
+    chNFe: doc.ch_nfe,
+    certPem,
+    keyPem,
+    timeoutMs: TIMEOUT_BUSCA_POR_CHAVE_MS,
+  });
+  const completa = resultado.documentos.find((d) => d.tipo === "completa" && d.chNFe === doc.ch_nfe && d.xmlCompleto);
+  if (!completa) return null;
+  const r = await query(
+    "UPDATE nfe_documentos SET xml_completo = $2, tipo = 'completa', dest_cnpj = COALESCE(dest_cnpj, $3) WHERE id = $1 RETURNING *",
+    [doc.id, completa.xmlCompleto, completa.destCnpj]
+  );
+  return r.rows[0] || null;
 }
 
 module.exports = { sincronizarEmpresa, completarXmlPorChave, certificadoDaEmpresa, esperar };
