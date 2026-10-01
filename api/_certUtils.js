@@ -99,17 +99,31 @@ function extrairDocumentoDoSan(cert) {
   return null;
 }
 
-// Ordem: SAN (mais confiável, estrutura tipada) -> CPF rotulado no CN
-// (best-effort, mas explícito) -> CNPJ logo após ":" no CN. Se nada bater,
-// não inventa nada — melhor recusar o certificado do que mandar um
-// documento errado pra SEFAZ.
+// "NOME:CPF" — o e-CPF padrão ICP-Brasil (11 dígitos logo após o ":").
+function extrairCpfDoSubject(cert) {
+  const cn = cert.subject.getField("CN");
+  const texto = cn ? cn.value : "";
+  const idx = texto.indexOf(":");
+  if (idx === -1) return null;
+  const digitos = somenteDigitos(texto.slice(idx + 1));
+  return digitos.length === 11 ? digitos : null;
+}
+
+// Ordem: SAN (mais confiável, estrutura tipada) -> CNPJ logo após ":" no CN
+// -> CPF. O CNPJ vem antes do CPF rotulado de propósito: certificado de
+// empresa (e-CNPJ) de empresário individual traz o CPF do titular escrito no
+// nome ("JOSE LUIZ VIEIRA CPF 234440296-91:02694338000116") e quem consulta
+// a SEFAZ é o CNPJ, não o CPF — usar o CPF ali faz a SEFAZ rejeitar com
+// "CNPJ-Base consultado difere do CNPJ-Base do Certificado Digital". Se
+// nada bater, não inventa nada — melhor recusar o certificado do que mandar
+// um documento errado pra SEFAZ.
 function extrairDocumento(cert) {
   const doSan = extrairDocumentoDoSan(cert);
   if (doSan) return doSan;
-  const cpfRotulado = extrairCpfRotuladoDoCn(cert);
-  if (cpfRotulado && cpfRotulado.length === 11) return { documento: cpfRotulado, tipoDocumento: "CPF" };
   const cnpj = extrairCnpjDoSubject(cert);
   if (cnpj) return { documento: cnpj, tipoDocumento: "CNPJ" };
+  const cpf = extrairCpfDoSubject(cert) || extrairCpfRotuladoDoCn(cert);
+  if (cpf && cpf.length === 11) return { documento: cpf, tipoDocumento: "CPF" };
   return null;
 }
 
