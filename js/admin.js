@@ -223,7 +223,7 @@
     return `
       <div class="cert-resumo">${resumo}</div>
       <div class="cert-ferramentas">
-        <input type="search" id="input-busca-cert" placeholder="Buscar por empresa ou CNPJ" autocomplete="off" />
+        <input type="search" id="input-busca-cert" name="filtro-certificados" placeholder="Buscar por empresa ou CNPJ" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
         <select id="select-filtro-cert" aria-label="Filtrar situação">
           <option value="">Todas as situações</option>
           <option value="valido">Válidos</option>

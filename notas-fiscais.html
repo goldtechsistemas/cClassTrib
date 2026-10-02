@@ -35,7 +35,7 @@
       <input type="file" id="input-cert-arquivo" accept=".pfx,.p12" />
 
       <label for="input-cert-senha" style="margin-top:14px;">Senha do certificado</label>
-      <input type="password" id="input-cert-senha" placeholder="Senha do certificado A1" autocomplete="off" />
+      <input type="text" class="campo-senha-oculta" id="input-cert-senha" name="cert-a1-chave" placeholder="Senha do certificado A1" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
 
       <div class="field-actions">
         <button class="btn" id="btn-enviar-cert">Validar e cadastrar</button>
@@ -47,7 +47,7 @@
         <h2 class="section-title">Empresas cadastradas</h2>
         <div class="busca-empresas" id="busca-empresas" style="display:none;">
           <label for="input-busca-empresas">Buscar empresa</label>
-          <input type="search" id="input-busca-empresas" placeholder="Nome ou CNPJ/CPF" autocomplete="off" />
+          <input type="search" id="input-busca-empresas" name="filtro-empresas" placeholder="Nome ou CNPJ/CPF" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
         </div>
       </div>
       <div id="empresas-vazio" class="hint" style="display:none;">Nenhuma empresa cadastrada ainda — envie um certificado acima.</div>
@@ -80,7 +80,7 @@
         <div class="filtro-grid">
           <div class="filtro-busca">
             <label for="input-busca-notas">Emitente ou CNPJ</label>
-            <input type="search" id="input-busca-notas" placeholder="Nome do emitente ou CNPJ" autocomplete="off" />
+            <input type="search" id="input-busca-notas" name="filtro-notas" placeholder="Nome do emitente ou CNPJ" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
           </div>
           <div>
             <label for="input-data-inicio">Emitidas de</label>

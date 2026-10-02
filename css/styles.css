@@ -782,3 +782,9 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
   .detalhes-grade { grid-template-columns: 1fr; }
   .cert-ferramentas { grid-template-columns: 1fr; }
 }
+
+
+/* Senha digitada como texto mascarado: nas telas internas (certificado A1,
+   "Minha conta") um <input type="password"> faz o Chrome oferecer o e-mail
+   salvo nos campos de texto/busca da página — aqui não existe login. */
+.campo-senha-oculta { -webkit-text-security: disc; text-security: disc; }
