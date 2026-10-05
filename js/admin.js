@@ -3,7 +3,8 @@
  * usuários comuns, tabela `admins` no Postgres) e gestão de usuários:
  * criar (com senha provisória — o usuário define a própria no primeiro
  * acesso), redefinir senha (nova provisória, mesmo fluxo), listar,
- * bloquear/desbloquear, ver detalhes e excluir (com
+ * bloquear/desbloquear, controlar assinatura/cobrança (data da assinatura,
+ * próximo vencimento e baixa de pagamentos), ver detalhes e excluir (com
  * confirmação dupla: modal + digitar o e-mail da conta).
  */
 (function () {
@@ -230,6 +231,81 @@
     return u.precisa_trocar_senha ? "Aguardando 1º acesso" : "Ativo";
   }
 
+  // ---------- Assinaturas e cobranças ----------
+
+  const MESES_PERIODO = { 1: "Mensal", 2: "Bimestral", 3: "Trimestral", 6: "Semestral", 12: "Anual" };
+
+  // Datas da cobrança são AAAA-MM-DD puras: formata cortando o texto, sem Date
+  // (evita o deslocamento de um dia por fuso horário).
+  function dataBr(iso) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(iso || "") ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "—";
+  }
+
+  function moeda(v) {
+    return v == null ? "—" : Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function hojeBrasilia() {
+    return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  }
+
+  // Mesma regra do servidor: soma meses mantendo o dia de cobrança (31 → 28/fev → 31/mar).
+  function somarMesesIso(iso, n, diaBase) {
+    const a = Number(iso.slice(0, 4)), m = Number(iso.slice(5, 7)), d = Number(iso.slice(8, 10));
+    const total = m - 1 + n;
+    const ano = a + Math.floor(total / 12);
+    const mes = ((total % 12) + 12) % 12;
+    const ultimo = new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate();
+    return `${ano}-${String(mes + 1).padStart(2, "0")}-${String(Math.min(diaBase || d, ultimo)).padStart(2, "0")}`;
+  }
+
+  // Situação: semassinatura | atrasado | vencendo (hoje até 7 dias) | emdia
+  function situacaoCobranca(c) {
+    if (!c || !c.proximoVencimento) return { chave: "semassinatura", cor: "neutro-fraco", texto: "Sem assinatura" };
+    const d = c.diasParaVencer;
+    if (d < 0) return { chave: "atrasado", cor: "vermelho", texto: `Atrasado há ${-d} dia${d === -1 ? "" : "s"}` };
+    if (d === 0) return { chave: "vencendo", cor: "amarelo", texto: "Vence hoje" };
+    if (d <= 7) return { chave: "vencendo", cor: "amarelo", texto: `Vence em ${d} dia${d === 1 ? "" : "s"}` };
+    return { chave: "emdia", cor: "verde", texto: "Em dia" };
+  }
+
+  function celulaAssinatura(u) {
+    const c = u.cobranca;
+    const sit = situacaoCobranca(c);
+    if (sit.chave === "semassinatura") return `<span class="badge cor-neutro-fraco">${sit.texto}</span>`;
+    return `<div class="cob-celula">
+        <span class="badge cor-${sit.cor}">${esc(sit.texto)}</span>
+        <span class="cob-data">Próx. vencimento: <strong>${dataBr(c.proximoVencimento)}</strong></span>
+        <span class="cob-valor">${esc(MESES_PERIODO[c.periodicidadeMeses] || "")}${c.valorCobranca != null ? " · " + moeda(c.valorCobranca) : ""}</span>
+      </div>`;
+  }
+
+  let resumoCobranca = null;
+  let filtroCobranca = "todos";
+
+  function renderizarResumoCobranca() {
+    const nSit = { semassinatura: 0, atrasado: 0, vencendo: 0, emdia: 0 };
+    usuariosCache.forEach((u) => { nSit[situacaoCobranca(u.cobranca).chave]++; });
+    const r = resumoCobranca;
+    const mesRotulo = r ? `${r.mes.slice(5, 7)}/${r.mes.slice(0, 4)}` : "";
+    document.getElementById("cobranca-resumo").innerHTML = r ? `
+      <div class="xml-cartao destaque"><strong>${esc(moeda(r.recebidoNoMes))}</strong><span>Recebido em ${mesRotulo} (${r.pagamentosNoMes} pagamento${r.pagamentosNoMes === 1 ? "" : "s"})</span></div>
+      <div class="xml-cartao"><strong>${esc(moeda(r.previstoNoMes))}</strong><span>A receber até o fim do mês</span></div>
+      <div class="xml-cartao"><strong style="${nSit.atrasado ? "color:var(--vermelho)" : ""}">${nSit.atrasado}</strong><span>Atrasado${nSit.atrasado ? " · " + esc(moeda(r.atrasadoValor)) : ""}</span></div>
+      <div class="xml-cartao"><strong>${nSit.vencendo}</strong><span>Vencem nos próximos 7 dias</span></div>` : "";
+    const filtros = [["todos", "Todos", usuariosCache.length], ["atrasado", "Atrasados", nSit.atrasado], ["vencendo", "Vencem em 7 dias", nSit.vencendo], ["emdia", "Em dia", nSit.emdia], ["semassinatura", "Sem assinatura", nSit.semassinatura]];
+    document.getElementById("cobranca-filtros").innerHTML = `<span class="filtro-rotulo">Mostrar:</span>` +
+      filtros.map(([k, t, n]) => `<button type="button" class="chip${filtroCobranca === k ? " ativo" : ""}" data-filtro-cob="${k}">${t} (${n})</button>`).join("");
+  }
+
+  function renderizarTabelaUsuarios() {
+    const corpo = document.getElementById("tabela-usuarios-body");
+    const lista = usuariosCache.filter((u) => filtroCobranca === "todos" || situacaoCobranca(u.cobranca).chave === filtroCobranca);
+    // Quem precisa de atenção primeiro: atrasados e os que vencem antes.
+    if (filtroCobranca !== "todos") lista.sort((a, b) => (a.cobranca.diasParaVencer ?? 1e9) - (b.cobranca.diasParaVencer ?? 1e9));
+    corpo.innerHTML = lista.length ? lista.map(linhaUsuario).join("") : `<tr><td colspan="7">Nenhum login nesta situação.</td></tr>`;
+  }
+
   function linhaUsuario(u) {
     const statusBadge = u.bloqueado
       ? `<span class="badge cor-vermelho">Bloqueado</span>`
@@ -245,10 +321,12 @@
         <td>${esc(u.nome)}</td>
         <td>${esc(formatarData(u.criado_em))}</td>
         <td>${statusBadge}</td>
+        <td>${celulaAssinatura(u)}</td>
         <td title="Certificados A1 importados no módulo Notas Fiscais">${Number(u.qtdCertificados) || 0}</td>
         <td>
           <div class="tabela-acoes">
             ${botaoBloqueio}
+            <button class="btn btn-sm" data-acao="cobranca" data-id="${u.id}">Cobrança</button>
             <button class="btn secondary btn-sm" data-acao="redefinir" data-id="${u.id}">Redefinir senha</button>
             <button class="btn secondary btn-sm" data-acao="detalhes" data-id="${u.id}">Ver Detalhes</button>
             <button class="btn perigo btn-sm" data-acao="excluir" data-id="${u.id}">Excluir</button>
@@ -259,21 +337,143 @@
 
   let usuariosCache = [];
 
-  async function carregarUsuarios() {
+  async function carregarUsuarios(silencioso) {
     const corpo = document.getElementById("tabela-usuarios-body");
-    corpo.innerHTML = `<tr><td colspan="6">Carregando...</td></tr>`;
+    if (!silencioso) corpo.innerHTML = `<tr><td colspan="7">Carregando...</td></tr>`;
     const resultado = await chamarApi("/api/admin/users");
     if (resultado.status === 401) { voltarParaLogin(); return; }
     if (!resultado.ok) {
-      corpo.innerHTML = `<tr><td colspan="6">Erro ao carregar usuários.</td></tr>`;
+      corpo.innerHTML = `<tr><td colspan="7">Erro ao carregar usuários.</td></tr>`;
       return;
     }
     usuariosCache = resultado.usuarios || [];
+    resumoCobranca = resultado.resumoCobranca || null;
     if (!usuariosCache.length) {
-      corpo.innerHTML = `<tr><td colspan="6">Nenhum usuário cadastrado ainda.</td></tr>`;
+      corpo.innerHTML = `<tr><td colspan="7">Nenhum usuário cadastrado ainda.</td></tr>`;
       return;
     }
-    corpo.innerHTML = usuariosCache.map(linhaUsuario).join("");
+    renderizarResumoCobranca();
+    renderizarTabelaUsuarios();
+  }
+
+  // ---------- Modal de cobrança ----------
+
+  let cobrancaModal = null; // { id, email, cobranca, pagamentos }
+
+  function renderizarModalCobranca() {
+    const { email, cobranca: c, pagamentos } = cobrancaModal;
+    const sit = situacaoCobranca(c);
+    const periodos = Object.keys(MESES_PERIODO).map((n) => `<option value="${n}"${Number(n) === c.periodicidadeMeses ? " selected" : ""}>${MESES_PERIODO[n]}</option>`).join("");
+    const valorTxt = c.valorCobranca != null ? Number(c.valorCobranca).toFixed(2).replace(".", ",") : "";
+    const temAssinatura = !!c.proximoVencimento;
+    const proxima = temAssinatura ? somarMesesIso(c.proximoVencimento, c.periodicidadeMeses, Number(c.proximoVencimento.slice(8, 10))) : "";
+
+    const blocoProximo = temAssinatura ? `
+      <div class="cob-bloco destaque">
+        <p class="hint" style="margin:0;">Próximo pagamento</p>
+        <div class="cob-proximo"><strong>${dataBr(c.proximoVencimento)}</strong><span class="badge cor-${sit.cor}">${esc(sit.texto)}</span></div>
+        <p class="hint" style="margin:0;">${esc(MESES_PERIODO[c.periodicidadeMeses])}${c.valorCobranca != null ? " · " + esc(moeda(c.valorCobranca)) : ""}${c.ultimoPagamento ? " · último pagamento recebido em " + dataBr(c.ultimoPagamento) : ""}</p>
+      </div>
+      <div class="cob-bloco">
+        <h3>Dar baixa (pagamento recebido)</h3>
+        <p class="hint" style="margin:0;">Quita o vencimento de <strong>${dataBr(c.proximoVencimento)}</strong>; o próximo passa a ser <strong>${dataBr(proxima)}</strong>.</p>
+        <div class="cob-form">
+          <div><label for="cob-pago-em">Recebido em</label><input type="date" id="cob-pago-em" value="${hojeBrasilia()}" /></div>
+          <div><label for="cob-valor-pago">Valor recebido (R$)</label><input type="text" id="cob-valor-pago" inputmode="decimal" value="${esc(valorTxt)}" autocomplete="off" /></div>
+          <div><label for="cob-obs">Observação (opcional)</label><input type="text" id="cob-obs" maxlength="300" placeholder="Ex.: Pix, boleto..." autocomplete="off" /></div>
+        </div>
+        <div class="field-actions"><button class="btn" type="button" data-cob="baixa">Registrar pagamento</button></div>
+      </div>` : `<div class="aviso-legal">Este login ainda não tem assinatura cadastrada. Preencha abaixo a data em que a contabilidade assinou.</div>`;
+
+    const linhasPag = (pagamentos || []).map((p) => `<tr><td>${dataBr(p.pagoEm)}</td><td>${dataBr(p.referenteA)}</td><td>${esc(moeda(p.valor))}</td><td>${esc(p.observacao || "")}</td></tr>`).join("");
+    const blocoHistorico = `
+      <div class="cob-bloco">
+        <h3>Histórico de pagamentos</h3>
+        ${linhasPag ? `<div class="table-wrap cob-historico"><table><thead><tr><th>Recebido em</th><th>Referente ao vencimento</th><th>Valor</th><th>Observação</th></tr></thead><tbody>${linhasPag}</tbody></table></div>
+        <div class="field-actions"><button class="btn secondary btn-sm" type="button" data-cob="estornar" title="Desfaz o pagamento mais recente e volta o vencimento">Desfazer último pagamento</button></div>` : `<p class="hint" style="margin:0;">Nenhum pagamento registrado ainda.</p>`}
+      </div>`;
+
+    document.getElementById("corpo-cobranca").innerHTML = `
+      <p class="hint" style="margin-top:0;">Login: <strong>${esc(email)}</strong></p>
+      <div id="erro-cobranca" class="aviso-legal" style="display:none;"></div>
+      ${blocoProximo}
+      <div class="cob-bloco">
+        <h3>${temAssinatura ? "Dados da assinatura" : "Cadastrar assinatura"}</h3>
+        <div class="cob-form">
+          <div><label for="cob-inicio">Conta criada / assinatura em</label><input type="date" id="cob-inicio" value="${esc(c.assinaturaInicio || "")}" /></div>
+          <div><label for="cob-valor">Valor da cobrança (R$)</label><input type="text" id="cob-valor" inputmode="decimal" value="${esc(valorTxt)}" placeholder="0,00" autocomplete="off" /></div>
+          <div><label for="cob-periodo">Periodicidade</label><select id="cob-periodo">${periodos}</select></div>
+          <div><label for="cob-proximo">Próximo vencimento</label><input type="date" id="cob-proximo" value="${esc(c.proximoVencimento || "")}" /></div>
+        </div>
+        <p class="hint" style="margin:0;">Deixe o próximo vencimento em branco para calcular automaticamente (assinatura + 1 período).</p>
+        <div class="field-actions">
+          <button class="btn" type="button" data-cob="assinatura">Salvar assinatura</button>
+          ${temAssinatura ? `<button class="btn perigo btn-sm" type="button" data-cob="remover" title="Apaga a data e o vencimento (o histórico de pagamentos é mantido)">Remover assinatura</button>` : ""}
+        </div>
+      </div>
+      ${blocoHistorico}`;
+  }
+
+  function erroCobranca(msg) {
+    const el = document.getElementById("erro-cobranca");
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = msg ? "block" : "none";
+    if (msg) el.scrollIntoView({ block: "nearest" });
+  }
+
+  async function abrirCobranca(id) {
+    const u = usuariosCache.find((x) => x.id === id);
+    if (!u) return;
+    cobrancaModal = { id, email: u.email, cobranca: u.cobranca, pagamentos: [] };
+    document.getElementById("corpo-cobranca").innerHTML = `<p class="hint">Carregando...</p>`;
+    document.getElementById("modal-cobranca-overlay").classList.add("aberto");
+    const r = await chamarApi(`/api/admin/users/${id}`);
+    if (r.status === 401) { voltarParaLogin(); return; }
+    if (!r.ok) { document.getElementById("corpo-cobranca").innerHTML = `<div class="aviso-legal">${esc(r.erro || "Erro ao carregar a cobrança.")}</div>`; return; }
+    cobrancaModal.cobranca = r.cobranca;
+    cobrancaModal.pagamentos = r.pagamentos;
+    renderizarModalCobranca();
+  }
+
+  async function enviarAcaoCobranca(corpo, mensagemOk) {
+    if (!cobrancaModal) return;
+    const r = await chamarApi(`/api/admin/users/${cobrancaModal.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+    if (r.status === 401) { voltarParaLogin(); return; }
+    if (!r.ok) { erroCobranca(r.erro || "Não foi possível salvar."); return; }
+    cobrancaModal.cobranca = r.cobranca;
+    cobrancaModal.pagamentos = r.pagamentos;
+    const u = usuariosCache.find((x) => x.id === cobrancaModal.id);
+    if (u) u.cobranca = r.cobranca;
+    renderizarModalCobranca();
+    mostrarAvisoPainel(mensagemOk(r.cobranca), "ok");
+    carregarUsuarios(true); // atualiza tabela, cartões e totais
+  }
+
+  function cliqueCobranca(e) {
+    const btn = e.target.closest("button[data-cob]");
+    if (!btn) return;
+    const v = (id) => document.getElementById(id).value.trim();
+    const acao = btn.dataset.cob;
+    erroCobranca("");
+    if (acao === "assinatura") {
+      enviarAcaoCobranca({ acao: "assinatura", assinaturaInicio: v("cob-inicio"), valorCobranca: v("cob-valor"), periodicidadeMeses: Number(v("cob-periodo")), proximoVencimento: v("cob-proximo") },
+        (c) => `Assinatura salva. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`);
+    } else if (acao === "baixa") {
+      btn.disabled = true; // evita baixa em duplicidade por clique duplo
+      enviarAcaoCobranca({ acao: "baixa", pagoEm: v("cob-pago-em"), valor: v("cob-valor-pago"), observacao: v("cob-obs") },
+        (c) => `Pagamento registrado. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`).then(() => { btn.disabled = false; });
+    } else if (acao === "estornar") {
+      if (!window.confirm("Desfazer o último pagamento registrado? O vencimento volta para a data anterior.")) return;
+      enviarAcaoCobranca({ acao: "estornar" }, (c) => `Pagamento desfeito. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`);
+    } else if (acao === "remover") {
+      if (!window.confirm("Remover a assinatura deste login? O histórico de pagamentos é mantido.")) return;
+      enviarAcaoCobranca({ acao: "remover-assinatura" }, () => "Assinatura removida.");
+    }
   }
 
   async function alternarBloqueio(id, bloquear) {
@@ -584,12 +784,25 @@
     else if (acao === "desbloquear") alternarBloqueio(id, false);
     else if (acao === "redefinir") redefinirSenha(id);
     else if (acao === "detalhes") abrirDetalhes(id);
+    else if (acao === "cobranca") abrirCobranca(id);
     else if (acao === "excluir") abrirExclusao(id);
   });
 
   const overlayDetalhes = document.getElementById("modal-detalhes-overlay");
   document.getElementById("btn-fechar-modal-detalhes").addEventListener("click", () => overlayDetalhes.classList.remove("aberto"));
   overlayDetalhes.addEventListener("click", (e) => { if (e.target === overlayDetalhes) overlayDetalhes.classList.remove("aberto"); });
+
+  const overlayCobranca = document.getElementById("modal-cobranca-overlay");
+  document.getElementById("btn-fechar-modal-cobranca").addEventListener("click", () => overlayCobranca.classList.remove("aberto"));
+  overlayCobranca.addEventListener("click", (e) => { if (e.target === overlayCobranca) overlayCobranca.classList.remove("aberto"); });
+  document.getElementById("corpo-cobranca").addEventListener("click", cliqueCobranca);
+  document.getElementById("cobranca-filtros").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-filtro-cob]");
+    if (!b) return;
+    filtroCobranca = b.dataset.filtroCob;
+    renderizarResumoCobranca();
+    renderizarTabelaUsuarios();
+  });
 
   const overlayExcluir = document.getElementById("modal-excluir-overlay");
   document.getElementById("btn-fechar-modal-excluir").addEventListener("click", () => overlayExcluir.classList.remove("aberto"));
@@ -599,6 +812,7 @@
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     overlayDetalhes.classList.remove("aberto");
+    overlayCobranca.classList.remove("aberto");
     overlayExcluir.classList.remove("aberto");
   });
 

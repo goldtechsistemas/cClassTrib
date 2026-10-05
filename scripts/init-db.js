@@ -128,6 +128,30 @@ async function main() {
   await pool.query(`UPDATE nfe_documentos SET xml_baixado_em = criado_em WHERE xml_completo IS NOT NULL AND xml_baixado_em IS NULL;`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_documentos_xml_baixado ON nfe_documentos (empresa_id, xml_baixado_em) WHERE xml_baixado_em IS NOT NULL;`);
 
+  // Controle de assinaturas/cobranças (painel admin): data da assinatura da
+  // contabilidade, valor, periodicidade e próximo vencimento ficam no próprio
+  // login; cada baixa (pagamento recebido) vira uma linha em pagamentos_assinatura.
+  await pool.query(`
+    ALTER TABLE usuarios
+      ADD COLUMN IF NOT EXISTS assinatura_inicio DATE,
+      ADD COLUMN IF NOT EXISTS valor_cobranca NUMERIC(10, 2),
+      ADD COLUMN IF NOT EXISTS periodicidade_meses SMALLINT NOT NULL DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS dia_vencimento SMALLINT,
+      ADD COLUMN IF NOT EXISTS proximo_vencimento DATE;
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pagamentos_assinatura (
+      id SERIAL PRIMARY KEY,
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      pago_em DATE NOT NULL,
+      valor NUMERIC(10, 2),
+      referente_a DATE NOT NULL,
+      observacao TEXT,
+      criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_pagamentos_assinatura_usuario ON pagamentos_assinatura (usuario_id, pago_em DESC);`);
+
   // Limite de tentativas de login (força bruta) — api/_limite.js também cria
   // esta tabela sozinho na primeira tentativa; aqui só mantém o esquema documentado.
   await pool.query(`

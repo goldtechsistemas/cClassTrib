@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { query } = require("../_db");
 const { corpoJson, lerSessaoAdmin, gerarSenhaProvisoria } = require("../_lib");
+const { SQL_COBRANCA, linhaCobranca } = require("../_cobranca");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TAMANHO_MINIMO_SENHA = 6;
@@ -59,8 +60,31 @@ module.exports = async (req, res) => {
       return;
     }
     const resultado = await query(
-      "SELECT id, email, nome, bloqueado, precisa_trocar_senha, criado_em FROM usuarios ORDER BY criado_em DESC"
+      `SELECT u.id, u.email, u.nome, u.bloqueado, u.precisa_trocar_senha, u.criado_em,
+              ${SQL_COBRANCA}
+         FROM usuarios u
+        ORDER BY u.criado_em DESC`
     );
+
+    // Resumo financeiro do mês (fuso de Brasília): o que já entrou, o que está
+    // previsto até o fim do mês e o que está atrasado.
+    const resumo = await query(
+      `WITH h AS (SELECT (now() AT TIME ZONE 'America/Sao_Paulo')::date AS hoje)
+       SELECT to_char(h.hoje, 'YYYY-MM') AS mes,
+              COALESCE((SELECT sum(p.valor) FROM pagamentos_assinatura p WHERE to_char(p.pago_em, 'YYYY-MM') = to_char(h.hoje, 'YYYY-MM')), 0) AS recebido_mes,
+              COALESCE((SELECT count(*) FROM pagamentos_assinatura p WHERE to_char(p.pago_em, 'YYYY-MM') = to_char(h.hoje, 'YYYY-MM')), 0)::int AS pagamentos_mes,
+              COALESCE((SELECT sum(u.valor_cobranca) FROM usuarios u WHERE u.proximo_vencimento >= h.hoje AND to_char(u.proximo_vencimento, 'YYYY-MM') = to_char(h.hoje, 'YYYY-MM')), 0) AS previsto_mes,
+              COALESCE((SELECT sum(u.valor_cobranca) FROM usuarios u WHERE u.proximo_vencimento < h.hoje), 0) AS atrasado_valor
+         FROM h`
+    );
+    const rs = resumo.rows[0];
+    const resumoCobranca = {
+      mes: rs.mes,
+      recebidoNoMes: Number(rs.recebido_mes),
+      pagamentosNoMes: rs.pagamentos_mes,
+      previstoNoMes: Number(rs.previsto_mes),
+      atrasadoValor: Number(rs.atrasado_valor),
+    };
 
     // Certificados importados por usuário (módulo Notas Fiscais): só o que o
     // admin precisa pra controle — nome, CNPJ, validade e última
@@ -83,9 +107,15 @@ module.exports = async (req, res) => {
     }
     const usuarios = resultado.rows.map((u) => {
       const certificados = porUsuario.get(u.id) || [];
-      return { ...u, qtdCertificados: certificados.length, certificados };
+      const { assinatura_inicio, valor_cobranca, periodicidade_meses, proximo_vencimento, dias_para_vencer, ultimo_pagamento, ...basico } = u;
+      return {
+        ...basico,
+        qtdCertificados: certificados.length,
+        certificados,
+        cobranca: linhaCobranca({ assinatura_inicio, valor_cobranca, periodicidade_meses, proximo_vencimento, dias_para_vencer, ultimo_pagamento }),
+      };
     });
-    res.status(200).json({ ok: true, usuarios });
+    res.status(200).json({ ok: true, usuarios, resumoCobranca });
   } catch (e) {
     console.error(e);
     res.status(500).json({ ok: false, erro: "Erro interno." });

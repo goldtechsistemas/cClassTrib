@@ -1755,3 +1755,17 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
 .xml-lista tr.xml-emp td { background: var(--bg-0); font-size: 0.82rem; color: var(--text-1); padding-left: 30px; }
 .xml-lista tr.xml-emp td:not(:first-child) { padding-left: 14px; }
 .xml-emp-nome { color: var(--text-0); }
+
+/* ===== Admin: assinaturas e cobranças ===== */
+.cob-celula { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; min-width: 150px; }
+.cob-celula .cob-data { font-size: 0.82rem; color: var(--text-1); font-variant-numeric: tabular-nums; }
+.cob-celula .cob-valor { font-size: 0.76rem; color: var(--text-muted); }
+.cob-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 14px; margin: 10px 0 6px; }
+.cob-form label { margin-top: 0; }
+.cob-bloco { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 14px; background: var(--bg-0); }
+.cob-bloco h3 { margin: 0 0 4px; font-size: 1rem; }
+.cob-bloco.destaque { border-color: rgba(var(--gold-rgb), 0.45); box-shadow: inset 3px 0 0 var(--gold); }
+.cob-proximo { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; margin: 6px 0 4px; }
+.cob-proximo strong { font-size: 1.35rem; color: var(--gold); font-variant-numeric: tabular-nums; }
+.cob-historico { max-height: 220px; overflow: auto; }
+.cob-historico td, .cob-historico th { font-variant-numeric: tabular-nums; white-space: nowrap; }

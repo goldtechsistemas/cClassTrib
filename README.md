@@ -556,6 +556,30 @@ os usuários cadastrados e ações de bloquear/desbloquear/excluir.
   `api/admin/users/[id].js`, não só na interface) antes do `DELETE` de
   verdade.
 
+### Assinaturas e cobranças (2026-10-05)
+
+No `admin.html`, cada login tem a data da assinatura ("Conta criada"), o valor,
+a periodicidade (mensal, bimestral, trimestral, semestral ou anual) e o **próximo
+vencimento**. O botão **Cobrança** abre o modal onde o admin cadastra a
+assinatura, **dá baixa** quando o pagamento é recebido (o próximo vencimento é
+calculado na hora), vê o histórico e pode desfazer o último pagamento.
+
+- **Banco**: colunas `assinatura_inicio`, `valor_cobranca`, `periodicidade_meses`,
+  `dia_vencimento` e `proximo_vencimento` em `usuarios` + tabela
+  `pagamentos_assinatura` (criadas de forma aditiva por `scripts/init-db.js`).
+- **Regras** (`api/_cobranca.js`): o dia de cobrança é estável — vencimento no dia
+  31 vira 28/fev e volta a 31/mar. A baixa avança a partir do vencimento pago (não
+  da data em que o dinheiro entrou), então pagar adiantado ou atrasado não muda o
+  dia de cobrança. A baixa usa troca atômica (`WHERE proximo_vencimento = ...`) e
+  não duplica com clique duplo ou duas abas abertas.
+- **Rotas** (dentro das funções existentes, sem consumir função nova da Vercel):
+  `GET /api/admin/users` traz a cobrança e o resumo do mês (recebido, previsto,
+  atrasado); `GET /api/admin/users/:id` traz cobrança + histórico; `PATCH` com
+  `acao: assinatura | baixa | estornar | remover-assinatura`.
+- A situação é calculada com a data de hoje em Brasília: **Em dia**, **Vence em
+  N dias** (até 7), **Vence hoje**, **Atrasado há N dias** e **Sem assinatura**.
+  O sistema só informa — não bloqueia o login por atraso.
+
 ## Como rodar localmente
 
 Desde a migração do login pra backend real (ver seção acima), rodar só um

@@ -109,6 +109,13 @@
       <p class="hint" id="xml-nota" style="margin-top:10px;"></p>
     </section>
 
+    <section class="card xml-card" id="secao-cobranca">
+      <h2 class="modal-titulo" style="margin:0 0 4px;">Assinaturas e cobranças</h2>
+      <p class="hint" style="margin:0 0 14px;">Cada login tem a data da assinatura, o valor e o próximo vencimento. Ao receber o pagamento, clique em <strong>Cobrança</strong> no login e dê a baixa — o próximo vencimento é calculado na hora.</p>
+      <div class="xml-resumo" id="cobranca-resumo"></div>
+      <div class="filtro-atalhos" id="cobranca-filtros" style="margin-top:0;"></div>
+    </section>
+
     <div class="table-wrap">
       <table>
         <thead>
@@ -117,6 +124,7 @@
             <th>Nome</th>
             <th>Cadastrado em</th>
             <th>Status</th>
+            <th>Assinatura</th>
             <th>Certificados</th>
             <th>Ações</th>
           </tr>
@@ -132,6 +140,15 @@
       <button class="modal-fechar" id="btn-fechar-modal-detalhes" type="button" aria-label="Fechar">&times;</button>
       <h2 class="modal-titulo">Detalhes do usuário</h2>
       <div id="corpo-detalhes"></div>
+    </div>
+  </div>
+
+  <!-- Modal de assinatura/cobrança -->
+  <div class="modal-overlay" id="modal-cobranca-overlay">
+    <div class="card modal-card modal-largo">
+      <button class="modal-fechar" id="btn-fechar-modal-cobranca" type="button" aria-label="Fechar">&times;</button>
+      <h2 class="modal-titulo">Assinatura e cobrança</h2>
+      <div id="corpo-cobranca"></div>
     </div>
   </div>
 
