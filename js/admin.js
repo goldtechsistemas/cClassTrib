@@ -326,6 +326,7 @@
         <td>
           <div class="tabela-acoes">
             ${botaoBloqueio}
+            <button class="btn btn-sm" data-acao="assinatura" data-id="${u.id}">Assinatura</button>
             <button class="btn btn-sm" data-acao="cobranca" data-id="${u.id}">Cobrança</button>
             <button class="btn secondary btn-sm" data-acao="redefinir" data-id="${u.id}">Redefinir senha</button>
             <button class="btn secondary btn-sm" data-acao="detalhes" data-id="${u.id}">Ver Detalhes</button>
@@ -358,60 +359,62 @@
 
   // ---------- Modal de cobrança ----------
 
-  let cobrancaModal = null; // { id, email, cobranca, pagamentos }
+  let cobrancaModal = null; // { id, email, modo: "assinatura" | "baixa", cobranca, pagamentos }
 
   function renderizarModalCobranca() {
-    const { email, cobranca: c, pagamentos } = cobrancaModal;
+    const { email, modo, cobranca: c, pagamentos } = cobrancaModal;
     const sit = situacaoCobranca(c);
-    const periodos = Object.keys(MESES_PERIODO).map((n) => `<option value="${n}"${Number(n) === c.periodicidadeMeses ? " selected" : ""}>${MESES_PERIODO[n]}</option>`).join("");
-    const valorTxt = c.valorCobranca != null ? Number(c.valorCobranca).toFixed(2).replace(".", ",") : "";
     const temAssinatura = !!c.proximoVencimento;
-    const proxima = temAssinatura ? somarMesesIso(c.proximoVencimento, c.periodicidadeMeses, Number(c.proximoVencimento.slice(8, 10))) : "";
+    const valorTxt = c.valorCobranca != null ? Number(c.valorCobranca).toFixed(2).replace(".", ",") : "";
+    const titulo = document.getElementById("titulo-cobranca");
+    let corpo;
 
-    const blocoProximo = temAssinatura ? `
-      <div class="cob-bloco destaque">
-        <p class="hint" style="margin:0;">Próximo pagamento</p>
-        <div class="cob-proximo"><strong>${dataBr(c.proximoVencimento)}</strong><span class="badge cor-${sit.cor}">${esc(sit.texto)}</span></div>
-        <p class="hint" style="margin:0;">${esc(MESES_PERIODO[c.periodicidadeMeses])}${c.valorCobranca != null ? " · " + esc(moeda(c.valorCobranca)) : ""}${c.ultimoPagamento ? " · último pagamento recebido em " + dataBr(c.ultimoPagamento) : ""}</p>
-      </div>
-      <div class="cob-bloco">
-        <h3>Dar baixa (pagamento recebido)</h3>
-        <p class="hint" style="margin:0;">Quita o vencimento de <strong>${dataBr(c.proximoVencimento)}</strong>; o próximo passa a ser <strong>${dataBr(proxima)}</strong>.</p>
-        <div class="cob-form">
-          <div><label for="cob-pago-em">Recebido em</label><input type="date" id="cob-pago-em" value="${hojeBrasilia()}" /></div>
-          <div><label for="cob-valor-pago">Valor recebido (R$)</label><input type="text" id="cob-valor-pago" inputmode="decimal" value="${esc(valorTxt)}" autocomplete="off" /></div>
-          <div><label for="cob-obs">Observação (opcional)</label><input type="text" id="cob-obs" maxlength="300" placeholder="Ex.: Pix, boleto..." autocomplete="off" /></div>
-        </div>
-        <div class="field-actions"><button class="btn" type="button" data-cob="baixa">Registrar pagamento</button></div>
-      </div>` : `<div class="aviso-legal">Este login ainda não tem assinatura cadastrada. Preencha abaixo a data em que a contabilidade assinou.</div>`;
-
-    const linhasPag = (pagamentos || []).map((p) => `<tr><td>${dataBr(p.pagoEm)}</td><td>${dataBr(p.referenteA)}</td><td>${esc(moeda(p.valor))}</td><td>${esc(p.observacao || "")}</td></tr>`).join("");
-    const blocoHistorico = `
-      <div class="cob-bloco">
-        <h3>Histórico de pagamentos</h3>
-        ${linhasPag ? `<div class="table-wrap cob-historico"><table><thead><tr><th>Recebido em</th><th>Referente ao vencimento</th><th>Valor</th><th>Observação</th></tr></thead><tbody>${linhasPag}</tbody></table></div>
-        <div class="field-actions"><button class="btn secondary btn-sm" type="button" data-cob="estornar" title="Desfaz o pagamento mais recente e volta o vencimento">Desfazer último pagamento</button></div>` : `<p class="hint" style="margin:0;">Nenhum pagamento registrado ainda.</p>`}
-      </div>`;
+    if (modo === "assinatura") {
+      titulo.textContent = temAssinatura ? "Assinatura" : "Registrar assinatura";
+      const periodos = Object.keys(MESES_PERIODO).map((n) => `<option value="${n}"${Number(n) === c.periodicidadeMeses ? " selected" : ""}>${MESES_PERIODO[n]}</option>`).join("");
+      corpo = `
+        <div class="cob-bloco">
+          <div class="cob-form">
+            <div><label for="cob-inicio">Conta criada / assinatura em</label><input type="date" id="cob-inicio" value="${esc(c.assinaturaInicio || "")}" /></div>
+            <div><label for="cob-valor">Valor da cobrança (R$)</label><input type="text" id="cob-valor" inputmode="decimal" value="${esc(valorTxt)}" placeholder="0,00" autocomplete="off" /></div>
+            <div><label for="cob-periodo">Periodicidade</label><select id="cob-periodo">${periodos}</select></div>
+            <div><label for="cob-proximo">Próximo vencimento</label><input type="date" id="cob-proximo" value="${esc(c.proximoVencimento || "")}" /></div>
+          </div>
+          <p class="hint" style="margin:0;">Deixe o próximo vencimento em branco para calcular automaticamente (assinatura + 1 período). Esta é a única tela onde valor e datas podem ser alterados; a baixa usa exatamente o que estiver aqui.</p>
+          <div class="field-actions">
+            <button class="btn" type="button" data-cob="assinatura">Salvar assinatura</button>
+            ${temAssinatura ? `<button class="btn perigo btn-sm" type="button" data-cob="remover" title="Apaga a data e o vencimento (o histórico de pagamentos é mantido)">Remover assinatura</button>` : ""}
+          </div>
+        </div>`;
+    } else {
+      titulo.textContent = "Cobrança";
+      const proxima = temAssinatura ? somarMesesIso(c.proximoVencimento, c.periodicidadeMeses, Number(c.proximoVencimento.slice(8, 10))) : "";
+      const podeBaixar = temAssinatura && c.valorCobranca != null;
+      const blocoBaixa = !temAssinatura
+        ? `<div class="aviso-legal">Este login ainda não tem assinatura. Clique em <strong>Assinatura</strong> na lista para registrar a data, o valor e o vencimento.</div>`
+        : `<div class="cob-bloco destaque">
+            <div class="cob-resumo-baixa">
+              <div><p class="hint" style="margin:0;">Vencimento</p><div class="cob-proximo"><strong>${dataBr(c.proximoVencimento)}</strong><span class="badge cor-${sit.cor}">${esc(sit.texto)}</span></div></div>
+              <div><p class="hint" style="margin:0;">Valor</p><div class="cob-proximo"><strong>${c.valorCobranca != null ? esc(moeda(c.valorCobranca)) : "—"}</strong></div></div>
+            </div>
+            ${podeBaixar
+              ? `<p class="hint" style="margin:0;">Ao dar baixa, o vencimento de <strong>${dataBr(c.proximoVencimento)}</strong> é quitado e o próximo passa a ser <strong>${dataBr(proxima)}</strong>.</p>
+                 <div class="field-actions"><button class="btn" type="button" data-cob="baixa" data-venc="${esc(c.proximoVencimento)}">Dar baixa</button></div>`
+              : `<p class="hint" style="margin:0;">Falta o valor da cobrança. Informe-o em <strong>Assinatura</strong> para poder dar baixa.</p>`}
+          </div>`;
+      const linhasPag = (pagamentos || []).map((p) => `<tr><td>${dataBr(p.referenteA)}</td><td>${esc(moeda(p.valor))}</td><td>${dataBr(p.pagoEm)}</td></tr>`).join("");
+      corpo = `${blocoBaixa}
+        <div class="cob-bloco">
+          <h3>Histórico de pagamentos</h3>
+          ${linhasPag ? `<div class="table-wrap cob-historico"><table><thead><tr><th>Vencimento quitado</th><th>Valor</th><th>Baixa registrada em</th></tr></thead><tbody>${linhasPag}</tbody></table></div>
+          <div class="field-actions"><button class="btn secondary btn-sm" type="button" data-cob="estornar" title="Desfaz o pagamento mais recente e volta o vencimento">Desfazer última baixa</button></div>` : `<p class="hint" style="margin:0;">Nenhuma baixa registrada ainda.</p>`}
+        </div>`;
+    }
 
     document.getElementById("corpo-cobranca").innerHTML = `
       <p class="hint" style="margin-top:0;">Login: <strong>${esc(email)}</strong></p>
       <div id="erro-cobranca" class="aviso-legal" style="display:none;"></div>
-      ${blocoProximo}
-      <div class="cob-bloco">
-        <h3>${temAssinatura ? "Dados da assinatura" : "Cadastrar assinatura"}</h3>
-        <div class="cob-form">
-          <div><label for="cob-inicio">Conta criada / assinatura em</label><input type="date" id="cob-inicio" value="${esc(c.assinaturaInicio || "")}" /></div>
-          <div><label for="cob-valor">Valor da cobrança (R$)</label><input type="text" id="cob-valor" inputmode="decimal" value="${esc(valorTxt)}" placeholder="0,00" autocomplete="off" /></div>
-          <div><label for="cob-periodo">Periodicidade</label><select id="cob-periodo">${periodos}</select></div>
-          <div><label for="cob-proximo">Próximo vencimento</label><input type="date" id="cob-proximo" value="${esc(c.proximoVencimento || "")}" /></div>
-        </div>
-        <p class="hint" style="margin:0;">Deixe o próximo vencimento em branco para calcular automaticamente (assinatura + 1 período).</p>
-        <div class="field-actions">
-          <button class="btn" type="button" data-cob="assinatura">Salvar assinatura</button>
-          ${temAssinatura ? `<button class="btn perigo btn-sm" type="button" data-cob="remover" title="Apaga a data e o vencimento (o histórico de pagamentos é mantido)">Remover assinatura</button>` : ""}
-        </div>
-      </div>
-      ${blocoHistorico}`;
+      ${corpo}`;
   }
 
   function erroCobranca(msg) {
@@ -422,10 +425,10 @@
     if (msg) el.scrollIntoView({ block: "nearest" });
   }
 
-  async function abrirCobranca(id) {
+  async function abrirCobranca(id, modo) {
     const u = usuariosCache.find((x) => x.id === id);
     if (!u) return;
-    cobrancaModal = { id, email: u.email, cobranca: u.cobranca, pagamentos: [] };
+    cobrancaModal = { id, email: u.email, modo, cobranca: u.cobranca, pagamentos: [] };
     document.getElementById("corpo-cobranca").innerHTML = `<p class="hint">Carregando...</p>`;
     document.getElementById("modal-cobranca-overlay").classList.add("aberto");
     const r = await chamarApi(`/api/admin/users/${id}`);
@@ -465,11 +468,11 @@
         (c) => `Assinatura salva. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`);
     } else if (acao === "baixa") {
       btn.disabled = true; // evita baixa em duplicidade por clique duplo
-      enviarAcaoCobranca({ acao: "baixa", pagoEm: v("cob-pago-em"), valor: v("cob-valor-pago"), observacao: v("cob-obs") },
-        (c) => `Pagamento registrado. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`).then(() => { btn.disabled = false; });
+      enviarAcaoCobranca({ acao: "baixa", vencimento: btn.dataset.venc },
+        (c) => `Baixa registrada. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`).then(() => { btn.disabled = false; });
     } else if (acao === "estornar") {
       if (!window.confirm("Desfazer o último pagamento registrado? O vencimento volta para a data anterior.")) return;
-      enviarAcaoCobranca({ acao: "estornar" }, (c) => `Pagamento desfeito. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`);
+      enviarAcaoCobranca({ acao: "estornar" }, (c) => `Baixa desfeita. Próximo vencimento: ${dataBr(c.proximoVencimento)}.`);
     } else if (acao === "remover") {
       if (!window.confirm("Remover a assinatura deste login? O histórico de pagamentos é mantido.")) return;
       enviarAcaoCobranca({ acao: "remover-assinatura" }, () => "Assinatura removida.");
@@ -784,7 +787,8 @@
     else if (acao === "desbloquear") alternarBloqueio(id, false);
     else if (acao === "redefinir") redefinirSenha(id);
     else if (acao === "detalhes") abrirDetalhes(id);
-    else if (acao === "cobranca") abrirCobranca(id);
+    else if (acao === "assinatura") abrirCobranca(id, "assinatura");
+    else if (acao === "cobranca") abrirCobranca(id, "baixa");
     else if (acao === "excluir") abrirExclusao(id);
   });
 

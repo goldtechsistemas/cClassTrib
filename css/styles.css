@@ -1769,3 +1769,4 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
 .cob-proximo strong { font-size: 1.35rem; color: var(--gold); font-variant-numeric: tabular-nums; }
 .cob-historico { max-height: 220px; overflow: auto; }
 .cob-historico td, .cob-historico th { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cob-resumo-baixa { display: flex; flex-wrap: wrap; gap: 8px 40px; margin-bottom: 8px; }

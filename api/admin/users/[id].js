@@ -72,13 +72,17 @@ async function acaoCobranca(req, res, id, corpo) {
 
   if (corpo.acao === "baixa") {
     if (!atual.proximo_vencimento) return erro("Este login ainda não tem assinatura cadastrada.");
-    const pagoEm = String(corpo.pagoEm || "");
-    if (!dataValida(pagoEm)) return erro("Informe a data em que o pagamento foi recebido.");
-    const valor = lerValor(corpo.valor === undefined || corpo.valor === "" ? atual.valor_cobranca : corpo.valor);
-    if (Number.isNaN(valor)) return erro("Valor inválido.");
-    const observacao = String(corpo.observacao || "").trim().slice(0, 300) || null;
+    // A baixa não aceita data nem valor digitados: quita o vencimento cadastrado
+    // pelo valor cadastrado, e o recebimento é registrado com a data de hoje
+    // (Brasília). Para mudar valor ou datas, edita-se a assinatura.
+    const valor = atual.valor_cobranca == null ? null : Number(atual.valor_cobranca);
+    if (valor == null) return erro("Informe o valor da cobrança na assinatura antes de dar baixa.");
+    const pagoEm = (await query("SELECT (now() AT TIME ZONE 'America/Sao_Paulo')::date::text AS hoje")).rows[0].hoje;
+    const observacao = null;
 
     const vencimentoPago = atual.proximo_vencimento;
+    // A tela manda o vencimento que o admin viu; se já mudou (duplo clique, outra aba), não baixa de novo.
+    if (corpo.vencimento !== vencimentoPago) return erro("O vencimento mudou — atualize a tela e tente de novo.");
     const proximo = somarMeses(vencimentoPago, Number(atual.periodicidade_meses) || 1, atual.dia_vencimento || dia(vencimentoPago));
     // Troca atômica: só avança se o vencimento ainda é o que a tela mostrou (evita
     // baixa em duplicidade por duplo clique ou duas abas abertas).
@@ -102,7 +106,7 @@ async function acaoCobranca(req, res, id, corpo) {
   if (corpo.acao === "estornar") {
     // Desfaz o último pagamento (erro de digitação, pagamento que não caiu...).
     const ultimo = await query(
-      "SELECT id, referente_a::text AS referente_a FROM pagamentos_assinatura WHERE usuario_id = $1 ORDER BY pago_em DESC, id DESC LIMIT 1",
+      "SELECT id, referente_a::text AS referente_a FROM pagamentos_assinatura WHERE usuario_id = $1 ORDER BY id DESC LIMIT 1",
       [id]
     );
     if (!ultimo.rows.length) return erro("Não há pagamento para desfazer.");

@@ -558,11 +558,12 @@ os usuários cadastrados e ações de bloquear/desbloquear/excluir.
 
 ### Assinaturas e cobranças (2026-10-05)
 
-No `admin.html`, cada login tem a data da assinatura ("Conta criada"), o valor,
-a periodicidade (mensal, bimestral, trimestral, semestral ou anual) e o **próximo
-vencimento**. O botão **Cobrança** abre o modal onde o admin cadastra a
-assinatura, **dá baixa** quando o pagamento é recebido (o próximo vencimento é
-calculado na hora), vê o histórico e pode desfazer o último pagamento.
+No `admin.html`, cada login tem dois botões: **Assinatura** (registra a data da
+assinatura "Conta criada", o valor, a periodicidade e o próximo vencimento — é o
+único lugar onde valor e datas são editados) e **Cobrança** (dá a **baixa** do
+vencimento cadastrado, pelo valor cadastrado, sem campos para digitar; o próximo
+vencimento é calculado na hora). A baixa registra o recebimento com a data de
+hoje (Brasília); há histórico e "Desfazer última baixa".
 
 - **Banco**: colunas `assinatura_inicio`, `valor_cobranca`, `periodicidade_meses`,
   `dia_vencimento` e `proximo_vencimento` em `usuarios` + tabela
@@ -575,7 +576,7 @@ calculado na hora), vê o histórico e pode desfazer o último pagamento.
 - **Rotas** (dentro das funções existentes, sem consumir função nova da Vercel):
   `GET /api/admin/users` traz a cobrança e o resumo do mês (recebido, previsto,
   atrasado); `GET /api/admin/users/:id` traz cobrança + histórico; `PATCH` com
-  `acao: assinatura | baixa | estornar | remover-assinatura`.
+  `acao: assinatura | baixa | estornar | remover-assinatura`. A baixa ignora valor/data enviados: usa os da assinatura e exige o vencimento exibido na tela (`vencimento`), recusando baixa repetida.
 - A situação é calculada com a data de hoje em Brasília: **Em dia**, **Vence em
   N dias** (até 7), **Vence hoje**, **Atrasado há N dias** e **Sem assinatura**.
   O sistema só informa — não bloqueia o login por atraso.
