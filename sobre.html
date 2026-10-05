@@ -12,25 +12,152 @@
 
   <main class="container">
     <section class="hero">
+      <span class="sb-selo">Reforma Tributária do Consumo</span>
       <h1>Entenda o IBS, a CBS e o Imposto Seletivo</h1>
-      <p>Um resumo direto dos três tributos criados pela Reforma Tributária (EC 132/2023 e LC 214/2025).</p>
+      <p>Um guia direto dos três tributos criados pela Reforma Tributária (EC 132/2023 e LC 214/2025): o que são, quando começam, quais produtos têm tratamento especial e as dúvidas mais comuns.</p>
     </section>
 
     <div id="aviso"></div>
 
-    <div id="explicacao-tributos"></div>
+    <div class="sb-fatos" id="sb-fatos"></div>
 
-    <h2 class="section-title">Os Anexos da LC 214/2025 usados neste site</h2>
-    <p class="section-sub">Cada Anexo define um tratamento tributário específico. Veja o resumo (a lista completa está na consulta por NCM/descrição):</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Anexo</th><th>Conteúdo</th><th>Tratamento</th><th>Artigo</th><th>cClassTrib</th></tr></thead>
-        <tbody id="tabela-anexos"></tbody>
-      </table>
+    <!-- ===== 1. Os três tributos ===== -->
+    <h2 class="passo-titulo"><span class="passo-num">1</span> Os três tributos novos</h2>
+    <div class="sb-tributos">
+      <article class="sb-tributo sb-ibs">
+        <span class="sb-tributo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg>
+        </span>
+        <h3>IBS <small>Imposto sobre Bens e Serviços</small></h3>
+        <p>Tributo de <strong>estados e municípios</strong>, não cumulativo, que substitui gradualmente o ICMS e o ISS. É administrado pelo Comitê Gestor do IBS (CGIBS), criado pela EC 132/2023.</p>
+        <ul class="sb-tributo-lista">
+          <li><strong>Quem recebe:</strong> estados, DF e municípios</li>
+          <li><strong>Substitui:</strong> ICMS e ISS</li>
+        </ul>
+      </article>
+      <article class="sb-tributo sb-cbs">
+        <span class="sb-tributo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 4v2H3V7l9-4zM5 9v8M9.5 9v8M14.5 9v8M19 9v8M3 20h18"/></svg>
+        </span>
+        <h3>CBS <small>Contribuição sobre Bens e Serviços</small></h3>
+        <p>Tributo <strong>federal</strong>, administrado pela Receita Federal. Incide, em regra, sobre a mesma base do IBS e com as mesmas hipóteses de redução, isenção e não incidência — os dois seguem a mesma legislação (LC 214/2025).</p>
+        <ul class="sb-tributo-lista">
+          <li><strong>Quem recebe:</strong> União</li>
+          <li><strong>Substitui:</strong> PIS e COFINS</li>
+        </ul>
+      </article>
+      <article class="sb-tributo sb-is">
+        <span class="sb-tributo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19L12 3zM12 10v4.5M12 17.5v.01"/></svg>
+        </span>
+        <h3>IS <small>Imposto Seletivo</small></h3>
+        <p>Tributo federal <strong>adicional</strong> (não substitui outro imposto) sobre bens e serviços prejudiciais à saúde ou ao meio ambiente — cigarros, bebidas alcoólicas, veículos, embarcações, aeronaves, bens minerais e outros listados no Anexo XVII.</p>
+        <ul class="sb-tributo-lista">
+          <li><strong>Quem recebe:</strong> União</li>
+          <li><strong>Natureza:</strong> soma-se ao IBS e à CBS</li>
+        </ul>
+      </article>
     </div>
 
-    <h2 class="section-title">Perguntas frequentes</h2>
-    <div id="faq"></div>
+    <div class="sb-troca" aria-label="O que muda: antes e depois">
+      <div class="sb-troca-lado">
+        <span class="sb-troca-rotulo">Hoje</span>
+        <div class="sb-chips">
+          <span class="sb-chip-tributo">ICMS</span><span class="sb-chip-tributo">ISS</span><span class="sb-chip-tributo">PIS</span><span class="sb-chip-tributo">COFINS</span><span class="sb-chip-tributo">IPI</span>
+        </div>
+      </div>
+      <div class="sb-troca-seta" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </div>
+      <div class="sb-troca-lado">
+        <span class="sb-troca-rotulo">Depois da transição</span>
+        <div class="sb-chips">
+          <span class="sb-chip-tributo novo">IBS</span><span class="sb-chip-tributo novo">CBS</span><span class="sb-chip-tributo novo">+ IS</span>
+        </div>
+      </div>
+      <p class="hint sb-troca-nota">O IPI é reduzido a zero, salvo para produtos que concorrem com a Zona Franca de Manaus. A troca acontece aos poucos, ao longo da transição abaixo.</p>
+    </div>
+
+    <!-- ===== 2. Linha do tempo ===== -->
+    <h2 class="passo-titulo"><span class="passo-num">2</span> Quando isso começa a valer?</h2>
+    <ol class="sb-linha" id="sb-linha">
+      <li data-ano-ini="2026" data-ano-fim="2026">
+        <span class="sb-linha-ano">2026</span>
+        <strong>Ano de teste</strong>
+        <p>CBS a 0,9% e IBS a 0,1%, valores que podem ser compensados com PIS/COFINS. Serve para o mercado e o fisco se adaptarem.</p>
+      </li>
+      <li data-ano-ini="2027" data-ano-fim="2028">
+        <span class="sb-linha-ano">2027–28</span>
+        <strong>A CBS começa de verdade</strong>
+        <p>CBS em alíquota plena, PIS e COFINS extintos e Imposto Seletivo em vigor. O IBS segue em alíquota reduzida (0,1%).</p>
+      </li>
+      <li data-ano-ini="2029" data-ano-fim="2032">
+        <span class="sb-linha-ano">2029–32</span>
+        <strong>Transição do ICMS e do ISS</strong>
+        <p>O IBS cresce a cada ano enquanto o ICMS e o ISS diminuem na mesma proporção.</p>
+      </li>
+      <li data-ano-ini="2033" data-ano-fim="2099">
+        <span class="sb-linha-ano">2033</span>
+        <strong>Sistema novo completo</strong>
+        <p>ICMS e ISS extintos; IBS e CBS valendo por inteiro.</p>
+      </li>
+    </ol>
+    <p class="hint sb-linha-nota">Resumo das datas da EC 132/2023 e da LC 214/2025, que continua sendo regulamentada e alterada (ex.: LC 227/2026) — confirme sempre a vigência na fonte oficial.</p>
+
+    <!-- ===== 3. Anexos ===== -->
+    <h2 class="passo-titulo"><span class="passo-num">3</span> Anexos da LC 214/2025: quem tem tratamento especial?</h2>
+    <p class="sb-sub">Cada Anexo da lei lista produtos ou serviços com redução de alíquota, alíquota zero ou outro tratamento. Filtre pelo tipo ou busque por um tema.</p>
+    <div class="sb-anexos-barra">
+      <div class="campo-com-icone">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="sb-busca-anexo" name="filtro-anexos" placeholder="Buscar por tema (ex.: saúde, alimentos, educação)" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+      </div>
+      <div class="sb-filtros" id="sb-filtros-anexo" role="group" aria-label="Filtrar por tratamento"></div>
+    </div>
+    <div class="sb-anexos" id="sb-anexos"></div>
+    <p class="hint sb-anexos-contagem" id="sb-anexos-contagem"></p>
+
+    <!-- ===== 4. Glossário ===== -->
+    <h2 class="passo-titulo"><span class="passo-num">4</span> Glossário rápido</h2>
+    <div class="sb-glossario">
+      <div class="sb-termo"><strong>NCM</strong><span>Nomenclatura Comum do Mercosul: código de 8 dígitos que identifica uma <em>mercadoria</em>.</span></div>
+      <div class="sb-termo"><strong>NBS</strong><span>Nomenclatura Brasileira de Serviços: o equivalente do NCM para <em>serviços</em>.</span></div>
+      <div class="sb-termo"><strong>CST</strong><span>Código de Situação Tributária do IBS/CBS, de 3 dígitos (ex.: 200 = alíquota reduzida).</span></div>
+      <div class="sb-termo"><strong>cClassTrib</strong><span>Classificação tributária de 6 dígitos: indica a regra exata da lei aplicada ao item. Os 3 primeiros dígitos são o CST.</span></div>
+      <div class="sb-termo"><strong>Anexo</strong><span>Lista, dentro da LC 214/2025, de produtos ou serviços com um tratamento específico.</span></div>
+      <div class="sb-termo"><strong>Alíquota de referência</strong><span>Percentual padrão do IBS+CBS, a ser fixado pelo Senado Federal. Reduções incidem sobre ele.</span></div>
+    </div>
+
+    <!-- ===== 5. FAQ ===== -->
+    <h2 class="passo-titulo"><span class="passo-num">5</span> Perguntas frequentes</h2>
+    <div class="sb-faq-barra">
+      <div class="campo-com-icone">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="sb-busca-faq" name="filtro-faq" placeholder="Buscar nas perguntas…" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+      </div>
+      <button type="button" class="btn secondary btn-sm" id="sb-faq-alternar">Expandir tudo</button>
+    </div>
+    <div class="sb-filtros" id="sb-filtros-faq" role="group" aria-label="Filtrar perguntas por assunto"></div>
+    <div id="faq" class="sb-faq"></div>
+    <p class="hint" id="sb-faq-vazio" style="display:none;">Nenhuma pergunta encontrada. Tente outra palavra.</p>
+
+    <!-- ===== Chamadas finais ===== -->
+    <div class="sb-ctas">
+      <a class="cta-lote" href="index.html">
+        <span class="cta-lote-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </span>
+        <span class="cta-lote-texto"><strong>Pronto para classificar um produto?</strong><span>Digite o NCM ou o nome do produto e veja o cClassTrib.</span></span>
+        <span class="cta-lote-seta" aria-hidden="true">Consultar →</span>
+      </a>
+      <a class="cta-lote" href="lote.html">
+        <span class="cta-lote-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+        </span>
+        <span class="cta-lote-texto"><strong>Muitos produtos?</strong><span>Envie uma planilha e classifique tudo de uma vez.</span></span>
+        <span class="cta-lote-seta" aria-hidden="true">Consulta em lote →</span>
+      </a>
+    </div>
   </main>
 
   <div id="footer"></div>

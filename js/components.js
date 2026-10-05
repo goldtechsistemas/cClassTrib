@@ -61,30 +61,52 @@
   const FAQ_ITEMS = [
     {
       pergunta: "O que é o cClassTrib?",
+      categoria: "conceitos",
       resposta: "É o Código de Classificação Tributária do IBS e da CBS: um campo obrigatório nos documentos fiscais eletrônicos (NF-e/NFC-e) que identifica qual regra específica da LC 214/2025 (Anexo/artigo) se aplica àquele item, em conjunto com o CST (Código de Situação Tributária) do IBS/CBS. A tabela oficial de 6 dígitos é publicada pelo Portal Nacional da NF-e (Informe Técnico 2025.002)."
     },
     {
+      pergunta: "Qual a diferença entre CST e cClassTrib?",
+      categoria: "conceitos",
+      resposta: "O CST (Código de Situação Tributária do IBS/CBS) tem 3 dígitos e diz a situação geral do item — por exemplo, 200 é alíquota reduzida e 410 é imunidade ou não incidência. O cClassTrib tem 6 dígitos e aponta a regra exata da LC 214/2025 aplicada (por exemplo, 200003 para o arroz do Anexo I). Os três primeiros dígitos do cClassTrib são sempre o CST. Na nota fiscal os dois campos são informados juntos."
+    },
+    {
+      pergunta: "O que é NCM e o que é NBS? Qual eu uso?",
+      categoria: "conceitos",
+      resposta: "O NCM (Nomenclatura Comum do Mercosul, 8 dígitos) identifica mercadorias — é o que a consulta por NCM deste site usa. O NBS (Nomenclatura Brasileira de Serviços) é o equivalente para serviços. Se você vende produtos, use o NCM; se não sabe o NCM, use a opção \"Só sei o nome do produto\" na tela Consultar."
+    },
+    {
+      pergunta: "Com que frequência os dados deste site são atualizados?",
+      categoria: "dados",
+      resposta: "As tabelas oficiais (cClassTrib, do Portal Nacional da NF-e, e NCM, do Siscomex) são conferidas contra as fontes oficiais e renovadas quando há versão nova; o texto dos Anexos acompanha a LC 214/2025 no Planalto. A data da última atualização e a versão da tabela cClassTrib aparecem no topo desta página. Mesmo assim, confirme sempre na fonte oficial antes de decidir."
+    },
+    {
       pergunta: "De onde vem o código cClassTrib de 6 dígitos mostrado nos resultados?",
+      categoria: "dados",
       resposta: "Do arquivo oficial \"cClassTrib 2026-10-01.xlsx\", publicado pelo Portal Nacional da NF-e em conjunto com a Receita Federal e o Comitê Gestor do IBS (Informe Técnico 2025.002). O arquivo foi importado integralmente (173 códigos) em js/cclasstrib-oficial.js. Quando um Anexo não tem código correspondente nessa tabela (caso do Imposto Seletivo, que usa sistemática própria, ou de Anexos sem lista de produtos), isso é indicado explicitamente em vez de inventado."
     },
     {
       pergunta: "Os dados deste site são oficiais?",
+      categoria: "dados",
       resposta: "Sim, nas duas frentes: os Anexos, artigos e percentuais de redução vêm do texto oficial da Lei Complementar 214/2025 (Diário Oficial da União / Planalto, domínio público); os códigos cClassTrib e CST vêm do arquivo oficial do Portal Nacional da NF-e citado acima. Ainda assim, este site é uma ferramenta independente de apoio, sem qualquer vínculo com a Receita Federal, o Comitê Gestor do IBS ou qualquer SEFAZ, e pode conter erros de transcrição — sempre confira contra a fonte oficial antes de decisões fiscais."
     },
     {
       pergunta: "A Reforma Tributária já está totalmente em vigor?",
+      categoria: "vigencia",
       resposta: "Não. A LC 214/2025 está em fase de regulamentação e transição (o período de transição do sistema tributário vai até 2033, com o modelo antigo sendo extinto de forma gradual). Além disso, leis complementares supervenientes já alteraram a LC 214/2025 — por exemplo, a Lei Complementar nº 227/2026 revogou o Anexo XIV (medicamentos) e alterou regras de combustíveis. Sempre confirme a vigência antes de aplicar qualquer classificação."
     },
     {
       pergunta: "Por que um NCM que eu sei que existe aparece como 'não encontrado'?",
+      categoria: "uso",
       resposta: "Este site cobre os Anexos I a XVII da LC 214/2025 com uma extração cuidadosa. Os Anexos que listam mercadorias por NCM foram conferidos, código por código, contra o texto da lei; a lista de serviços (que usa NBS, não NCM) do Anexo X (57 itens culturais) é mostrada só em parte. 'Não encontrado' significa apenas que o item não consta na nossa base atual — não significa necessariamente tributação integral. Consulte o texto oficial da lei ou um profissional para confirmação."
     },
     {
       pergunta: "Como é calculada a 'alíquota estimada'?",
+      categoria: "vigencia",
       resposta: "A LC 214/2025 não fixa um percentual único de alíquota-padrão do IBS+CBS combinados — isso será definido por resolução do Senado Federal. Usamos um valor de referência ilustrativo (ajustável no código-fonte) e aplicamos o percentual de redução do Anexo correspondente. É uma estimativa educativa, não um valor oficial."
     },
     {
       pergunta: "Posso confiar neste site para fechar minha nota fiscal?",
+      categoria: "uso",
       resposta: "Não. Use este site como ponto de partida para entender o enquadramento legal, mas a emissão de documentos fiscais deve sempre ser validada com seu sistema de ERP/emissor de NF-e homologado, seu contador e, quando necessário, a Receita Federal ou o Comitê Gestor do IBS."
     }
   ];
