@@ -9,7 +9,7 @@ const { completarXmlPorChave, esperar } = require("../_nfeSync");
 // Rota chamada pelo botao "Dar ciencia" de uma nota especifica na tela.
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
-    res.status(405).json({ ok: false, erro: "Metodo nao permitido." });
+    res.status(405).json({ ok: false, erro: "Método não permitido." });
     return;
   }
   const usuarioId = await exigirUsuario(req, res);
@@ -26,20 +26,20 @@ module.exports = async (req, res) => {
   const rEmpresa = await query("SELECT * FROM nfe_empresas WHERE id = $1 AND usuario_id = $2", [empresaId, usuarioId]);
   const empresa = rEmpresa.rows[0];
   if (!empresa) {
-    res.status(404).json({ ok: false, erro: "Empresa nao encontrada." });
+    res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
     return;
   }
 
   const rDoc = await query("SELECT * FROM nfe_documentos WHERE empresa_id = $1 AND ch_nfe = $2", [empresaId, chNFe]);
   const documento = rDoc.rows[0];
   if (!documento) {
-    res.status(404).json({ ok: false, erro: "Nota nao encontrada para esta empresa." });
+    res.status(404).json({ ok: false, erro: "Nota não encontrada para esta empresa." });
     return;
   }
   if (documento.manifestacao !== "nenhuma") {
-    let erro = "Esta nota ja esta sendo manifestada (provavelmente por uma sincronizacao automatica em andamento).";
-    if (documento.manifestacao === "ciencia") erro = "Esta nota ja teve Ciencia da Operacao registrada.";
-    else if (documento.manifestacao === "confirmacao") erro = "Esta nota ja teve Confirmacao da Operacao registrada.";
+    let erro = "Esta nota já está sendo manifestada (provavelmente por uma sincronização automática em andamento).";
+    if (documento.manifestacao === "ciencia") erro = "Esta nota já teve Ciência da Operação registrada.";
+    else if (documento.manifestacao === "confirmacao") erro = "Esta nota já teve Confirmação da Operação registrada.";
     res.status(409).json({ ok: false, erro });
     return;
   }
@@ -52,7 +52,7 @@ module.exports = async (req, res) => {
     [documento.id]
   );
   if (!reivindicada.rows.length) {
-    res.status(409).json({ ok: false, erro: "Esta nota ja esta sendo manifestada (provavelmente por uma sincronizacao automatica em andamento)." });
+    res.status(409).json({ ok: false, erro: "Esta nota já está sendo manifestada (provavelmente por uma sincronização automática em andamento)." });
     return;
   }
 
@@ -64,7 +64,7 @@ module.exports = async (req, res) => {
   } catch (e) {
     console.error(e);
     await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [documento.id]).catch(() => {});
-    res.status(500).json({ ok: false, erro: "Nao foi possivel carregar o certificado salvo." });
+    res.status(500).json({ ok: false, erro: "Não foi possível carregar o certificado salvo." });
     return;
   }
 
@@ -95,7 +95,7 @@ module.exports = async (req, res) => {
       });
     }
   } catch (e) {
-    const mensagem = e instanceof ErroSefaz ? e.message : "Erro inesperado ao enviar a manifestacao.";
+    const mensagem = e instanceof ErroSefaz ? e.message : "Erro inesperado ao enviar a manifestação.";
     if (!(e instanceof ErroSefaz)) console.error(e);
     await query("UPDATE nfe_documentos SET manifestacao = 'nenhuma' WHERE id = $1", [documento.id]).catch(() => {});
     res.status(502).json({ ok: false, erro: mensagem });
@@ -103,7 +103,7 @@ module.exports = async (req, res) => {
   }
 
   const statusManifestacao = resultado.tpEvento === TP_EVENTO_CONFIRMACAO ? "confirmacao" : "ciencia";
-  const nomeEvento = resultado.tpEvento === TP_EVENTO_CONFIRMACAO ? "Confirmacao da Operacao" : "Ciencia da Operacao";
+  const nomeEvento = resultado.tpEvento === TP_EVENTO_CONFIRMACAO ? "Confirmação da Operação" : "Ciência da Operação";
 
   if (resultado.jaManifestada) {
     // cStat 573 (Duplicidade de Evento): a manifestacao ja existe na SEFAZ
@@ -118,8 +118,8 @@ module.exports = async (req, res) => {
       xMotivo: resultado.xMotivo,
       xmlCompleto: xmlObtido,
       mensagem: xmlObtido
-        ? `Esta nota ja tinha ${nomeEvento} registrada na SEFAZ. XML completo baixado.`
-        : `Esta nota ja tinha ${nomeEvento} registrada na SEFAZ. O XML completo sera buscado ao baixar o PDF.`,
+        ? `Esta nota já tinha ${nomeEvento} registrada na SEFAZ. XML completo baixado.`
+        : `Esta nota já tinha ${nomeEvento} registrada na SEFAZ. O XML completo será buscado ao baixar o PDF.`,
     });
     return;
   }
@@ -139,8 +139,8 @@ module.exports = async (req, res) => {
   const xmlObtido = await tentarTrazerXmlCompleto(empresa, documento.id, { certPem, keyPem });
   const prefixo =
     resultado.tpEvento === TP_EVENTO_CONFIRMACAO
-      ? "Ciencia da Operacao estava fora do prazo (10 dias) — Confirmacao da Operacao foi registrada em vez dela."
-      : "Ciencia da Operacao registrada.";
+      ? "Ciência da Operação estava fora do prazo (10 dias) — Confirmação da Operação foi registrada em vez dela."
+      : "Ciência da Operação registrada.";
   res.status(200).json({
     ok: true,
     cStat: resultado.cStat,
@@ -148,8 +148,8 @@ module.exports = async (req, res) => {
     tpEvento: resultado.tpEvento,
     xmlCompleto: xmlObtido,
     mensagem: xmlObtido
-      ? `${prefixo} XML completo baixado — o PDF ja sai como DANFE.`
-      : `${prefixo} Nao foi possivel trazer o XML completo agora (a SEFAZ ainda esta liberando ou o servico de distribuicao esta lento); ele sera buscado de novo automaticamente ao baixar o PDF.`,
+      ? `${prefixo} XML completo baixado — o PDF já sai como DANFE.`
+      : `${prefixo} Não foi possível trazer o XML completo agora (a SEFAZ ainda está liberando ou o serviço de distribuição está lento); ele será buscado de novo automaticamente ao baixar o PDF.`,
   });
 };
 

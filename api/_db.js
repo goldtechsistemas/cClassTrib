@@ -9,7 +9,10 @@ function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: process.env.POSTGRES_URL,
-      ssl: { rejectUnauthorized: false },
+      // Verifica o certificado do servidor (Neon usa certificado de AC pública) —
+      // com "false" a conexão aceitaria qualquer certificado, inclusive de um
+      // intermediário malicioso na rota até o banco.
+      ssl: { rejectUnauthorized: true },
     });
   }
   return pool;

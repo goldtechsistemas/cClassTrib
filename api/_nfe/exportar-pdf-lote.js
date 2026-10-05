@@ -16,7 +16,12 @@ const PAUSA_ENTRE_BUSCAS_MS = 1000;
 // deixar o usuário esperando (ou estourar o tempo máximo da função).
 const ORCAMENTO_BUSCAS_MS = 20000;
 
+// Parte dos 60s da função fica reservada pra buscar XML por chave (acima),
+// montar o ZIP e responder.
+const ORCAMENTO_GERACAO_PDF_MS = 42000;
+
 module.exports = async (req, res) => {
+  const inicioChamada = Date.now();
   if (req.method !== "GET") {
     res.status(405).json({ ok: false, erro: "Método não permitido." });
     return;
@@ -63,11 +68,34 @@ module.exports = async (req, res) => {
     }
   }
 
+  // A função morre aos 60s: com centenas de notas não dá pra gerar todos os
+  // PDFs numa chamada só. Para antes do limite e entrega o ZIP com o que deu
+  // tempo, listando as notas que ficaram de fora (o usuário baixa o resto
+  // filtrando por período ou selecionando as notas).
   const zip = new JSZip();
+  const prazoGeracao = inicioChamada + ORCAMENTO_GERACAO_PDF_MS;
+  let geradas = 0;
   for (let i = 0; i < r.rows.length; i += CONCORRENCIA) {
+    if (Date.now() >= prazoGeracao) break;
     const lote = r.rows.slice(i, i + CONCORRENCIA);
     const buffers = await Promise.all(lote.map((doc) => gerarPdfParaDocumento(doc)));
     lote.forEach((doc, j) => zip.file(`${doc.ch_nfe}.pdf`, buffers[j]));
+    geradas += lote.length;
+  }
+  if (geradas < r.rows.length) {
+    const faltantes = r.rows.slice(geradas);
+    zip.file(
+      "NOTAS-NAO-GERADAS.txt",
+      [
+        `${geradas} de ${r.rows.length} PDF(s) gerado(s). O tempo máximo da geração acabou antes de terminar.`,
+        "Baixe as demais filtrando por um período menor ou selecionando só essas notas:",
+        "",
+        ...faltantes.map(
+          (doc) =>
+            `- Nº ${doc.numero || "?"} | ${doc.emit_nome || "emitente desconhecido"} | chave ${doc.ch_nfe}`
+        ),
+      ].join("\r\n")
+    );
   }
   const buffer = await zip.generateAsync({ type: "nodebuffer" });
 

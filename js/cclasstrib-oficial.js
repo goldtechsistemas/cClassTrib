@@ -1,11 +1,12 @@
 /*
  * Tabela OFICIAL de códigos cClassTrib (IBS/CBS) e CST-IBS/CBS.
  *
- * FONTE: arquivo "cClassTrib 2026-06-22.xlsx", publicado pelo Portal Nacional
+ * FONTE: arquivo "cClassTrib 2026-10-01.xlsx" (publicado em 01/10/2026, referente ao
+ * IT 2025.002 v1.70), publicado pelo Portal Nacional
  * da NF-e em conjunto com a Receita Federal e o Comitê Gestor do IBS
- * (Informe Técnico 2025.002, planilhas "CST 2026-06-01 Pub" e
- * "cClass 2026-06-01 Pub"). Arquivo fornecido pelo usuário em 2026-09-12 e
- * transcrito integralmente (164 códigos cClassTrib e 18 códigos CST).
+ * (Informe Técnico 2025.002, planilhas "CST 2026-09-01" e
+ * "cClass 2026-09-01"). Arquivo baixado do Portal em 2026-10-05 e
+ * transcrito integralmente (173 códigos cClassTrib e 18 códigos CST).
  *
  * Este arquivo é tratado como fonte de dados bruta/autoritativa — não edite
  * valores aqui para "consertar" algo; se um valor parecer errado, é a
@@ -18,12 +19,12 @@
  */
 window.CCLASSTRIB_OFICIAL = {
   meta: {
-    arquivo: "cClassTrib 2026-06-22.xlsx",
-    planilhas: ["CST 2026-06-01 Pub", "cClass 2026-06-01 Pub"],
+    arquivo: "cClassTrib 2026-10-01.xlsx",
+    planilhas: ["CST 2026-09-01", "cClass 2026-09-01"],
     fonte: "Portal Nacional da NF-e / Receita Federal / Comitê Gestor do IBS — Informe Técnico 2025.002",
-    dataVersaoArquivo: "2026-06-22",
-    dataImportacao: "2026-09-12",
-    totalCodigosCClassTrib: 164
+    dataVersaoArquivo: "2026-10-01",
+    dataImportacao: "2026-10-05",
+    totalCodigosCClassTrib: 173
   },
 
   // As 18 situações de CST-IBS/CBS (planilha "CST 2026-06-01 Pub")
@@ -57,6 +58,7 @@ window.CCLASSTRIB_OFICIAL = {
     { cst: "000", codigo: "000003", nome: "Regime automotivo - projetos incentivados (art. 311)", artigo: "Art. 311", tipoAliquota: "Padrão", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "000", codigo: "000004", nome: "Regime automotivo - projetos incentivados (art. 312)", artigo: "Art. 312", tipoAliquota: "Padrão", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "000", codigo: "000005", nome: "Operação com EAC destinado à mistura com gasolina A, mas com saída do biocombustível com destinação diversa", artigo: "Art. 179, I", tipoAliquota: "Padrão", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "000", codigo: "000006", nome: "Situações tributadas integralmente pelo IBS e CBS realizadas por autônomo", artigo: "", tipoAliquota: "Padrão", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "010", codigo: "010001", nome: "Operações do FGTS não realizadas pela Caixa Econômica Federal", artigo: "Art. 212", tipoAliquota: "Uniforme setorial", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "010", codigo: "010002", nome: "Operações do serviço financeiro", artigo: "Art. 233", tipoAliquota: "Uniforme setorial", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "011", codigo: "011001", nome: "Planos de assistência funerária.", artigo: "Art. 236", tipoAliquota: "Uniforme nacional (referência)", pRedIBS: 60, pRedCBS: 60, anexo: null },
@@ -118,6 +120,8 @@ window.CCLASSTRIB_OFICIAL = {
     { cst: "200", codigo: "200052", nome: "Prestação de serviços de profissões intelectuais", artigo: "Art. 127, I a XVIII", tipoAliquota: "Padrão", pRedIBS: 30, pRedCBS: 30, anexo: null },
     { cst: "200", codigo: "200053", nome: "Fornecimento de medicamentos registrados na Anvisa, quando classificados como soros ou vacinas", artigo: "Art. 146, § 1º, III", tipoAliquota: "Padrão", pRedIBS: 100, pRedCBS: 100, anexo: null },
     { cst: "200", codigo: "200054", nome: "Fornecimento de bem material pela cooperativa de produção agropecuária a associado não sujeito ao regime regular do IBS e da CBS", artigo: "Art. 271, § 1º, II", tipoAliquota: "Padrão", pRedIBS: 100, pRedCBS: 100, anexo: null },
+    { cst: "200", codigo: "200055", nome: "Fornecimento dos serviços com redução de alíquota de 60% realizado por autônomo", artigo: "Art. 128, I, II, VIII, IX, X, XI, XII e XIII", tipoAliquota: "Padrão", pRedIBS: 60, pRedCBS: 60, anexo: null },
+    { cst: "200", codigo: "200056", nome: "Fornecimento dos serviços com redução de alíquota de 30% realizado por autônomo", artigo: "Art. 127", tipoAliquota: "Padrão", pRedIBS: 30, pRedCBS: 30, anexo: null },
     { cst: "220", codigo: "220001", nome: "Incorporação imobiliária submetida ao regime especial de tributação", artigo: "Art. 485, I", tipoAliquota: "Fixa", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "220", codigo: "220002", nome: "Incorporação imobiliária submetida ao regime especial de tributação", artigo: "Art. 485, II", tipoAliquota: "Fixa", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "220", codigo: "220003", nome: "Alienação de imóvel decorrente de parcelamento do solo", artigo: "Art. 486", tipoAliquota: "Fixa", pRedIBS: 0, pRedCBS: 0, anexo: null },
@@ -128,6 +132,8 @@ window.CCLASSTRIB_OFICIAL = {
     { cst: "222", codigo: "222001", nome: "Transporte internacional de passageiros, caso os trechos de ida e volta sejam vendidos em conjunto", artigo: "Art. 12 § 8º", tipoAliquota: "Padrão", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "400", codigo: "400001", nome: "Fornecimento de serviços de transporte público coletivo de passageiros rodoviário e metroviário", artigo: "Art. 157", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "400", codigo: "400002", nome: "Fornecimento de serviços de transporte público coletivo de passageiros rodoviário e metroviário com medição por quilômetro rodado", artigo: "Art. 157", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "400", codigo: "400003", nome: "Bagagens", artigo: "Art. 94 I", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "400", codigo: "400004", nome: "Remessas internacionais", artigo: "Art. 94 II", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "410", codigo: "410001", nome: "Fornecimento de bonificações quando constem no documento fiscal e que não dependam de evento posterior", artigo: "Art. 5º, § 1º, I", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "410", codigo: "410002", nome: "Transferências entre estabelecimentos pertencentes ao mesmo contribuinte", artigo: "Art. 6º, II", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "410", codigo: "410003", nome: "Doações sem contraprestação em benefício do doador", artigo: "Art. 6º, VIII", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
@@ -163,7 +169,7 @@ window.CCLASSTRIB_OFICIAL = {
     { cst: "410", codigo: "410033", nome: "Operações de Fundos de Investimento Imobiliário (FII) e Fundos de Investimento nas Cadeias Produtivas do Agronegócio (Fiagro)", artigo: "Art. 26, § 5º-A, I e II", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "410", codigo: "410034", nome: "Operações de fundos de investimento", artigo: "Art. 26, § 5º-A, III", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "410", codigo: "410035", nome: "Fornecimento realizado por nanoempreendedor", artigo: "Art. 26, IV", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
-    { cst: "410", codigo: "410036", nome: "Descontos incondicionais", artigo: "Art. 12, §2º III", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "410", codigo: "410036", nome: "Descontos financeiros em nota fatura", artigo: "Art. 12, §2º III", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "410", codigo: "410037", nome: "Importação os bens materiais sem incidência de IBS e CBS", artigo: "Art. 66, I,III e VII", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "410", codigo: "410999", nome: "Operações não onerosas sem previsão de tributação, não especificadas anteriormente", artigo: "Art. 4º, § 1º", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "510", codigo: "510001", nome: "Operações, sujeitas a diferimento, com energia elétrica, relativas à importação, geração, comercialização, distribuição e transmissão", artigo: "Art. 28, § 1º", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
@@ -173,15 +179,15 @@ window.CCLASSTRIB_OFICIAL = {
     { cst: "550", codigo: "550003", nome: "Regimes de Depósito (art. 85)", artigo: "Art. 85", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550004", nome: "Regimes de Depósito (art. 87)", artigo: "Art. 87", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550005", nome: "Regimes de Depósito (art. 87, Parágrafo único)", artigo: "Art. 87, parágrafo único", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
-    { cst: "550", codigo: "550006", nome: "Regimes de Permanência Temporária", artigo: "Art. 88", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
-    { cst: "550", codigo: "550007", nome: "Regimes de Aperfeiçoamento", artigo: "Art. 90", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550006", nome: "Regimes de Permanência Temporária com suspensão total", artigo: "Art. 88", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550007", nome: "Regimes de Aperfeiçoamento (Recof)", artigo: "Art. 90", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550008", nome: "Importação de bens para o Regime de Repetro-Temporário", artigo: "Art. 93, I", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550009", nome: "GNL-Temporário", artigo: "Art. 93, II", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550010", nome: "Repetro-Permanente", artigo: "Art. 93, III", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
-    { cst: "550", codigo: "550011", nome: "Repetro-Industrialização", artigo: "Art. 93, IV", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550011", nome: "Repetro-Industrialização", artigo: "Art. 93, IV e Art. 93, § 4º", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550012", nome: "Repetro-Nacional", artigo: "Art. 93, V", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550013", nome: "Repetro-Entreposto", artigo: "Art. 93, VI", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
-    { cst: "550", codigo: "550014", nome: "Zona de Processamento de Exportação", artigo: "Arts. 99, 100 e 102", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550014", nome: "Zona de Processamento de Exportação", artigo: "Arts. 99 e 100", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550015", nome: "Regime Tributário para Incentivo à Modernização e à Ampliação da Estrutura Portuária", artigo: "Art. 105", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550016", nome: "Regime Especial de Incentivos para o Desenvolvimento da Infraestrutura", artigo: "Art. 106", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550017", nome: "Regime Tributário para Incentivo à Atividade Naval - Renaval (Art. 107, I)", artigo: "Art. 107, I", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
@@ -193,6 +199,10 @@ window.CCLASSTRIB_OFICIAL = {
     { cst: "550", codigo: "550023", nome: "Operações com hidrocarbonetos líquidos derivados de petróleo não combustíveis ou de gás natural, inclusive nafta", artigo: "Art. 172, § 2º", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550024", nome: "Regime Tributário para Incentivo à Atividade Naval - Renaval (Art. 107, II)", artigo: "Art. 107, II", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "550", codigo: "550025", nome: "Regime Tributário para Incentivo à Atividade Naval - Renaval (Art. 107, III)", artigo: "Art. 107, III", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550026", nome: "Regimes de admissão temporária com suspensão total do pagamento dos tributos (ZFM)", artigo: "Art. 89, § 3º, II", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550027", nome: "Regimes de Aperfeiçoamento (Drawback)", artigo: "Art. 90", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550028", nome: "Regimes de Aperfeiçoamento (Admissão temporária)", artigo: "Art. 90", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "550", codigo: "550029", nome: "Zona de Processamento de Exportação", artigo: "Art. 102", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "620", codigo: "620001", nome: "Tributação monofásica sobre combustíveis", artigo: "Art. 172", tipoAliquota: "Uniforme setorial", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "620", codigo: "620002", nome: "Tributação monofásica com responsabilidade pela retenção sobre combustíveis", artigo: "Art. 178", tipoAliquota: "Uniforme setorial", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "620", codigo: "620003", nome: "Tributação monofásica com responsabilidade de retenção de tributos por terceiros", artigo: "Art. 178", tipoAliquota: "Uniforme setorial", pRedIBS: 0, pRedCBS: 0, anexo: null },
@@ -214,7 +224,7 @@ window.CCLASSTRIB_OFICIAL = {
     { cst: "820", codigo: "820006", nome: "Documento com informações de fornecimento de serviços de exploração de via", artigo: "Art. 11, VIII", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "820", codigo: "820007", nome: "Documento com informações de fornecimento de serviços financeiros", artigo: "Art. 181", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "820", codigo: "820008", nome: "Documento com informações de fornecimento de serviço continuado, mas com tributação realizada em fatura anterior", artigo: "Art. 10, § 3º", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
-    { cst: "820", codigo: "820009", nome: "Cobrança relativa a fornecimentos declarados em outro documento", artigo: "Art. 60", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
+    { cst: "820", codigo: "820009", nome: "Fornecimentos declarados e tributados em outro documento", artigo: "Art. 60", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null },
     { cst: "830", codigo: "830001", nome: "Documento com exclusão da BC da CBS e do IBS de energia elétrica fornecida pela distribuidora à UC", artigo: "Art. 28, parágrafos 3° e 4°", tipoAliquota: "Sem alíquota", pRedIBS: 0, pRedCBS: 0, anexo: null }
   ]
 };

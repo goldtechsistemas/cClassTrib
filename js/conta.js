@@ -10,7 +10,7 @@
 (function () {
   "use strict";
 
-  const TAMANHO_MINIMO_SENHA = 6;
+  const TAMANHO_MINIMO_SENHA = 8;
   let sessaoAtual = null;
   const MODAL_HTML = `
     <div class="modal-overlay" id="modal-conta-overlay">
@@ -34,7 +34,7 @@
           <label for="input-conta-senha-atual">Senha atual</label>
           <input type="text" class="campo-senha-oculta" id="input-conta-senha-atual" name="conta-chave-atual" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
           <label for="input-conta-senha-nova" style="margin-top:14px;">Nova senha</label>
-          <input type="text" class="campo-senha-oculta" id="input-conta-senha-nova" name="conta-chave-nova" placeholder="No mínimo 6 caracteres" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+          <input type="text" class="campo-senha-oculta" id="input-conta-senha-nova" name="conta-chave-nova" placeholder="No mínimo 8 caracteres" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
           <label for="input-conta-senha-confirmar" style="margin-top:14px;">Confirmar nova senha</label>
           <input type="text" class="campo-senha-oculta" id="input-conta-senha-confirmar" name="conta-chave-confirma" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
           <div class="field-actions"><button class="btn" id="btn-salvar-senha" type="button">Salvar</button></div>

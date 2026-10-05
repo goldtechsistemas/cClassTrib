@@ -17,6 +17,10 @@ module.exports = async (req, res) => {
     res.status(400).json({ ok: false, erro: "Informe a empresa." });
     return;
   }
+  if (!/^\d{1,9}$/.test(String(empresaId))) {
+    res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
+    return;
+  }
 
   const r = await query("SELECT * FROM nfe_empresas WHERE id = $1 AND usuario_id = $2", [empresaId, usuarioId]);
   const empresa = r.rows[0];

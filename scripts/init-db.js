@@ -120,6 +120,16 @@ async function main() {
   // Índices — Postgres NÃO indexa colunas de chave estrangeira sozinho, e
   // toda consulta do módulo filtra por empresa_id; sem isso vira table scan
   // conforme as tabelas crescem.
+  // Limite de tentativas de login (força bruta) — api/_limite.js também cria
+  // esta tabela sozinho na primeira tentativa; aqui só mantém o esquema documentado.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS login_tentativas (
+      chave TEXT PRIMARY KEY,
+      falhas INTEGER NOT NULL DEFAULT 0,
+      primeira_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+      bloqueado_ate TIMESTAMPTZ
+    );
+  `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_documentos_empresa_dhemi ON nfe_documentos (empresa_id, dh_emi DESC);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_documentos_pendentes ON nfe_documentos (empresa_id, tipo, manifestacao);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_eventos_empresa ON nfe_eventos (empresa_id);`);

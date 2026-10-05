@@ -65,7 +65,7 @@
     },
     {
       pergunta: "De onde vem o código cClassTrib de 6 dígitos mostrado nos resultados?",
-      resposta: "Do arquivo oficial \"cClassTrib 2026-06-22.xlsx\", publicado pelo Portal Nacional da NF-e em conjunto com a Receita Federal e o Comitê Gestor do IBS (Informe Técnico 2025.002). O arquivo foi importado integralmente (164 códigos) em js/cclasstrib-oficial.js. Quando um Anexo não tem código correspondente nessa tabela (caso do Imposto Seletivo, que usa sistemática própria, ou de Anexos sem lista de produtos), isso é indicado explicitamente em vez de inventado."
+      resposta: "Do arquivo oficial \"cClassTrib 2026-10-01.xlsx\", publicado pelo Portal Nacional da NF-e em conjunto com a Receita Federal e o Comitê Gestor do IBS (Informe Técnico 2025.002). O arquivo foi importado integralmente (173 códigos) em js/cclasstrib-oficial.js. Quando um Anexo não tem código correspondente nessa tabela (caso do Imposto Seletivo, que usa sistemática própria, ou de Anexos sem lista de produtos), isso é indicado explicitamente em vez de inventado."
     },
     {
       pergunta: "Os dados deste site são oficiais?",
@@ -77,7 +77,7 @@
     },
     {
       pergunta: "Por que um NCM que eu sei que existe aparece como 'não encontrado'?",
-      resposta: "Este site cobre os Anexos I a XVII da LC 214/2025 com uma extração cuidadosa, mas não exaustiva a 100% em todos os Anexos mais longos (ex.: Anexo VI tem 81 insumos farmacêuticos, Anexo X tem 57 itens culturais — mostramos uma seleção representativa desses dois). 'Não encontrado' significa apenas que o item não consta na nossa base atual — não significa necessariamente tributação integral. Consulte o texto oficial da lei ou um profissional para confirmação."
+      resposta: "Este site cobre os Anexos I a XVII da LC 214/2025 com uma extração cuidadosa. Os Anexos que listam mercadorias por NCM foram conferidos, código por código, contra o texto da lei; a lista de serviços (que usa NBS, não NCM) do Anexo X (57 itens culturais) é mostrada só em parte. 'Não encontrado' significa apenas que o item não consta na nossa base atual — não significa necessariamente tributação integral. Consulte o texto oficial da lei ou um profissional para confirmação."
     },
     {
       pergunta: "Como é calculada a 'alíquota estimada'?",
@@ -143,6 +143,17 @@
       </div>`;
   }
 
+  // Outros itens do mesmo Anexo que também citam este NCM (ver agrupamento
+  // em Rules.classificarPorNcm) — mostra os primeiros e resume o resto.
+  function renderItensRelacionados(r) {
+    const lista = r.itensRelacionados || [];
+    if (!lista.length) return "";
+    const LIMITE = 5;
+    const itens = lista.slice(0, LIMITE).map((i) => `<li>item ${esc(i.item)} — ${esc(i.descricao)}</li>`).join("");
+    const resto = lista.length > LIMITE ? `<li>… e mais ${lista.length - LIMITE} item(ns)</li>` : "";
+    return `<div class="meta">Este NCM também consta em outros ${lista.length} item(ns) do mesmo Anexo (mesma classificação):<ul class="itens-relacionados">${itens}${resto}</ul></div>`;
+  }
+
   function renderResultado(r) {
     if (r.naoEncontrado) {
       return `
@@ -181,6 +192,7 @@
         <span class="badge cor-${r.cor}">${esc(r.tratamentoLabel)}</span>
         <h3>${titulo}</h3>
         ${r.itemDescricao ? `<div class="desc">${esc(r.itemDescricao)}</div>` : ""}
+        ${renderItensRelacionados(r)}
         <div class="meta">Base legal: art. ${esc(r.artigo)} da LC 214/2025${r.item ? " · item " + esc(r.item) + " do Anexo " + esc(r.anexoId) : ""}</div>
         <div class="meta">Redução de alíquota: ${r.percentualReducao != null ? r.percentualReducao + "%" : "não aplicável (ver observação)"}</div>
         <div class="meta">Alíquota estimada resultante: ${aliquota}</div>

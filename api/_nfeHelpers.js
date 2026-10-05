@@ -33,6 +33,11 @@ async function exigirEmpresaDoUsuario(req, res, usuarioId, empresaId, colunas = 
     res.status(400).json({ ok: false, erro: "Informe a empresa." });
     return null;
   }
+  // id que não é número inteiro (adulterado/lixo) viraria erro de banco (500).
+  if (!/^\d{1,9}$/.test(String(empresaId))) {
+    res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
+    return null;
+  }
   const r = await query(`SELECT ${colunas} FROM nfe_empresas WHERE id = $1 AND usuario_id = $2`, [empresaId, usuarioId]);
   if (!r.rows.length) {
     res.status(404).json({ ok: false, erro: "Empresa não encontrada." });

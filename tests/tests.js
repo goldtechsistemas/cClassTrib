@@ -99,7 +99,22 @@
 
   // --- tabela oficial cClassTrib (js/cclasstrib-oficial.js) ---
   assert("Tabela oficial cClassTrib foi carregada", !!window.CCLASSTRIB_OFICIAL && window.CCLASSTRIB_OFICIAL.codigos.length > 0);
-  assertEqual("Tabela oficial tem 164 códigos cClassTrib", window.CCLASSTRIB_OFICIAL.codigos.length, 164);
+  assertEqual("Tabela oficial tem 173 códigos cClassTrib", window.CCLASSTRIB_OFICIAL.codigos.length, 173);
+
+  // --- atualizações de 2026-10-05: códigos novos e Anexos completados ---
+  const codigosOficiais = new Set(window.CCLASSTRIB_OFICIAL.codigos.map((c) => c.codigo));
+  ["000006", "200055", "200056", "400003", "400004", "550026", "550027", "550028", "550029"].forEach((cod) =>
+    assert("Tabela oficial cClassTrib 2026-10-01 inclui o código novo " + cod, codigosOficiais.has(cod))
+  );
+  assert("Tabela NCM inclui o código novo 8518.10.20 (vigência 01/10/2026)", window.NCM_TABELA.some((r) => r[0] === "8518.10.20"));
+  const vitaminaC = R.classificarPorNcm("2936.27.10", data);
+  assert("Anexo VI (nutrição enteral/parenteral) classifica ácido ascórbico 2936.27.10", vitaminaC.some((r) => r.anexoId === "VI"));
+  const aminoacido = R.classificarPorNcm("2922.49.90", data).filter((r) => r.anexoId === "VI");
+  assertEqual("NCM presente em vários itens do mesmo Anexo gera UM cartão por Anexo", aminoacido.length, 1);
+  assert("O cartão agrupado lista os demais itens do mesmo Anexo", aminoacido[0].itensRelacionados.length >= 3);
+  assert("Anexo VI tem os 81 itens do texto da lei", data.anexos.find((a) => a.id === "VI").itens.length === 81);
+  assert("Anexo XI (segurança) classifica o NCM 8517.62.7x (item 2.28)", R.classificarPorNcm("8517.62.79", data).some((r) => r.anexoId === "XI"));
+  assert("Anexo IX classifica 2304.00.10 (farelos de soja)", R.classificarPorNcm("2304.00.10", data).some((r) => r.anexoId === "IX"));
 
   assertEqual("romanoParaInteiro converte corretamente", [R.romanoParaInteiro("I"), R.romanoParaInteiro("IV"), R.romanoParaInteiro("IX"), R.romanoParaInteiro("XIII"), R.romanoParaInteiro("XV")], [1, 4, 9, 13, 15]);
 

@@ -175,7 +175,7 @@
       semAnexo: {
         titulo: "Nenhum Anexo de redução encontrado — regra geral do IBS/CBS",
         observacao:
-          "Este NCM não consta em nenhum dos Anexos de redução/zero/imunidade mapeados neste site. Pela regra geral do IBS/CBS, isso significa tributação integral — mas a cobertura dos Anexos aqui não é garantidamente 100% exaustiva (alguns Anexos maiores têm apenas uma seleção representativa; veja a seção de FAQ). Confirme o NCM digitado e, em caso de dúvida, consulte a Receita Federal ou um profissional."
+          "Este NCM não consta em nenhum dos Anexos de redução/zero/imunidade mapeados neste site. Pela regra geral do IBS/CBS, isso significa tributação integral — mas a cobertura dos Anexos aqui não é garantidamente 100% exaustiva (os Anexos de mercadorias foram conferidos contra o texto da lei, mas a lei e a regulamentação continuam mudando — veja a seção de FAQ). Confirme o NCM digitado e, em caso de dúvida, consulte a Receita Federal ou um profissional."
       },
       seletivo: {
         titulo: "Regra geral do IBS/CBS (tributação integral)",
@@ -273,7 +273,28 @@
     // confiáveis e por isso sinalizadas separadamente na interface.
     resultados.sort((a, b) => b.matchEspecificidade - a.matchEspecificidade);
 
-    return resultados;
+    // Um mesmo NCM pode constar em vários itens do MESMO Anexo (ex.: dezenas
+    // de aminoácidos do Anexo VI compartilham o NCM 2922.49.90). A
+    // classificação é a mesma — em vez de repetir um cartão por item, mantém o
+    // mais específico e lista os demais itens dentro dele.
+    const porAnexo = new Map();
+    const agrupados = [];
+    resultados.forEach((r) => {
+      if (!r.anexoId) {
+        agrupados.push(r);
+        return;
+      }
+      const principal = porAnexo.get(r.anexoId);
+      if (!principal) {
+        r.itensRelacionados = [];
+        porAnexo.set(r.anexoId, r);
+        agrupados.push(r);
+      } else {
+        principal.itensRelacionados.push({ item: r.item, descricao: r.itemDescricao });
+      }
+    });
+
+    return agrupados;
   }
 
   function normalizeTexto(s) {

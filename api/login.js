@@ -1,6 +1,12 @@
 const bcrypt = require("bcryptjs");
 const { query } = require("./_db");
 const { corpoJson, iniciarSessaoUsuario, iniciarTrocaSenha } = require("./_lib");
+const { minutosBloqueado, registrarFalha, limparFalhas, mensagemBloqueio } = require("./_limite");
+
+// Hash de mentira: quando o e-mail não existe, ainda assim gasta o mesmo tempo
+// de um bcrypt de verdade — senão a resposta rápida entregaria quais e-mails
+// têm conta.
+const HASH_FALSO = "$2a$12$dPQp9WPlrOWpdt5.DNN2qeu9IPW/wj2mdyM4dcN.lGlFgE8LWgcHG";
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -14,6 +20,12 @@ module.exports = async (req, res) => {
   const lembrar = !!corpo.lembrar;
 
   try {
+    const minutos = await minutosBloqueado(req, "usuario", email);
+    if (minutos) {
+      res.status(429).json({ ok: false, erro: mensagemBloqueio(minutos) });
+      return;
+    }
+
     const resultado = await query(
       "SELECT nome, senha_hash, bloqueado, precisa_trocar_senha FROM usuarios WHERE email = $1",
       [email]
@@ -24,15 +36,19 @@ module.exports = async (req, res) => {
     // bom revelar pra quem está tentando entrar qual dos dois estava errado.
     const erroGenerico = { ok: false, erro: "E-mail ou senha incorretos." };
     if (!registro) {
+      await bcrypt.compare(senha, HASH_FALSO);
+      await registrarFalha(req, "usuario", email);
       res.status(401).json(erroGenerico);
       return;
     }
 
     const senhaCorreta = await bcrypt.compare(senha, registro.senha_hash);
     if (!senhaCorreta) {
+      await registrarFalha(req, "usuario", email);
       res.status(401).json(erroGenerico);
       return;
     }
+    await limparFalhas(req, "usuario", email);
 
     if (registro.bloqueado) {
       res.status(403).json({ ok: false, erro: "Esta conta está bloqueada. Fale com o suporte." });

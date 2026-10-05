@@ -2,7 +2,7 @@
   "use strict";
   window.Auth.redirecionarSeLogado();
 
-  const TAMANHO_MINIMO_SENHA = 6;
+  const TAMANHO_MINIMO_SENHA = 8;
 
   const inputEmail = document.getElementById("input-email");
   const inputSenha = document.getElementById("input-senha");

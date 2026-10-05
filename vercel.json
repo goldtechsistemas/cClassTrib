@@ -11,17 +11,113 @@
       "includeFiles": "node_modules/pdfkit/**"
     }
   },
+  "redirects": [
+    {
+      "source": "/scripts/:caminho*",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/tests/:caminho*",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/data/:caminho*",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/scratchpad/:caminho*",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/.claude/:caminho*",
+      "destination": "/",
+      "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
+  ],
   "rewrites": [
-    { "source": "/api/nfe-empresas", "destination": "/api/nfe?rota=empresas" },
-    { "source": "/api/nfe-certificado", "destination": "/api/nfe?rota=certificado" },
-    { "source": "/api/nfe-empresa-excluir", "destination": "/api/nfe?rota=empresa-excluir" },
-    { "source": "/api/nfe-sincronizar", "destination": "/api/nfe?rota=sincronizar" },
-    { "source": "/api/nfe-cron-sincronizar", "destination": "/api/nfe?rota=cron-sincronizar" },
-    { "source": "/api/nfe-manifestar", "destination": "/api/nfe?rota=manifestar" },
-    { "source": "/api/nfe-documentos", "destination": "/api/nfe?rota=documentos" },
-    { "source": "/api/nfe-exportar-xml", "destination": "/api/nfe?rota=exportar-xml" },
-    { "source": "/api/nfe-exportar-excel", "destination": "/api/nfe?rota=exportar-excel" },
-    { "source": "/api/nfe-exportar-pdf-lote", "destination": "/api/nfe?rota=exportar-pdf-lote" },
-    { "source": "/api/nfe-exportar-pdf", "destination": "/api/nfe?rota=exportar-pdf" }
+    {
+      "source": "/api/nfe-empresas",
+      "destination": "/api/nfe?rota=empresas"
+    },
+    {
+      "source": "/api/nfe-certificado",
+      "destination": "/api/nfe?rota=certificado"
+    },
+    {
+      "source": "/api/nfe-empresa-excluir",
+      "destination": "/api/nfe?rota=empresa-excluir"
+    },
+    {
+      "source": "/api/nfe-sincronizar",
+      "destination": "/api/nfe?rota=sincronizar"
+    },
+    {
+      "source": "/api/nfe-cron-sincronizar",
+      "destination": "/api/nfe?rota=cron-sincronizar"
+    },
+    {
+      "source": "/api/nfe-manifestar",
+      "destination": "/api/nfe?rota=manifestar"
+    },
+    {
+      "source": "/api/nfe-documentos",
+      "destination": "/api/nfe?rota=documentos"
+    },
+    {
+      "source": "/api/nfe-exportar-xml",
+      "destination": "/api/nfe?rota=exportar-xml"
+    },
+    {
+      "source": "/api/nfe-exportar-excel",
+      "destination": "/api/nfe?rota=exportar-excel"
+    },
+    {
+      "source": "/api/nfe-exportar-pdf-lote",
+      "destination": "/api/nfe?rota=exportar-pdf-lote"
+    },
+    {
+      "source": "/api/nfe-exportar-pdf",
+      "destination": "/api/nfe?rota=exportar-pdf"
+    }
   ]
 }

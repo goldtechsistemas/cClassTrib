@@ -82,10 +82,10 @@ cclasstrib-app/
 └── data/raw/                # (fora do deploy) fontes brutas para auditoria:
     ├── lcp214_plain.txt       #   texto integral da LC 214/2025 (Planalto)
     ├── anexos/anexo_*.txt     #   cada Anexo fatiado individualmente
-    ├── cClassTrib 2026-06-22.xlsx              # arquivo oficial original (Portal NF-e)
+    ├── cClassTrib 2026-10-01.xlsx              # arquivo oficial original (Portal NF-e)
     ├── CST_INDICADORES_20250514_PUBLICACAO.xlsx # versão anterior, não usada (ver nota acima)
     ├── cclasstrib_compact_extraido.tsv          # extração compacta usada para montar cclasstrib-oficial.js
-    └── Tabela_NCM_Vigente_20260924.json          # arquivo oficial original (Siscomex/RFB) usado para ncm-tabela.js — baixado direto da API pública (https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json), sempre reflete o dia da checagem; ver scripts/transformar-tabela-ncm.ps1
+    └── Tabela_NCM_Vigente_20261005.json          # arquivo oficial original (Siscomex/RFB) usado para ncm-tabela.js — baixado direto da API pública (https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json), sempre reflete o dia da checagem; ver scripts/transformar-tabela-ncm.ps1
 ```
 
 ## Fonte primária dos dados — como foi montada a base
@@ -95,7 +95,7 @@ brasileiras candidatas a fornecer dados estruturados sobre cClassTrib/IBS/CBS:
 
 | Fonte | O que encontramos |
 |---|---|
-| **Portal Nacional da NF-e** (`nfe.fazenda.gov.br`) | Publica oficialmente, via **Informe Técnico 2025.002**, a tabela **cClassTrib** (código de 6 dígitos) e **cCredPres**, em conjunto com a Receita Federal e o Comitê Gestor do IBS. É a fonte mais próxima de "estruturada", mas é distribuída como arquivo (XLSX/PDF) versionado, não uma API REST. O acesso direto ao portal ficou instável durante a pesquisa inicial, mas o **usuário localizou e forneceu o arquivo "cClassTrib 2026-06-22.xlsx" diretamente**, que foi importado em `js/cclasstrib-oficial.js` (ver seção "Atualização" abaixo). Um arquivo mais antigo também foi encontrado (`CST_INDICADORES_20250514_PUBLICACAO.xlsx`, datado de 2025-05-14) — é uma versão anterior e mais simples da tabela de CST, **superada** pelo arquivo de 2026-06-22 e não utilizada neste projeto. |
+| **Portal Nacional da NF-e** (`nfe.fazenda.gov.br`) | Publica oficialmente, via **Informe Técnico 2025.002**, a tabela **cClassTrib** (código de 6 dígitos) e **cCredPres**, em conjunto com a Receita Federal e o Comitê Gestor do IBS. É a fonte mais próxima de "estruturada", mas é distribuída como arquivo (XLSX/PDF) versionado, não uma API REST. O acesso direto ao portal ficou instável durante a pesquisa inicial, mas o **usuário localizou e forneceu o arquivo "cClassTrib 2026-10-01.xlsx" diretamente**, que foi importado em `js/cclasstrib-oficial.js` (ver seção "Atualização" abaixo). Um arquivo mais antigo também foi encontrado (`CST_INDICADORES_20250514_PUBLICACAO.xlsx`, datado de 2025-05-14) — é uma versão anterior e mais simples da tabela de CST, **superada** pelo arquivo de 2026-06-22 e não utilizada neste projeto. |
 | **Comitê Gestor do IBS** (`cgibs.gov.br`) | Portal institucional (notícias, resoluções, cartilhas em PDF). Não expõe API de dados abertos nem tabela estruturada de NCM/cClassTrib. |
 | **SEFAZ estaduais** | Alguns estados (ex. RS) têm ferramentas de consulta de classificação tributária, mas não uma fonte de dados aberta/API. |
 | **Diário Oficial / Planalto** (`planalto.gov.br`) | Texto oficial e consolidado da **LC 214/2025**, de domínio público. **Esta foi a fonte usada para montar `js/data.js`** — o HTML da lei foi baixado e os Anexos I a XVII foram extraídos com `scripts/extract-anexos.ps1` e depois revisados manualmente. O texto bruto de cada Anexo, do jeito que foi extraído, está preservado em `data/raw/` para auditoria. |
@@ -197,11 +197,48 @@ sujeita a erro, e tratada como tal:
   antes de entrar no dicionário (comentários no próprio arquivo explicam o
   raciocínio de cada categoria).
 
+### Revisão geral (2026-10-05) — segurança e operação
+
+- **Login com limite de tentativas** (`api/_limite.js`): 5 senhas erradas seguidas
+  (mesmo e-mail + mesmo IP) bloqueiam por 15 min; 25 por IP. Vale também para o
+  login do admin. A tabela `login_tentativas` é criada sozinha no primeiro uso.
+- **Cron de sincronização** (`api/_nfe/cron-sincronizar.js`): agora **exige**
+  `CRON_SECRET` nas variáveis de ambiente da Vercel (sem ele responde 503 — antes
+  ficava aberto). A Vercel manda o segredo sozinha no cabeçalho `Authorization`
+  quando a variável existe. Processa as empresas mais "esquecidas" primeiro e para
+  antes dos 60 s.
+- **Cabeçalhos de segurança** e `Cache-Control: no-store` nas rotas `/api/*`
+  (`vercel.json`); as pastas `/scripts`, `/tests`, `/data` e `/.claude` deixam de
+  ser servidas em produção.
+- **Banco:** a conexão agora verifica o certificado TLS do servidor.
+- **Senhas definidas pelo usuário:** mínimo de 8 caracteres.
+- **PDF em lote:** para antes de estourar os 60 s e lista no ZIP as notas que não
+  deu tempo de gerar.
+- **Anexos VI, IX e XI** completados a partir do texto da lei (antes eram uma
+  seleção parcial): 188 NCM que caíam na "regra geral" por engano agora são
+  classificados no Anexo correto.
+
+### Atualização (2026-10-05): tabelas oficiais renovadas
+
+- **cClassTrib** — nova versão publicada pelo Portal Nacional da NF-e em
+  01/10/2026 (IT 2025.002 v1.70, planilha "cClass 2026-09-01"): 9 códigos
+  novos (000006, 200055, 200056, 400003, 400004, 550026 a 550029; total agora
+  173) e 6 nomes/artigos ajustados. Planilha em `data/raw/cClassTrib 2026-10-01.xlsx`.
+- **NCM** — tabela do Siscomex vigente em 05/10/2026 (15.157 itens): novo código
+  8518.10.20 (microfones, vigência 01/10/2026) e 3913.90.50 renomeado
+  ("Quitosana"). Arquivo em `data/raw/Tabela_NCM_Vigente_20261005.json`.
+
+Para renovar de novo: baixar a planilha em
+https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=/NJarYc9nus=
+(Tabela de Classificação Tributária do IBS e CBS) e a tabela NCM em
+https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json?perfil=PUBLICO,
+regerar `js/cclasstrib-oficial.js` / `js/ncm-tabela.js` e rodar `tests/tests.html`.
+
 ### Atualização (2026-09-12): tabela oficial cClassTrib importada
 
-O usuário localizou e forneceu o arquivo oficial **"cClassTrib 2026-06-22.xlsx"**
+O usuário localizou e forneceu o arquivo oficial **"cClassTrib 2026-10-01.xlsx"**
 (Portal Nacional da NF-e / Receita Federal / Comitê Gestor do IBS, Informe
-Técnico 2025.002), com as 164 hipóteses de cClassTrib e as 18 situações de
+Técnico 2025.002), com as hipóteses de cClassTrib (164 na época; 173 desde 2026-10-05) e as 18 situações de
 CST-IBS/CBS. Ele foi transcrito integralmente em `js/cclasstrib-oficial.js`
 (sem depender de Node/Python/Excel — veja `scripts/read-xlsx.ps1` e
 `scripts/read-xlsx-cols.ps1`, leitores de `.xlsx` em PowerShell puro, usados

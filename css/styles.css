@@ -1478,3 +1478,6 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
   .cta-lote { flex-wrap: wrap; }
   .cta-lote-seta { width: 100%; }
 }
+
+
+.itens-relacionados { margin: 4px 0 0; padding-left: 18px; color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; }

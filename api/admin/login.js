@@ -1,6 +1,9 @@
 const bcrypt = require("bcryptjs");
 const { query } = require("../_db");
 const { corpoJson, iniciarSessaoAdmin } = require("../_lib");
+const { minutosBloqueado, registrarFalha, limparFalhas, mensagemBloqueio } = require("../_limite");
+
+const HASH_FALSO = "$2a$12$dPQp9WPlrOWpdt5.DNN2qeu9IPW/wj2mdyM4dcN.lGlFgE8LWgcHG"; // iguala o tempo de resposta quando o e-mail não existe
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -13,18 +16,28 @@ module.exports = async (req, res) => {
   const senha = String(corpo.senha || "");
 
   try {
+    const minutos = await minutosBloqueado(req, "admin", email);
+    if (minutos) {
+      res.status(429).json({ ok: false, erro: mensagemBloqueio(minutos) });
+      return;
+    }
+
     const resultado = await query("SELECT senha_hash FROM admins WHERE email = $1", [email]);
     const registro = resultado.rows[0];
     const erroGenerico = { ok: false, erro: "E-mail ou senha incorretos." };
     if (!registro) {
+      await bcrypt.compare(senha, HASH_FALSO);
+      await registrarFalha(req, "admin", email);
       res.status(401).json(erroGenerico);
       return;
     }
     const senhaCorreta = await bcrypt.compare(senha, registro.senha_hash);
     if (!senhaCorreta) {
+      await registrarFalha(req, "admin", email);
       res.status(401).json(erroGenerico);
       return;
     }
+    await limparFalhas(req, "admin", email);
 
     iniciarSessaoAdmin(res, { email });
     res.status(200).json({ ok: true, email });

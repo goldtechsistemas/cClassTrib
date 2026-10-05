@@ -32,7 +32,7 @@
   // Versão embutida nesta página no momento em que ela foi carregada —
   // equivalente a main.__version__ embutida no .exe. Só isso e o campo
   // "versao" de versao.json precisam subir a cada lançamento.
-  const VERSAO_ATUAL = "1.0.1";
+  const VERSAO_ATUAL = "1.1.0";
 
   const INTERVALO_RECHECAGEM_MS = 30 * 60 * 1000; // 30 min — para quem deixa a aba aberta o dia todo
 

@@ -60,6 +60,10 @@ module.exports = async (req, res) => {
   try {
     let row;
     if (empresaId && empresaId !== "novo") {
+      if (!/^\d{1,9}$/.test(String(empresaId))) {
+        res.status(404).json({ ok: false, erro: "Empresa não encontrada." });
+        return;
+      }
       const existente = await query("SELECT id FROM nfe_empresas WHERE id = $1 AND usuario_id = $2", [empresaId, usuarioId]);
       if (!existente.rows.length) {
         res.status(404).json({ ok: false, erro: "Empresa não encontrada." });

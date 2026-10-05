@@ -3,6 +3,8 @@
 // Functions por deploy). Não há rota de e-mail de propósito: o e-mail é o
 // login e só o administrador cria/gerencia as contas.
 const bcrypt = require("bcryptjs");
+
+const TAMANHO_MINIMO_SENHA = 8;
 const { query } = require("../_db");
 const {
   corpoJson,
@@ -27,8 +29,8 @@ async function definirSenhaInicial(req, res) {
   }
 
   const novaSenha = String(corpoJson(req).novaSenha || "");
-  if (novaSenha.length < 6) {
-    res.status(400).json({ ok: false, erro: "A nova senha precisa ter no mínimo 6 caracteres." });
+  if (novaSenha.length < TAMANHO_MINIMO_SENHA) {
+    res.status(400).json({ ok: false, erro: `A nova senha precisa ter no mínimo ${TAMANHO_MINIMO_SENHA} caracteres.` });
     return;
   }
 
@@ -71,8 +73,8 @@ async function alterarSenha(req, res, sessao) {
   const senhaAtual = String(corpo.senhaAtual || "");
   const novaSenha = String(corpo.novaSenha || "");
 
-  if (novaSenha.length < 6) {
-    res.status(400).json({ ok: false, erro: "A nova senha precisa ter no mínimo 6 caracteres." });
+  if (novaSenha.length < TAMANHO_MINIMO_SENHA) {
+    res.status(400).json({ ok: false, erro: `A nova senha precisa ter no mínimo ${TAMANHO_MINIMO_SENHA} caracteres.` });
     return;
   }
 
