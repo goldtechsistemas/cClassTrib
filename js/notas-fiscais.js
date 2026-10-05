@@ -22,6 +22,10 @@
   const wrapBuscaEmpresas = document.getElementById("busca-empresas");
   const inputBuscaEmpresas = document.getElementById("input-busca-empresas");
   const empresasSemResultado = document.getElementById("empresas-sem-resultado");
+  const empresasContador = document.getElementById("empresas-contador");
+  const empresasDica = document.getElementById("empresas-dica");
+  const empresasRodape = document.getElementById("empresas-rodape");
+  const EMPRESAS_VISIVEIS_SEM_ROLAGEM = 10;
 
   const notasSecao = document.getElementById("notas-secao");
   const notasTitulo = document.getElementById("notas-titulo");
@@ -124,14 +128,21 @@
       wrapTabela.style.display = "none";
       wrapBuscaEmpresas.style.display = "none";
       empresasSemResultado.style.display = "none";
+      empresasContador.style.display = "none";
+      empresasDica.style.display = "none";
+      empresasRodape.style.display = "none";
       return;
     }
     wrapVazio.style.display = "none";
     wrapBuscaEmpresas.style.display = "";
+    empresasDica.style.display = "";
+    empresasContador.style.display = "";
 
     const empresas = empresasCache.filter((emp) => empresaCombinaComBusca(emp, termo));
+    empresasContador.textContent = termo ? `${empresas.length} de ${empresasCache.length}` : String(empresasCache.length);
     if (!empresas.length) {
       wrapTabela.style.display = "none";
+      empresasRodape.style.display = "none";
       empresasSemResultado.textContent = `Nenhuma empresa encontrada para "${termo}".`;
       empresasSemResultado.style.display = "";
       return;
@@ -141,12 +152,20 @@
 
     corpoTabela.innerHTML = empresas
       .map((emp) => {
-        const ambiente = emp.ambiente === 1 ? "Produção" : "Homologação";
-        let validade = emp.certValidUntil ? `Válido até ${formatarData(emp.certValidUntil)}` : "Sem certificado";
-        if (emp.certVencido) {
-          validade = `<span style="color:var(--vermelho)">⚠ Vencido em ${formatarData(emp.certValidUntil)}</span>`;
-        } else if (emp.certPrestesAVencer) {
-          validade = `<span style="color:var(--amarelo, #c98a1c)">⚠ Vence em ${emp.certDiasRestantes} dia(s) (${formatarData(emp.certValidUntil)})</span>`;
+        const nomeEmpresa = emp.razaoSocial || emp.cnpj;
+        const ehProducao = emp.ambiente === 1;
+        const ambiente = `<span class="badge ${ehProducao ? "cor-neutro-fraco" : "cor-amarelo"}">${ehProducao ? "Produção" : "Homologação"}</span>`;
+
+        let validade = `<span class="badge cor-neutro-fraco">Sem certificado</span>`;
+        if (emp.certValidUntil) {
+          const dataValidade = esc(formatarData(emp.certValidUntil));
+          if (emp.certVencido) {
+            validade = `<span class="badge cor-vermelho">Vencido</span><div class="hint">em ${dataValidade}</div>`;
+          } else if (emp.certPrestesAVencer) {
+            validade = `<span class="badge cor-amarelo">Vence em ${esc(emp.certDiasRestantes)} dia(s)</span><div class="hint">até ${dataValidade}</div>`;
+          } else {
+            validade = `<span class="badge cor-verde">Válido</span><div class="hint">até ${dataValidade}</div>`;
+          }
         }
 
         // A espera exigida pela SEFAZ só vale pra busca de notas NOVAS — a
@@ -159,25 +178,36 @@
           const horaCurta = espera.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
           const mesmoDia = espera.toDateString() === new Date().toDateString();
           const quando = mesmoDia ? `às ${horaCurta}` : `em ${espera.toLocaleString("pt-BR")}`;
-          avisoEspera = `<br><span style="font-size:0.85em;opacity:0.75" title="A SEFAZ pede para aguardar antes de buscar notas novas">Notas novas liberam ${esc(quando)}</span>`;
+          avisoEspera = `<div class="hint empresa-espera" title="A SEFAZ pede para aguardar antes de buscar notas novas">Notas novas liberam ${esc(quando)}</div>`;
         }
-        const botaoSincronizar = `<button class="btn secondary btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Sincronizar agora</button>${avisoEspera}`;
 
         const avisoUf = emp.uf
           ? ""
-          : `<br><span style="color:var(--amarelo, #c98a1c)" title="Não foi possível identificar a UF no certificado; a consulta à SEFAZ pode falhar até isso ser corrigido.">⚠ UF não detectada</span>`;
+          : `<div class="empresa-alerta" title="Não foi possível identificar a UF no certificado; a consulta à SEFAZ pode falhar até isso ser corrigido.">⚠ UF não detectada</div>`;
 
+        const ehCpf = String(emp.cnpj || "").replace(/\D/g, "").length === 11;
         return `
-          <tr>
-            <td class="mono">${esc(formatarDocumentoEmpresa(emp.cnpj))}</td>
-            <td>${esc(emp.razaoSocial || "—")}${avisoUf}</td>
-            <td>${esc(ambiente)}</td>
-            <td>${validade}</td>
-            <td>${esc(formatarData(emp.ultimaSincronizacao) === "—" ? "Nunca sincronizado" : formatarData(emp.ultimaSincronizacao))}</td>
+          <tr data-empresa-id="${esc(emp.id)}">
             <td>
-              ${botaoSincronizar}
-              <button class="btn secondary btn-sm btn-ver-notas" data-id="${esc(emp.id)}" data-nome="${esc(emp.razaoSocial || emp.cnpj)}" type="button">Ver notas</button>
-              <button class="btn secondary btn-sm btn-excluir-empresa" data-id="${esc(emp.id)}" type="button">Excluir</button>
+              <div class="empresa-cel">
+                <span class="empresa-avatar" aria-hidden="true">${esc(iniciaisEmpresa(nomeEmpresa))}</span>
+                <div class="empresa-dados">
+                  <strong class="empresa-nome">${esc(emp.razaoSocial || "—")}</strong>
+                  <span class="hint mono">${ehCpf ? "CPF" : "CNPJ"} ${esc(formatarDocumentoEmpresa(emp.cnpj))}</span>
+                  ${avisoUf}
+                </div>
+              </div>
+            </td>
+            <td>${ambiente}</td>
+            <td>${validade}</td>
+            <td>${textoUltimaSincronizacao(emp.ultimaSincronizacao)}</td>
+            <td>
+              <div class="empresa-acoes">
+                <button class="btn btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(nomeEmpresa)}" type="button">Sincronizar agora</button>
+                <button class="btn secondary btn-sm btn-ver-notas" data-id="${esc(emp.id)}" data-nome="${esc(nomeEmpresa)}" type="button">Ver notas</button>
+                <button class="btn secondary btn-sm btn-excluir-empresa" data-id="${esc(emp.id)}" type="button">Excluir</button>
+              </div>
+              ${avisoEspera}
             </td>
           </tr>`;
       })
@@ -192,6 +222,49 @@
     corpoTabela.querySelectorAll(".btn-ver-notas").forEach((btn) => {
       btn.addEventListener("click", () => mostrarNotas(btn.dataset.id, btn.dataset.nome));
     });
+    marcarEmpresaSelecionada();
+    ajustarAlturaListaEmpresas(empresas.length);
+  }
+
+  function iniciaisEmpresa(nome) {
+    const palavras = String(nome || "?").replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+    return ((palavras[0] || "?")[0] + (palavras.length > 1 ? palavras[1][0] : "")).toUpperCase();
+  }
+
+  // "Hoje", "Ontem", "Há 3 dias" + a data — mais fácil de bater o olho do que
+  // só a data.
+  function textoUltimaSincronizacao(iso) {
+    if (!iso) return `<span class="hint">Nunca sincronizado</span>`;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return `<span class="hint">Nunca sincronizado</span>`;
+    const inicioDia = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const dias = Math.round((inicioDia(new Date()) - inicioDia(d)) / 86400000);
+    const rotulo = dias <= 0 ? "Hoje" : dias === 1 ? "Ontem" : `Há ${dias} dias`;
+    const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return `<strong class="sync-rotulo">${esc(rotulo)}</strong><div class="hint">${esc(formatarData(iso))} às ${esc(hora)}</div>`;
+  }
+
+  // Destaca a empresa cujas notas estão abertas logo abaixo.
+  function marcarEmpresaSelecionada() {
+    corpoTabela.querySelectorAll("tr[data-empresa-id]").forEach((tr) => {
+      tr.classList.toggle("empresa-selecionada", Number(tr.dataset.empresaId) === empresaSelecionadaId);
+    });
+  }
+
+  // A lista mostra até 10 empresas sem rolar; a partir daí ganha barra de
+  // rolagem própria (cabeçalho fixo) em vez de esticar a página. A altura é
+  // medida nas linhas reais — algumas ficam mais altas por causa de avisos.
+  function ajustarAlturaListaEmpresas(total) {
+    wrapTabela.style.maxHeight = "";
+    if (total <= EMPRESAS_VISIVEIS_SEM_ROLAGEM) {
+      empresasRodape.style.display = "none";
+      return;
+    }
+    const linhas = Array.from(corpoTabela.querySelectorAll("tr")).slice(0, EMPRESAS_VISIVEIS_SEM_ROLAGEM);
+    const altura = wrapTabela.querySelector("thead").offsetHeight + linhas.reduce((soma, tr) => soma + tr.offsetHeight, 0);
+    wrapTabela.style.maxHeight = `min(${altura + 2}px, 85vh)`;
+    empresasRodape.textContent = `Mostrando ${total} empresas — role a lista para ver as demais.`;
+    empresasRodape.style.display = "";
   }
 
   async function sincronizarEmpresa(empresaId, nomeEmpresa, botao) {
@@ -413,6 +486,7 @@
   function mostrarNotas(empresaId, nomeEmpresa) {
     empresaSelecionadaId = Number(empresaId);
     empresaSelecionadaNome = nomeEmpresa;
+    marcarEmpresaSelecionada();
     notasSecao.style.display = "";
     notasSecao.scrollIntoView({ behavior: "smooth", block: "start" });
     carregarNotas(empresaId, nomeEmpresa);

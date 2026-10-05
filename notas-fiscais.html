@@ -85,22 +85,30 @@
 
     <section>
       <div class="secao-cabecalho">
-        <h2 class="section-title">Empresas cadastradas</h2>
+        <div class="secao-titulo-bloco">
+          <h2 class="section-title">Empresas cadastradas <span class="contador-chip" id="empresas-contador" style="display:none;"></span></h2>
+          <p class="hint" id="empresas-dica" style="display:none;">Use <strong>Ver notas</strong> para abrir as notas de uma empresa.</p>
+        </div>
         <div class="busca-empresas" id="busca-empresas" style="display:none;">
           <label for="input-busca-empresas">Buscar empresa</label>
-          <input type="search" id="input-busca-empresas" name="filtro-empresas" placeholder="Nome ou CNPJ/CPF" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+          <div class="campo-com-icone">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="search" id="input-busca-empresas" name="filtro-empresas" placeholder="Nome ou CNPJ/CPF" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+          </div>
         </div>
       </div>
-      <div id="empresas-vazio" class="hint" style="display:none;">Nenhuma empresa cadastrada ainda — envie um certificado acima.</div>
+      <div id="empresas-vazio" class="empresas-vazio" style="display:none;">
+        <strong>Nenhuma empresa cadastrada ainda</strong>
+        <span>Envie um certificado A1 acima para começar a buscar as notas de compra.</span>
+      </div>
       <div id="empresas-sem-resultado" class="hint" style="display:none;"></div>
-      <div class="table-wrap" id="empresas-wrap" style="display:none">
+      <div class="table-wrap empresas-lista" id="empresas-wrap" style="display:none">
         <table>
           <thead>
             <tr>
-              <th>CNPJ/CPF</th>
-              <th>Razão social / certificado</th>
+              <th>Empresa</th>
               <th>Ambiente</th>
-              <th>Certificado válido até</th>
+              <th>Certificado</th>
               <th>Última sincronização</th>
               <th>Ações</th>
             </tr>
@@ -108,6 +116,7 @@
           <tbody id="empresas-body"></tbody>
         </table>
       </div>
+      <p class="hint empresas-rodape" id="empresas-rodape" style="display:none;"></p>
     </section>
 
     <section id="notas-secao" style="display:none">
