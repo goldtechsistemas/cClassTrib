@@ -197,6 +197,31 @@ sujeita a erro, e tratada como tal:
   antes de entrar no dicionário (comentários no próprio arquivo explicam o
   raciocínio de cada categoria).
 
+### Proteção do conteúdo contra cópia (2026-10-05)
+
+Os scripts de **dados e regras** (tabelas NCM/cClassTrib, Anexos, motor de busca,
+lógica das telas) **não ficam mais na pasta pública `js/`**: moram em
+`api/_conteudo/` e só são entregues a quem tem sessão válida, pela rota
+`api/_nfe/conteudo.js` (o `vercel.json` reescreve `/js/<arquivo>` para ela, então
+os `<script src="js/...">` das páginas não mudaram). Sem login a resposta é 401.
+
+- **Fica público** (precisa para o login): `js/auth.js`, `login.js`, `tema.js`,
+  `conta.js`, `atualizador.js`, `admin.js`.
+- **Marca d'água por usuário:** cada script leva um aviso de direitos autorais com
+  um código da conta e uma impressão digital em caracteres invisíveis costurada num
+  texto de tela. Se um arquivo vazar: `node scripts/rastrear-marca.js arquivo.js`
+  diz de qual conta saiu.
+- **Regra para âncoras** (`ANCORAS` em `conteudo.js`): só texto de TELA — nunca
+  texto comparado no código nem gravado em CSV/Excel/PDF (a marca iria junto).
+- **Novo script protegido:** colocar em `api/_conteudo/`. **Novo script público:**
+  colocar em `js/` (um arquivo existente em `js/` sempre vence o rewrite).
+- **Desenvolvimento local:** `node scripts/dev-server.js` serve tudo direto;
+  `DEV_PROTEGIDO=1 node scripts/dev-server.js` usa o mesmo caminho da produção.
+- **Limite honesto:** quem tem conta ainda consegue salvar o que o navegador
+  recebe — isso nenhum site consegue impedir. A proteção tira o conteúdo do
+  alcance de quem não tem conta e deixa rastro de quem copiar. Os dados oficiais
+  (tabelas) são públicos por natureza; o que é seu é o tratamento e o motor.
+
 ### Revisão geral (2026-10-05) — segurança e operação
 
 - **Login com limite de tentativas** (`api/_limite.js`): 5 senhas erradas seguidas

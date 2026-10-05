@@ -1,11 +1,11 @@
 # Converte a tabela NCM oficial completa (JSON do Siscomex/Receita Federal,
-# fornecida pelo usuario) em um arquivo js/ncm-tabela.js compacto, pronto
+# fornecida pelo usuario) em um arquivo api/_conteudo/ncm-tabela.js compacto, pronto
 # para ser carregado via <script src> (sem fetch, sem servidor obrigatorio).
 #
 # Uso: pwsh -File scripts/transformar-tabela-ncm.ps1 -Origem "caminho\para\Tabela_NCM_Vigente_*.json"
 param(
   [Parameter(Mandatory=$true)][string]$Origem,
-  [string]$Destino = (Join-Path $PSScriptRoot "..\js\ncm-tabela.js")
+  [string]$Destino = (Join-Path $PSScriptRoot "..\api\_conteudo\ncm-tabela.js")
 )
 
 $ErrorActionPreference = "Stop"

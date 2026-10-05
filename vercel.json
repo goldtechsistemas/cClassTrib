@@ -8,7 +8,7 @@
   "functions": {
     "api/nfe.js": {
       "maxDuration": 60,
-      "includeFiles": "node_modules/pdfkit/**"
+      "includeFiles": "{node_modules/pdfkit/**,api/_conteudo/**}"
     }
   },
   "redirects": [
@@ -118,6 +118,10 @@
     {
       "source": "/api/nfe-exportar-pdf",
       "destination": "/api/nfe?rota=exportar-pdf"
+    },
+    {
+      "source": "/js/:arquivo",
+      "destination": "/api/nfe?rota=conteudo&arquivo=:arquivo"
     }
   ]
 }

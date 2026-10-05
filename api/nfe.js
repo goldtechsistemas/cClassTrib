@@ -19,6 +19,7 @@ const rotas = {
   "exportar-excel": require("./_nfe/exportar-excel"),
   "exportar-pdf": require("./_nfe/exportar-pdf"),
   "exportar-pdf-lote": require("./_nfe/exportar-pdf-lote"),
+  conteudo: require("./_nfe/conteudo"),
 };
 
 module.exports = async (req, res) => {

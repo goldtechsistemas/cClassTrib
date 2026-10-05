@@ -135,7 +135,36 @@ async function tratarApi(req, res, pathname, searchParams) {
   }
 }
 
+// Em produção os scripts de dados/regras ficam em api/_conteudo e só são
+// entregues a quem tem sessão (vercel.json reescreve /js/<arquivo> para
+// api/_nfe/conteudo.js). Localmente servem direto da pasta, sem login — a menos
+// que DEV_PROTEGIDO=1, que usa o mesmo caminho da produção (com marca d'água,
+// gzip e ETag) para um usuário fictício.
+function servirConteudoProtegido(req, res, pathname) {
+  const m = pathname.match(/^\/(?:tests\/\.\.\/)?js\/([A-Za-z0-9.-]+\.js)$/);
+  if (!m) return false;
+  if (fs.existsSync(path.join(ROOT, "js", m[1]))) return false; // arquivo público de verdade
+  const arquivo = path.join(ROOT, "api", "_conteudo", m[1]);
+  if (!fs.existsSync(arquivo)) return false;
+  if (process.env.DEV_PROTEGIDO === "1") {
+    const { servirConteudo } = require(path.join(ROOT, "api", "_nfe", "conteudo.js"));
+    const adaptada = {
+      _status: 200,
+      _headers: {},
+      status(c) { this._status = c; return this; },
+      setHeader(k, v) { this._headers[k] = v; return this; },
+      end(d) { res.writeHead(this._status, this._headers); res.end(d); },
+    };
+    servirConteudo(req, adaptada, m[1], "dev@local");
+  } else {
+    res.writeHead(200, { "Content-Type": MIME[".js"] });
+    res.end(fs.readFileSync(arquivo));
+  }
+  return true;
+}
+
 function servirEstatico(req, res, pathname) {
+  if (servirConteudoProtegido(req, res, pathname)) return;
   const caminho = pathname === "/" ? "/index.html" : pathname;
   const arquivo = path.join(ROOT, decodeURIComponent(caminho));
   if (!arquivo.startsWith(ROOT)) {
