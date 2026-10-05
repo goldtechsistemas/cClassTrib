@@ -1,5 +1,5 @@
-// Relatório do painel admin: quantos XMLs completos cada empresa baixou da
-// SEFAZ em um mês (por padrão o mês atual, fuso de Brasília). Cada XML conta
+// Relatório do painel admin: quantos XMLs completos cada LOGIN (somando todas
+// as suas empresas/certificados) baixou da SEFAZ em um mês (por padrão o mês atual, fuso de Brasília). Cada XML conta
 // uma vez só, no dia em que chegou (nfe_documentos.xml_baixado_em).
 const { query } = require("../_db");
 const { lerSessaoAdmin } = require("../_lib");
@@ -64,16 +64,41 @@ module.exports = async (req, res) => {
       xmlsTotal: r.xmls_total,
     }));
 
+    // Total por LOGIN: soma de todos os certificados (empresas) de cada usuário.
+    // Entram todos os usuários, inclusive os que ainda não cadastraram empresa.
+    const todos = await query("SELECT id, email, nome, bloqueado FROM usuarios");
+    const porUsuario = new Map(
+      todos.rows.map((u) => [
+        u.id,
+        { usuarioId: u.id, usuarioEmail: u.email, usuarioNome: u.nome, bloqueado: u.bloqueado, qtdEmpresas: 0, xmlsNoMes: 0, xmlsTotal: 0, ultimaSincronizacao: null, empresas: [] },
+      ])
+    );
+    for (const e of lista) {
+      const u = porUsuario.get(e.usuarioId);
+      if (!u) continue;
+      u.qtdEmpresas += 1;
+      u.xmlsNoMes += e.xmlsNoMes;
+      u.xmlsTotal += e.xmlsTotal;
+      if (e.ultimaSincronizacao && (!u.ultimaSincronizacao || new Date(e.ultimaSincronizacao) > new Date(u.ultimaSincronizacao))) {
+        u.ultimaSincronizacao = e.ultimaSincronizacao;
+      }
+      u.empresas.push(e);
+    }
+    const usuarios = Array.from(porUsuario.values()).sort(
+      (a, b) => b.xmlsNoMes - a.xmlsNoMes || String(a.usuarioEmail).toLowerCase().localeCompare(String(b.usuarioEmail).toLowerCase())
+    );
+
     res.status(200).json({
       ok: true,
       mes,
       mesesDisponiveis: meses.rows,
-      empresas: lista,
+      usuarios,
       totais: {
-        xmlsNoMes: lista.reduce((s, e) => s + e.xmlsNoMes, 0),
-        xmlsAcumulado: lista.reduce((s, e) => s + e.xmlsTotal, 0),
+        xmlsNoMes: usuarios.reduce((s, u) => s + u.xmlsNoMes, 0),
+        xmlsAcumulado: usuarios.reduce((s, u) => s + u.xmlsTotal, 0),
+        logins: usuarios.length,
+        loginsComXmlNoMes: usuarios.filter((u) => u.xmlsNoMes > 0).length,
         empresas: lista.length,
-        empresasComXmlNoMes: lista.filter((e) => e.xmlsNoMes > 0).length,
       },
     });
   } catch (e) {

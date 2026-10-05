@@ -80,14 +80,15 @@
     <section class="card xml-card" id="secao-xml">
       <div class="xml-topo">
         <div>
-          <h2 class="modal-titulo" style="margin:0 0 4px;">XMLs baixados por empresa</h2>
-          <p class="hint" style="margin:0;">Quantidade de XMLs completos que chegaram da SEFAZ em cada empresa, no mês escolhido.</p>
+          <h2 class="modal-titulo" style="margin:0 0 4px;">XMLs baixados por login</h2>
+          <p class="hint" style="margin:0;">Total de XMLs completos que chegaram da SEFAZ em cada login (somando todos os certificados dele), no mês escolhido. Clique no login para ver por empresa.</p>
         </div>
         <div class="xml-controles">
           <label for="select-mes-xml" class="sr-only">Mês</label>
           <select id="select-mes-xml" aria-label="Mês do relatório"></select>
           <button class="btn secondary btn-sm" id="btn-xml-atualizar" type="button">Atualizar</button>
           <button class="btn secondary btn-sm" id="btn-xml-csv" type="button">Exportar CSV</button>
+          <button class="btn secondary btn-sm" id="btn-xml-csv-empresas" type="button" title="Uma linha por empresa (certificado)">CSV por empresa</button>
         </div>
       </div>
       <div class="xml-resumo" id="xml-resumo"></div>
@@ -95,8 +96,8 @@
         <table>
           <thead>
             <tr>
-              <th>Usuário</th>
-              <th>Empresa</th>
+              <th>Login</th>
+              <th class="col-valor">Empresas</th>
               <th class="col-valor">XMLs no mês</th>
               <th class="col-valor">Total acumulado</th>
               <th>Última sincronização</th>

@@ -140,44 +140,89 @@
 
     document.getElementById("xml-resumo").innerHTML = `
       <div class="xml-cartao destaque"><strong>${resultado.totais.xmlsNoMes}</strong><span>XMLs em ${esc(rotuloMesXml(resultado.mes))}</span></div>
-      <div class="xml-cartao"><strong>${resultado.totais.empresasComXmlNoMes}</strong><span>empresa(s) com XML no mês</span></div>
-      <div class="xml-cartao"><strong>${resultado.totais.empresas}</strong><span>empresa(s) cadastradas</span></div>
+      <div class="xml-cartao"><strong>${resultado.totais.loginsComXmlNoMes}</strong><span>login(s) com XML no mês</span></div>
+      <div class="xml-cartao"><strong>${resultado.totais.logins}</strong><span>login(s) cadastrados · ${resultado.totais.empresas} empresa(s)</span></div>
       <div class="xml-cartao"><strong>${resultado.totais.xmlsAcumulado}</strong><span>XMLs no total, desde o início</span></div>`;
 
-    if (!resultado.empresas.length) {
-      corpo.innerHTML = `<tr><td colspan="5">Nenhuma empresa cadastrada ainda.</td></tr>`;
+    if (!resultado.usuarios.length) {
+      corpo.innerHTML = `<tr><td colspan="5">Nenhum usuário cadastrado ainda.</td></tr>`;
     } else {
-      corpo.innerHTML = resultado.empresas
-        .map(
-          (e) => `<tr class="${e.xmlsNoMes ? "" : "xml-zerado"}">
-            <td><strong>${esc(e.usuarioNome || "—")}</strong><div class="hint" style="margin:0;">${esc(e.usuarioEmail)}</div></td>
-            <td>${esc(e.razaoSocial || "—")}<div class="hint mono" style="margin:0;">${esc(formatarDocumento(e.cnpj))}</div></td>
-            <td class="col-valor"><strong>${e.xmlsNoMes}</strong></td>
-            <td class="col-valor">${e.xmlsTotal}</td>
-            <td>${e.ultimaSincronizacao ? esc(formatarData(e.ultimaSincronizacao)) : "Nunca"}</td>
-          </tr>`
-        )
+      corpo.innerHTML = resultado.usuarios
+        .map((u) => {
+          const temEmpresas = u.empresas.length > 0;
+          const detalhe = u.empresas
+            .map(
+              (e) => `<tr class="xml-emp" data-uid="${u.usuarioId}" hidden>
+                <td colspan="2"><span class="xml-emp-nome">${esc(e.razaoSocial || "—")}</span> <span class="hint mono" style="margin:0;">${esc(formatarDocumento(e.cnpj))}</span></td>
+                <td class="col-valor">${e.xmlsNoMes}</td>
+                <td class="col-valor">${e.xmlsTotal}</td>
+                <td>${e.ultimaSincronizacao ? esc(formatarData(e.ultimaSincronizacao)) : "Nunca"}</td>
+              </tr>`
+            )
+            .join("");
+          return `<tr class="xml-user${u.xmlsNoMes ? "" : " xml-zerado"}" data-uid="${u.usuarioId}"${temEmpresas ? ' tabindex="0" role="button" aria-expanded="false"' : ""}>
+              <td>
+                <span class="xml-seta" aria-hidden="true">${temEmpresas ? "▸" : ""}</span>
+                <strong>${esc(u.usuarioNome || "—")}</strong>${u.bloqueado ? ' <span class="badge cor-vermelho">Bloqueado</span>' : ""}
+                <div class="hint" style="margin:0 0 0 16px;">${esc(u.usuarioEmail)}</div>
+              </td>
+              <td class="col-valor">${u.qtdEmpresas}</td>
+              <td class="col-valor"><strong>${u.xmlsNoMes}</strong></td>
+              <td class="col-valor">${u.xmlsTotal}</td>
+              <td>${u.ultimaSincronizacao ? esc(formatarData(u.ultimaSincronizacao)) : "Nunca"}</td>
+            </tr>${detalhe}`;
+        })
         .join("");
     }
     document.getElementById("xml-nota").textContent =
       "Conta cada XML completo uma única vez, no dia em que chegou da SEFAZ (fuso de Brasília). XMLs que já existiam antes desse registro passaram a valer pela data em que a nota entrou no sistema.";
   }
 
-  function exportarRelatorioXml() {
-    if (!relatorioXml) return;
-    const linhas = [["Mês", "Usuário", "E-mail", "Empresa", "CNPJ/CPF", "XMLs no mês", "Total acumulado"]];
-    relatorioXml.empresas.forEach((e) =>
-      linhas.push([relatorioXml.mes, e.usuarioNome || "", e.usuarioEmail, e.razaoSocial || "", e.cnpj, e.xmlsNoMes, e.xmlsTotal])
-    );
+  // Clicar (ou Enter) no login abre/fecha a lista das empresas dele.
+  function alternarEmpresasDoLogin(linha) {
+    if (!linha || !linha.classList.contains("xml-user") || !linha.hasAttribute("role")) return;
+    const abrir = linha.getAttribute("aria-expanded") !== "true";
+    linha.setAttribute("aria-expanded", String(abrir));
+    linha.classList.toggle("aberto", abrir);
+    linha.querySelector(".xml-seta").textContent = abrir ? "▾" : "▸";
+    document.querySelectorAll(`#xml-body tr.xml-emp[data-uid="${linha.dataset.uid}"]`).forEach((tr) => { tr.hidden = !abrir; });
+  }
+  document.getElementById("xml-body").addEventListener("click", (e) => alternarEmpresasDoLogin(e.target.closest("tr.xml-user")));
+  document.getElementById("xml-body").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      const linha = e.target.closest("tr.xml-user");
+      if (linha) { e.preventDefault(); alternarEmpresasDoLogin(linha); }
+    }
+  });
+
+  function baixarCsv(nome, linhas) {
     const csv = linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\r\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `xmls-baixados-${relatorioXml.mes}.csv`;
+    a.download = nome;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
+  }
+
+  // Uma linha por LOGIN (o total que importa para conferir/cobrar).
+  function exportarRelatorioXml() {
+    if (!relatorioXml) return;
+    const linhas = [["Mês", "Login (nome)", "E-mail", "Empresas", "XMLs no mês", "Total acumulado"]];
+    relatorioXml.usuarios.forEach((u) => linhas.push([relatorioXml.mes, u.usuarioNome || "", u.usuarioEmail, u.qtdEmpresas, u.xmlsNoMes, u.xmlsTotal]));
+    baixarCsv(`xmls-por-login-${relatorioXml.mes}.csv`, linhas);
+  }
+
+  // Detalhado: uma linha por empresa (certificado).
+  function exportarRelatorioXmlEmpresas() {
+    if (!relatorioXml) return;
+    const linhas = [["Mês", "Login (nome)", "E-mail", "Empresa", "CNPJ/CPF", "XMLs no mês", "Total acumulado"]];
+    relatorioXml.usuarios.forEach((u) =>
+      u.empresas.forEach((e) => linhas.push([relatorioXml.mes, u.usuarioNome || "", u.usuarioEmail, e.razaoSocial || "", e.cnpj, e.xmlsNoMes, e.xmlsTotal]))
+    );
+    baixarCsv(`xmls-por-empresa-${relatorioXml.mes}.csv`, linhas);
   }
 
   function textoStatus(u) {
@@ -517,6 +562,7 @@
   document.getElementById("select-mes-xml").addEventListener("change", carregarRelatorioXml);
   document.getElementById("btn-xml-atualizar").addEventListener("click", carregarRelatorioXml);
   document.getElementById("btn-xml-csv").addEventListener("click", exportarRelatorioXml);
+  document.getElementById("btn-xml-csv-empresas").addEventListener("click", exportarRelatorioXmlEmpresas);
   document.getElementById("btn-criar-usuario").addEventListener("click", criarUsuario);
   document.getElementById("btn-copiar-dados").addEventListener("click", copiarDados);
   ["input-novo-email", "input-novo-nome", "input-novo-senha"].forEach((id) => {

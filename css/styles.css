@@ -1747,3 +1747,11 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
 .xml-lista thead th { position: sticky; top: 0; z-index: 1; }
 .xml-lista .col-valor { text-align: right; font-variant-numeric: tabular-nums; }
 .xml-lista tr.xml-zerado { opacity: 0.55; }
+
+.xml-lista tr.xml-user[role="button"] { cursor: pointer; }
+.xml-lista tr.xml-user[role="button"]:hover { background: rgba(var(--gold-rgb), 0.06); }
+.xml-lista tr.xml-user.aberto { background: rgba(var(--gold-rgb), 0.09); }
+.xml-seta { display: inline-block; width: 16px; color: var(--gold); }
+.xml-lista tr.xml-emp td { background: var(--bg-0); font-size: 0.82rem; color: var(--text-1); padding-left: 30px; }
+.xml-lista tr.xml-emp td:not(:first-child) { padding-left: 14px; }
+.xml-emp-nome { color: var(--text-0); }
