@@ -1147,3 +1147,334 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
   padding: 0 4px;
 }
 .aviso-nfe-fechar:hover { opacity: 1; }
+
+
+/* =====================================================================
+   Consultar e Consulta em lote — passos numerados, cartões de escolha,
+   busca grande, resultado com filtros
+   ===================================================================== */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
+
+/* ----- Títulos de passo ----- */
+.passo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 30px 0 12px;
+  font-size: 1.12rem;
+  color: var(--text-0);
+}
+.passo-num {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--btn-text);
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  box-shadow: 0 3px 10px rgba(var(--gold-rgb), 0.35);
+}
+.passo-titulo.passo-no-card { margin-top: 0; }
+
+/* ----- Cartões "o que você tem em mãos" (usam .tab-btn por baixo) ----- */
+.modo-grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0 0 8px; }
+.modo-grade-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tab-btn.modo-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 18px;
+  border-radius: var(--radius);
+  text-align: left;
+  background: var(--bg-1);
+  border: 1.5px solid var(--border);
+  color: var(--text-1);
+  transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.tab-btn.modo-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.tab-btn.modo-card.active {
+  background: linear-gradient(135deg, rgba(var(--gold-rgb), 0.16), rgba(var(--gold-rgb), 0.04)), var(--bg-1);
+  border-color: var(--gold);
+  color: var(--text-0);
+  font-weight: 400;
+  box-shadow: 0 6px 20px rgba(var(--gold-rgb), 0.18);
+}
+.modo-icone {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.12);
+  border: 1px solid rgba(var(--gold-rgb), 0.25);
+  transition: all 0.15s;
+}
+.modo-card.active .modo-icone { color: var(--btn-text); background: linear-gradient(135deg, var(--gold), var(--gold-dark)); border-color: transparent; }
+.modo-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.modo-texto strong { font-size: 1rem; color: var(--text-0); }
+.modo-texto span { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+
+/* ----- Busca grande ----- */
+.busca-card { padding: 22px; }
+.busca-grande { display: flex; gap: 10px; align-items: stretch; }
+.busca-grande .campo-com-icone { flex: 1; min-width: 0; }
+.busca-grande .campo-com-icone svg { left: 16px; }
+.busca-grande .campo-com-icone input { padding: 15px 16px 15px 46px; font-size: 1.05rem; border-radius: 12px; }
+.busca-grande .btn { padding: 0 26px; font-size: 1rem; border-radius: 12px; white-space: nowrap; }
+.exemplos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.exemplos-rotulo { font-size: 0.82rem; color: var(--text-muted); margin-right: 2px; }
+.detalhe-ajuda { margin-top: 14px; }
+.detalhe-ajuda summary { cursor: pointer; font-size: 0.84rem; color: var(--text-muted); width: fit-content; }
+.detalhe-ajuda summary:hover { color: var(--gold); }
+.detalhe-ajuda .hint { line-height: 1.55; }
+
+/* ----- Área de resultado (placeholder enquanto vazia) ----- */
+.resultado-area:empty::before {
+  content: attr(data-vazio);
+  display: block;
+  padding: 26px 18px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+}
+.resultado-cabecalho { margin: 0 2px 12px; color: var(--text-muted); font-size: 0.88rem; }
+.resultado-cabecalho strong { color: var(--text-0); }
+
+/* ----- Operações como cartões ----- */
+.opcoes-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.opcao-card {
+  text-align: left;
+  padding: 13px 16px 13px 44px;
+  background: var(--bg-0);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-1);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, background 0.15s;
+}
+.opcao-card::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg-1);
+  transition: all 0.15s;
+}
+.opcao-card:hover { border-color: var(--gold); }
+.opcao-card.ativo { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.09); color: var(--text-0); font-weight: 600; }
+.opcao-card.ativo::before { border-color: var(--gold); background: var(--gold); box-shadow: inset 0 0 0 3px var(--bg-1); }
+
+/* ----- Chamada para a outra tela ----- */
+.cta-lote {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 34px;
+  padding: 18px 22px;
+  background: var(--bg-1);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cta-lote:hover { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.05); text-decoration: none; }
+.cta-lote-icone {
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.12);
+}
+.cta-lote-texto { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.cta-lote-texto strong { color: var(--text-0); font-size: 1rem; }
+.cta-lote-texto span { font-size: 0.86rem; color: var(--text-muted); }
+.cta-lote-seta { flex: none; color: var(--gold); font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+
+/* ----- Fluxo em 3 passos (lote) ----- */
+.fluxo {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 26px 0 4px;
+  padding: 0;
+  counter-reset: fluxo;
+}
+.fluxo li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  position: relative;
+}
+.fluxo li:not(:last-child)::after {
+  content: "›";
+  position: absolute;
+  right: -11px;
+  top: 50%;
+  transform: translateY(-52%);
+  width: 20px;
+  text-align: center;
+  font-size: 1.5rem;
+  color: var(--gold);
+  background: var(--bg-0);
+  z-index: 1;
+  line-height: 1;
+}
+.fluxo-num {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.14);
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+}
+.fluxo li > span:last-child { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fluxo strong { color: var(--text-0); font-size: 0.95rem; }
+.fluxo em { font-style: normal; font-size: 0.8rem; color: var(--text-muted); }
+
+/* ----- Envio + modelo (lote) ----- */
+.lote-grade { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.lote-grade .card { margin-bottom: 0; }
+.lote-modelo h3 { margin: 0 0 8px; color: var(--gold); font-size: 1rem; }
+.btn-modelo { margin-top: 12px; }
+.drop-grande {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 30px 20px;
+  background: var(--bg-0);
+  border-width: 2px;
+}
+.drop-grande strong { color: var(--text-0); font-size: 1.05rem; }
+.drop-grande u { color: var(--gold); text-decoration: none; font-weight: 600; }
+.drop-grande .hint { margin: 6px 0 0; }
+.drop-grande:hover, .drop-grande:focus-visible, .drop-grande.dragover {
+  border-color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.07);
+  outline: none;
+}
+.drop-grande.dragover { transform: scale(1.01); }
+.drop-icone {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.12);
+  margin-bottom: 6px;
+}
+.arquivo-enviado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: var(--verde-bg);
+  border: 1px solid var(--verde);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  color: var(--text-0);
+  min-width: 0;
+}
+.arquivo-enviado strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barra { height: 8px; margin-top: 12px; background: var(--bg-2); border-radius: 999px; overflow: hidden; }
+.barra > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold), #ffa363);
+  transition: width 0.2s ease;
+}
+.barra.completa > span { background: var(--verde); }
+
+/* ----- Resultado do lote ----- */
+.resumo-lote .passo-titulo { margin-top: 30px; }
+.resumo-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.resumo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--bg-1);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  color: var(--text-1);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.resumo-card:hover:not(:disabled) { border-color: var(--gold); }
+.resumo-card:disabled { opacity: 0.45; cursor: default; }
+.resumo-num { font-size: 1.6rem; font-weight: 700; color: var(--text-0); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.resumo-rotulo { font-size: 0.8rem; color: var(--text-muted); }
+.resumo-card.cor-verde .resumo-num { color: var(--verde); }
+.resumo-card.cor-amarelo .resumo-num { color: var(--amarelo); }
+.resumo-card.cor-vermelho .resumo-num { color: var(--vermelho); }
+.resumo-card.ativo { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.09); }
+.resumo-barra { display: flex; height: 8px; margin: 12px 0; border-radius: 999px; overflow: hidden; background: var(--bg-2); }
+.resumo-barra .seg-verde { background: var(--verde); }
+.resumo-barra .seg-amarelo { background: var(--amarelo); }
+.resumo-barra .seg-vermelho { background: var(--vermelho); }
+.resumo-barra .seg-nao { background: var(--text-muted); opacity: 0.6; }
+.resumo-filtro { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.resumo-filtro input { max-width: 340px; }
+.resumo-filtro .hint { margin: 0; }
+
+.table-wrap.lista-rolavel { max-height: 70vh; overflow: auto; background: var(--bg-1); }
+.lista-rolavel thead th { position: sticky; top: 0; z-index: 1; }
+
+/* ----- Responsivo ----- */
+@media (max-width: 860px) {
+  .modo-grade, .modo-grade-2, .fluxo, .lote-grade { grid-template-columns: 1fr; }
+  .fluxo li:not(:last-child)::after { display: none; }
+  .resumo-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .opcoes-grade { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .busca-grande { flex-direction: column; }
+  .busca-grande .btn { padding: 13px 20px; }
+  .cta-lote { flex-wrap: wrap; }
+  .cta-lote-seta { width: 100%; }
+}

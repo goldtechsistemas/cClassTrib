@@ -18,14 +18,60 @@
 
     <div id="aviso"></div>
 
-    <section class="instrucoes-formato">
-      <h2 class="section-title" style="margin-top:0;">Como formatar o arquivo antes de enviar</h2>
-      <p class="section-sub">Envie uma planilha do Excel (.xlsx) ou um arquivo CSV e receba a classificação de vários produtos de uma vez — por código NCM ou, se você só tiver o nome do produto, descubra o NCM automaticamente. O formato certo depende de qual aba você vai usar abaixo.</p>
-      <p class="hint limite-lote" style="margin-bottom:16px;"></p>
-      <div class="grid-3">
-        <div class="explainer-card">
-          <h3>Para "Classificar cClasstrib"</h3>
-          <p class="hint" style="margin-top:0;">Você já sabe o NCM de cada produto. Inclua uma coluna com o cabeçalho <strong>"NCM"</strong> — a coluna de descrição é opcional (ajuda a desambiguar) e pode estar em qualquer posição da planilha.</p>
+    <ol class="fluxo" aria-label="Como funciona">
+      <li><span class="fluxo-num">1</span><span><strong>Escolha o que você tem</strong><em>O NCM ou só o nome do produto</em></span></li>
+      <li><span class="fluxo-num">2</span><span><strong>Envie a planilha</strong><em>Arraste o arquivo .xlsx ou .csv</em></span></li>
+      <li><span class="fluxo-num">3</span><span><strong>Confira e exporte</strong><em>Filtre o resultado e baixe em CSV</em></span></li>
+    </ol>
+
+    <h2 class="passo-titulo"><span class="passo-num">1</span> O que a sua planilha tem?</h2>
+    <div class="tabs modo-grade modo-grade-2" role="tablist">
+      <button class="tab-btn modo-card active" data-tab="classificar" type="button" role="tab">
+        <span class="modo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>
+        </span>
+        <span class="modo-texto">
+          <strong>Já tenho o NCM de cada produto</strong>
+          <span>Classificar cClassTrib — uma coluna "NCM" (e, se quiser, a descrição).</span>
+        </span>
+      </button>
+      <button class="tab-btn modo-card" data-tab="descobrir" type="button" role="tab">
+        <span class="modo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </span>
+        <span class="modo-texto">
+          <strong>Só tenho o nome dos produtos</strong>
+          <span>Descobrir NCM por descrição — uma única coluna com o nome de cada produto.</span>
+        </span>
+      </button>
+    </div>
+
+    <!-- ===== Classificar cClassTrib (já tem o NCM) ===== -->
+    <div class="panel active" id="panel-classificar">
+      <div class="lote-grade">
+        <div class="card lote-envio">
+          <h2 class="passo-titulo passo-no-card"><span class="passo-num">2</span> Envie a planilha</h2>
+          <div class="file-drop drop-grande" id="drop-area" role="button" tabindex="0">
+            <div class="drop-icone" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+            </div>
+            <strong>Arraste a planilha até aqui</strong>
+            <span>ou <u>clique para escolher</u> (.xlsx ou .csv)</span>
+            <p class="hint limite-lote"></p>
+            <input type="file" id="file-input" accept=".xlsx,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" />
+          </div>
+          <div class="arquivo-enviado" id="arquivo-classificar" style="display:none;"></div>
+          <div class="barra" id="barra-classificar" style="display:none;"><span></span></div>
+          <div class="progress-line" id="progress-line"></div>
+          <div class="field-actions">
+            <button class="btn secondary" id="btn-exemplo" type="button">Testar com um exemplo</button>
+            <button class="btn" id="btn-exportar" type="button" disabled>Exportar resultado em CSV</button>
+          </div>
+        </div>
+
+        <aside class="card lote-modelo">
+          <h3>Como montar a planilha</h3>
+          <p class="hint" style="margin-top:0;">Inclua uma coluna com o cabeçalho <strong>"NCM"</strong>. A coluna de descrição é opcional (ajuda a desambiguar) e pode estar em qualquer posição.</p>
           <div class="planilha-exemplo">
             <table>
               <thead><tr><th class="col-canto"></th><th>A</th><th>B</th></tr></thead>
@@ -38,48 +84,16 @@
               </tbody>
             </table>
           </div>
-        </div>
-        <div class="explainer-card">
-          <h3>Para "Descobrir NCM por descrição"</h3>
-          <p class="hint" style="margin-top:0;">Você só tem o nome dos produtos, sem o NCM. Envie uma planilha com <strong>uma única coluna</strong>, só com a descrição — o site descobre o NCM mais provável automaticamente.</p>
-          <div class="planilha-exemplo">
-            <table>
-              <thead><tr><th class="col-canto"></th><th>A</th></tr></thead>
-              <tbody>
-                <tr><th>1</th><td class="cel-cabecalho">Descrição</td></tr>
-                <tr><th>2</th><td>ORIGINAL 473ML</td></tr>
-                <tr><th>3</th><td>BRAHMA</td></tr>
-                <tr><th>4</th><td>HEINEKEN 473ML</td></tr>
-                <tr><th>5</th><td>AMSTEL 473ML</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="classificar">Classificar cClasstrib</button>
-      <button class="tab-btn" data-tab="descobrir">Descobrir NCM por descrição</button>
-    </div>
-
-    <div class="panel active" id="panel-classificar">
-      <div class="card">
-        <div class="file-drop" id="drop-area">
-          <p><strong>Arraste um arquivo .xlsx ou .csv aqui</strong> ou clique para selecionar</p>
-          <p class="hint">Aceita "Pasta de Trabalho do Excel" (.xlsx, lê a primeira aba) ou CSV, com uma coluna só de NCM ou várias colunas (ex.: Descrição, CST, CEST, NCM) — o site procura automaticamente a coluna chamada "NCM" pelo cabeçalho. Em CSV, separadores "," ou ";" são detectados sozinhos, e acentuação em Windows-1252 é corrigida automaticamente.</p>
-          <p class="hint limite-lote"></p>
-          <input type="file" id="file-input" accept=".xlsx,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" />
-        </div>
-        <div class="progress-line" id="progress-line"></div>
-        <div class="field-actions">
-          <button class="btn secondary" id="btn-exemplo">Usar exemplo de CSV</button>
-          <button class="btn" id="btn-exportar" disabled>Exportar resultado em CSV</button>
-        </div>
+          <button class="btn secondary btn-sm btn-modelo" id="btn-modelo-classificar" type="button">⬇ Baixar planilha modelo (CSV)</button>
+          <details class="detalhe-ajuda">
+            <summary>Mais detalhes sobre o arquivo</summary>
+            <p class="hint">Aceita "Pasta de Trabalho do Excel" (.xlsx, lê a primeira aba) ou CSV, com uma coluna só de NCM ou várias colunas (ex.: Descrição, CST, CEST, NCM) — o site procura automaticamente a coluna chamada "NCM" pelo cabeçalho. Em CSV, separadores "," ou ";" são detectados sozinhos, e acentuação em Windows-1252 é corrigida automaticamente.</p>
+          </details>
+        </aside>
       </div>
 
-      <div id="resumo"></div>
-      <div class="table-wrap" id="tabela-wrap" style="display:none">
+      <div id="resumo" class="resumo-lote"></div>
+      <div class="table-wrap lista-rolavel" id="tabela-wrap" style="display:none">
         <table>
           <thead>
             <tr>
@@ -99,27 +113,57 @@
       </div>
     </div>
 
+    <!-- ===== Descobrir NCM por descrição (só tem o nome) ===== -->
     <div class="panel" id="panel-descobrir">
-      <div class="card">
-        <div class="file-drop" id="drop-area-descobrir">
-          <p><strong>Arraste um arquivo .xlsx ou .csv aqui</strong> ou clique para selecionar</p>
-          <p class="hint">
-            Uma coluna com o <strong>nome/descrição do produto</strong> por linha (ex.: "BRAHMA 350ML", "parafuso sextavado", "água mineral") —
-            o site busca o NCM mais provável na <strong>tabela oficial completa</strong> (mesma da aba "Descobrir NCM" da consulta única) e já
-            classifica tributariamente. Termos ambíguos mostram quantos candidatos foram encontrados; confira o resultado antes de usar.
-          </p>
-          <p class="hint limite-lote"></p>
-          <input type="file" id="file-input-descobrir" accept=".xlsx,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" />
+      <div class="lote-grade">
+        <div class="card lote-envio">
+          <h2 class="passo-titulo passo-no-card"><span class="passo-num">2</span> Envie a planilha</h2>
+          <div class="file-drop drop-grande" id="drop-area-descobrir" role="button" tabindex="0">
+            <div class="drop-icone" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+            </div>
+            <strong>Arraste a planilha até aqui</strong>
+            <span>ou <u>clique para escolher</u> (.xlsx ou .csv)</span>
+            <p class="hint limite-lote"></p>
+            <input type="file" id="file-input-descobrir" accept=".xlsx,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" />
+          </div>
+          <div class="arquivo-enviado" id="arquivo-descobrir" style="display:none;"></div>
+          <div class="barra" id="barra-descobrir" style="display:none;"><span></span></div>
+          <div class="progress-line" id="progress-line-descobrir"></div>
+          <div class="field-actions">
+            <button class="btn secondary" id="btn-exemplo-descobrir" type="button">Testar com um exemplo</button>
+            <button class="btn" id="btn-exportar-descobrir" type="button" disabled>Exportar resultado em CSV</button>
+          </div>
         </div>
-        <div class="progress-line" id="progress-line-descobrir"></div>
-        <div class="field-actions">
-          <button class="btn secondary" id="btn-exemplo-descobrir">Usar exemplo de CSV</button>
-          <button class="btn" id="btn-exportar-descobrir" disabled>Exportar resultado em CSV</button>
-        </div>
+
+        <aside class="card lote-modelo">
+          <h3>Como montar a planilha</h3>
+          <p class="hint" style="margin-top:0;">Uma <strong>única coluna</strong>, só com o nome/descrição de cada produto. O site descobre o NCM mais provável e já classifica.</p>
+          <div class="planilha-exemplo">
+            <table>
+              <thead><tr><th class="col-canto"></th><th>A</th></tr></thead>
+              <tbody>
+                <tr><th>1</th><td class="cel-cabecalho">Descrição</td></tr>
+                <tr><th>2</th><td>ORIGINAL 473ML</td></tr>
+                <tr><th>3</th><td>BRAHMA</td></tr>
+                <tr><th>4</th><td>HEINEKEN 473ML</td></tr>
+                <tr><th>5</th><td>AMSTEL 473ML</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button class="btn secondary btn-sm btn-modelo" id="btn-modelo-descobrir" type="button">⬇ Baixar planilha modelo (CSV)</button>
+          <details class="detalhe-ajuda">
+            <summary>Mais detalhes sobre a busca</summary>
+            <p class="hint">
+              Ex.: "BRAHMA 350ML", "parafuso sextavado", "água mineral" — o site busca o NCM mais provável na <strong>tabela oficial completa</strong> (mesma da opção "Só sei o nome do produto" da consulta única) e já
+              classifica tributariamente. Termos ambíguos mostram quantos candidatos foram encontrados; confira o resultado antes de usar.
+            </p>
+          </details>
+        </aside>
       </div>
 
-      <div id="resumo-descobrir"></div>
-      <div class="table-wrap" id="tabela-wrap-descobrir" style="display:none">
+      <div id="resumo-descobrir" class="resumo-lote"></div>
+      <div class="table-wrap lista-rolavel" id="tabela-wrap-descobrir" style="display:none">
         <table>
           <thead>
             <tr>
@@ -135,6 +179,17 @@
         </table>
       </div>
     </div>
+
+    <a class="cta-lote" href="index.html">
+      <span class="cta-lote-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </span>
+      <span class="cta-lote-texto">
+        <strong>Só precisa consultar um produto?</strong>
+        <span>Use a consulta individual: digite o NCM ou o nome e veja o resultado na hora.</span>
+      </span>
+      <span class="cta-lote-seta" aria-hidden="true">Consultar →</span>
+    </a>
   </main>
 
   <div id="footer"></div>

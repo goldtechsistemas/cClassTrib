@@ -16,12 +16,17 @@
     btn.addEventListener("click", () => ativarAba(btn.dataset.tab));
   });
 
+  // "2 resultado(s) para 1006" — dá um título ao que apareceu abaixo da busca.
+  function cabecalhoResultado(quantidade, termo) {
+    return `<p class="resultado-cabecalho"><strong>${quantidade}</strong> resultado(s) para <strong>${window.Components.esc(termo)}</strong></p>`;
+  }
+
   function exibirResultados(container, resultados, consultaOriginal) {
     if (!resultados || resultados.length === 0) {
       container.innerHTML = renderResultado(window.Rules.naoEncontrado(consultaOriginal));
       return;
     }
-    container.innerHTML = resultados.map(renderResultado).join("");
+    container.innerHTML = cabecalhoResultado(resultados.length, consultaOriginal) + resultados.map(renderResultado).join("");
   }
 
   // Navegadores/gerenciadores de senha às vezes enfiam o e-mail do login no
@@ -82,6 +87,21 @@
 
   document.getElementById("btn-buscar-ncm").addEventListener("click", buscarCclasstrib);
   inputNcm.addEventListener("keydown", (e) => { if (e.key === "Enter") buscarCclasstrib(); });
+
+  // Consulta sozinha enquanto digita (a base é local, a resposta é imediata):
+  // espera uma pausa curta e só a partir de 4 dígitos — "10" casaria com
+  // quase tudo e não ajudaria. Campo vazio limpa o resultado.
+  let esperaNcm = null;
+  inputNcm.addEventListener("input", () => {
+    clearTimeout(esperaNcm);
+    const digitos = inputNcm.value.replace(/\D/g, "");
+    if (!digitos) {
+      resultadoNcm.innerHTML = "";
+      return;
+    }
+    if (digitos.length < 4) return;
+    esperaNcm = setTimeout(buscarCclasstrib, 350);
+  });
 
   // Usado pela aba "Descobrir NCM" para levar um código encontrado direto
   // para a classificação tributária, sem o usuário ter que copiar/colar.
@@ -166,11 +186,24 @@
         </div>`;
       return;
     }
-    resultadoDescobrirNcm.innerHTML = resultados.map(window.Components.renderNcmBuscaResultado).join("");
+    resultadoDescobrirNcm.innerHTML = cabecalhoResultado(resultados.length, termo) + resultados.map(window.Components.renderNcmBuscaResultado).join("");
   }
 
   document.getElementById("btn-descobrir-ncm").addEventListener("click", buscarDescobrirNcm);
   inputDescobrirNcm.addEventListener("keydown", (e) => { if (e.key === "Enter") buscarDescobrirNcm(); });
+
+  // Igual ao NCM: busca sozinha após uma pausa na digitação (3+ letras).
+  let esperaDescricao = null;
+  inputDescobrirNcm.addEventListener("input", () => {
+    clearTimeout(esperaDescricao);
+    const termo = inputDescobrirNcm.value.trim();
+    if (!termo) {
+      resultadoDescobrirNcm.innerHTML = "";
+      return;
+    }
+    if (termo.length < 3) return;
+    esperaDescricao = setTimeout(buscarDescobrirNcm, 450);
+  });
 
   // Delegação de evento para os botões "Ver classificação tributária →"
   // injetados dinamicamente nos cards de resultado.
@@ -196,5 +229,41 @@
   }
 
   document.getElementById("btn-buscar-operacao").addEventListener("click", buscarPorOperacao);
+
+  // As operações viram cartões clicáveis (o <select> continua por trás, só
+  // guardando o valor): escolher um cartão já mostra a regra.
+  const opcoesOperacao = document.getElementById("opcoes-operacao");
+  function marcarOperacao() {
+    opcoesOperacao.querySelectorAll(".opcao-card").forEach((b) => {
+      const ativo = b.dataset.valor === selectOperacao.value;
+      b.classList.toggle("ativo", ativo);
+      b.setAttribute("aria-checked", String(ativo));
+    });
+  }
+  opcoesOperacao.innerHTML = Array.from(selectOperacao.options)
+    .map((o) => `<button type="button" class="opcao-card" role="radio" aria-checked="false" data-valor="${window.Components.esc(o.value)}">${window.Components.esc(o.textContent)}</button>`)
+    .join("");
+  opcoesOperacao.addEventListener("click", (e) => {
+    const botao = e.target.closest(".opcao-card");
+    if (!botao) return;
+    selectOperacao.value = botao.dataset.valor;
+    marcarOperacao();
+    buscarPorOperacao();
+  });
+  marcarOperacao();
   buscarPorOperacao(); // mostra a primeira por padrão
+
+  // "Experimente: 1006.20.00 · arroz" — preenche o campo e já consulta.
+  document.querySelectorAll(".chip[data-exemplo]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const painel = chip.closest(".panel");
+      if (painel && painel.id === "panel-ncm") {
+        inputNcm.value = chip.dataset.exemplo;
+        buscarCclasstrib();
+      } else {
+        inputDescobrirNcm.value = chip.dataset.exemplo;
+        buscarDescobrirNcm();
+      }
+    });
+  });
 })();

@@ -18,61 +18,130 @@
 
     <div id="aviso"></div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="ncm">Consultar cClassTrib</button>
-      <button class="tab-btn" data-tab="descobrir-ncm">Descobrir NCM</button>
-      <button class="tab-btn" data-tab="operacao">Por tipo de operação</button>
+    <h2 class="passo-titulo"><span class="passo-num">1</span> O que você tem em mãos?</h2>
+    <div class="tabs modo-grade" role="tablist">
+      <button class="tab-btn modo-card active" data-tab="ncm" type="button" role="tab">
+        <span class="modo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>
+        </span>
+        <span class="modo-texto">
+          <strong>Já sei o NCM</strong>
+          <span>Digite o código e veja o cClassTrib, a redução de alíquota e a base legal.</span>
+        </span>
+      </button>
+      <button class="tab-btn modo-card" data-tab="descobrir-ncm" type="button" role="tab">
+        <span class="modo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </span>
+        <span class="modo-texto">
+          <strong>Só sei o nome do produto</strong>
+          <span>Descreva o produto (ex.: "água mineral") e o site encontra o NCM mais provável.</span>
+        </span>
+      </button>
+      <button class="tab-btn modo-card" data-tab="operacao" type="button" role="tab">
+        <span class="modo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13l-3-3M21 17H8l3 3"/></svg>
+        </span>
+        <span class="modo-texto">
+          <strong>É um tipo de operação</strong>
+          <span>Exportação, doação, Zona Franca… veja a regra tributária que se aplica.</span>
+        </span>
+      </button>
     </div>
 
+    <!-- ===== Já sei o NCM ===== -->
     <div class="panel active" id="panel-ncm">
-      <p class="tab-instrucao">Para descobrir o cClassTrib do produto, basta digitar o NCM no campo abaixo e clicar em "Consultar".</p>
-      <div class="card">
-        <label for="input-ncm">Código NCM</label>
-        <input type="text" id="input-ncm" name="ncm-consulta" placeholder="Ex.: 1006.20.00 ou 10062000" inputmode="numeric" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" />
-        <div class="field-actions">
-          <button class="btn" id="btn-buscar-ncm">Consultar</button>
+      <h2 class="passo-titulo"><span class="passo-num">2</span> Digite o NCM do produto</h2>
+      <div class="card busca-card">
+        <label for="input-ncm" class="sr-only">Código NCM</label>
+        <div class="busca-grande">
+          <div class="campo-com-icone">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="input-ncm" name="ncm-consulta" placeholder="Ex.: 1006.20.00 ou 10062000" inputmode="numeric" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" />
+          </div>
+          <button class="btn" id="btn-buscar-ncm" type="button">Consultar</button>
         </div>
-        <p class="hint">
-          Busca dentro dos ~200 itens dos Anexos com tratamento tributário especial (zero, redução ou Imposto Seletivo) —
-          não é a tabela NCM inteira. Não sabe o NCM do seu produto? Use a aba "Descobrir NCM".
-        </p>
+        <div class="exemplos">
+          <span class="exemplos-rotulo">Experimente:</span>
+          <button class="chip" type="button" data-exemplo="1006.20.00">1006.20.00 · arroz</button>
+          <button class="chip" type="button" data-exemplo="0401.10.10">0401.10.10 · leite</button>
+          <button class="chip" type="button" data-exemplo="2203.00.00">2203.00.00 · cerveja</button>
+          <button class="chip" type="button" data-exemplo="8713.10.00">8713.10.00 · cadeira de rodas</button>
+        </div>
+        <details class="detalhe-ajuda">
+          <summary>Como funciona esta busca?</summary>
+          <p class="hint">
+            Basta digitar — a consulta aparece sozinha enquanto você escreve (a partir de 4 dígitos) e também ao clicar em "Consultar".
+            Busca dentro dos ~200 itens dos Anexos com tratamento tributário especial (zero, redução ou Imposto Seletivo) —
+            não é a tabela NCM inteira. Não sabe o NCM do seu produto? Escolha "Só sei o nome do produto" acima.
+          </p>
+        </details>
       </div>
-      <div id="resultado-ncm"></div>
+      <h2 class="passo-titulo"><span class="passo-num">3</span> Veja a classificação</h2>
+      <div id="resultado-ncm" class="resultado-area" data-vazio="A classificação tributária do NCM aparece aqui."></div>
     </div>
 
+    <!-- ===== Só sei o nome do produto ===== -->
     <div class="panel" id="panel-descobrir-ncm">
-      <p class="tab-instrucao">Não sabe o NCM do produto? Descreva-o abaixo (ex.: "parafuso sextavado") e o site encontra o código mais provável na tabela oficial completa.</p>
-      <div class="card">
-        <label for="input-descobrir-ncm">Descreva o produto (ex.: água, parafuso, notebook...)</label>
-        <input type="text" id="input-descobrir-ncm" name="descricao-produto" placeholder="Ex.: água mineral" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" />
-        <div class="field-actions">
-          <button class="btn" id="btn-descobrir-ncm">Buscar NCM</button>
+      <h2 class="passo-titulo"><span class="passo-num">2</span> Descreva o produto</h2>
+      <div class="card busca-card">
+        <label for="input-descobrir-ncm" class="sr-only">Descreva o produto</label>
+        <div class="busca-grande">
+          <div class="campo-com-icone">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="input-descobrir-ncm" name="descricao-produto" placeholder="Ex.: água mineral, arroz, parafuso sextavado…" autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other" />
+          </div>
+          <button class="btn" id="btn-descobrir-ncm" type="button">Buscar NCM</button>
         </div>
-        <p class="hint">
-          Busca na <strong>tabela NCM oficial completa</strong> (Receita Federal/Siscomex, <span id="ncm-tabela-info"></span>) —
-          não só nos itens com tratamento especial. Termos genéricos (ex.: "água") costumam retornar vários códigos candidatos;
-          escolha o que corresponde exatamente ao seu produto. Quando o código tiver alíquota reduzida/zero, aparece um atalho
-          direto para a classificação tributária completa.
-        </p>
+        <div class="exemplos">
+          <span class="exemplos-rotulo">Experimente:</span>
+          <button class="chip" type="button" data-exemplo="água mineral">água mineral</button>
+          <button class="chip" type="button" data-exemplo="cadeira de rodas">cadeira de rodas</button>
+          <button class="chip" type="button" data-exemplo="parafuso sextavado">parafuso sextavado</button>
+          <button class="chip" type="button" data-exemplo="arroz">arroz</button>
+          <button class="chip" type="button" data-exemplo="cerveja">cerveja</button>
+          <button class="chip" type="button" data-exemplo="heineken">heineken</button>
+        </div>
+        <details class="detalhe-ajuda">
+          <summary>Como funciona esta busca?</summary>
+          <p class="hint">
+            A busca aparece sozinha enquanto você digita. Ela usa a <strong>tabela NCM oficial completa</strong> (Receita Federal/Siscomex, <span id="ncm-tabela-info"></span>) —
+            não só os itens com tratamento especial. Termos genéricos (ex.: "água") costumam retornar vários códigos candidatos;
+            escolha o que corresponde exatamente ao seu produto. Quando o código tiver alíquota reduzida/zero, aparece um atalho
+            direto para a classificação tributária completa.
+          </p>
+        </details>
       </div>
-      <div id="resultado-descobrir-ncm"></div>
+      <h2 class="passo-titulo"><span class="passo-num">3</span> Escolha o código certo</h2>
+      <div id="resultado-descobrir-ncm" class="resultado-area" data-vazio="Os códigos NCM candidatos aparecem aqui."></div>
     </div>
 
+    <!-- ===== Por tipo de operação ===== -->
     <div class="panel" id="panel-operacao">
-      <p class="tab-instrucao">Selecione o tipo de operação (ex.: exportação, doação) para ver a regra tributária específica que se aplica a ela.</p>
-      <div class="card">
-        <label for="select-operacao">Tipo de operação</label>
-        <select id="select-operacao"></select>
-        <div class="field-actions">
-          <button class="btn" id="btn-buscar-operacao">Consultar regra</button>
+      <h2 class="passo-titulo"><span class="passo-num">2</span> Escolha o tipo de operação</h2>
+      <div class="card busca-card">
+        <label for="select-operacao" class="sr-only">Tipo de operação</label>
+        <select id="select-operacao" class="sr-only" tabindex="-1" aria-hidden="true"></select>
+        <div class="opcoes-grade" id="opcoes-operacao" role="radiogroup" aria-label="Tipo de operação"></div>
+        <div class="field-actions" style="margin-top:14px;">
+          <button class="btn" id="btn-buscar-operacao" type="button">Consultar regra</button>
+          <span class="hint" style="align-self:center;margin:0;">A regra também aparece sozinha ao escolher uma opção.</span>
         </div>
       </div>
-      <div id="resultado-operacao"></div>
+      <h2 class="passo-titulo"><span class="passo-num">3</span> Veja a regra aplicável</h2>
+      <div id="resultado-operacao" class="resultado-area" data-vazio="A regra tributária da operação aparece aqui."></div>
     </div>
 
-    <p class="hint" style="margin-top:28px;">
-      Precisa classificar muitos NCMs de uma vez? Use a <a href="lote.html">consulta em lote (CSV)</a>.
-    </p>
+    <a class="cta-lote" href="lote.html">
+      <span class="cta-lote-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+      </span>
+      <span class="cta-lote-texto">
+        <strong>Tem muitos produtos para classificar?</strong>
+        <span>Envie uma planilha (Excel ou CSV) e receba a classificação de todos de uma vez.</span>
+      </span>
+      <span class="cta-lote-seta" aria-hidden="true">Consulta em lote →</span>
+    </a>
   </main>
 
   <div id="footer"></div>
