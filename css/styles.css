@@ -1063,3 +1063,57 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
 .nf-numero { color: var(--text-0); font-size: 0.95rem; }
 .nota-emitente { display: flex; flex-direction: column; gap: 2px; min-width: 220px; }
 .nota-emitente .empresa-nome { font-weight: 600; }
+
+
+/* ---------- Notas fiscais: painel "Informações do período" ---------- */
+.painel-periodo {
+  margin: 0 0 18px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.painel-cabecalho {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: none;
+  border: none;
+  color: var(--text-0);
+  font-family: var(--font);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+.painel-cabecalho:hover { background: rgba(var(--gold-rgb), 0.05); }
+.painel-cabecalho > svg:first-child { color: var(--gold); flex: none; }
+.painel-subtitulo { margin-left: 4px; font-size: 0.84rem; color: var(--text-muted); flex: 1; }
+.painel-seta { margin-left: auto; color: var(--text-muted); transition: transform 0.2s; flex: none; }
+.painel-periodo.recolhido .painel-seta { transform: rotate(-90deg); }
+.painel-periodo.recolhido .painel-corpo { display: none; }
+.painel-corpo { padding: 2px 18px 16px; border-top: 1px solid var(--border); }
+.painel-meses { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 0; }
+.chip.ativo { background: rgba(var(--gold-rgb), 0.16); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+.painel-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.painel-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+.painel-cartao.destaque { border-color: rgba(var(--gold-rgb), 0.45); box-shadow: inset 3px 0 0 var(--gold); }
+.painel-rotulo { font-size: 0.8rem; color: var(--text-muted); }
+.painel-valor { font-size: 1.3rem; color: var(--text-0); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.painel-sub { font-size: 0.74rem; color: var(--text-muted); min-height: 1em; }
+.painel-nota { margin: 12px 2px 0; line-height: 1.5; }

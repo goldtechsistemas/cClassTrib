@@ -28,6 +28,14 @@
   const EMPRESAS_VISIVEIS_SEM_ROLAGEM = 10;
   const NOTAS_VISIVEIS_SEM_ROLAGEM = 20;
   const notasRodape = document.getElementById("notas-rodape");
+  const painelPeriodo = document.getElementById("painel-periodo");
+  const btnPainelPeriodo = document.getElementById("btn-painel-periodo");
+  const painelSubtitulo = document.getElementById("painel-subtitulo");
+  const painelMeses = document.getElementById("painel-meses");
+  const painelGrade = document.getElementById("painel-grade");
+  const painelNota = document.getElementById("painel-nota");
+  let notasDoPainel = [];
+  let painelMesSelecionado = "todos";
 
   const notasSecao = document.getElementById("notas-secao");
   const notasTitulo = document.getElementById("notas-titulo");
@@ -402,8 +410,11 @@
       notasWrap.style.display = "none";
       notasAcoesLote.style.display = "none";
       notasRodape.style.display = "none";
+      painelPeriodo.style.display = "none";
       return;
     }
+    notasDoPainel = notas;
+    renderizarPainelPeriodo();
     notasVazio.style.display = "none";
     notasWrap.style.display = "";
     notasAcoesLote.style.display = "";
@@ -474,6 +485,134 @@
       });
     });
   }
+
+  // ----- Painel "Informações do período": totais das notas que estão na tela,
+  // por mês de emissão (dia do calendário de Brasília) ou do período todo.
+  const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+  function chaveMes(iso) {
+    if (!iso) return "sem-data";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "sem-data";
+    const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).formatToParts(d);
+    const ano = partes.find((x) => x.type === "year").value;
+    const mes = partes.find((x) => x.type === "month").value;
+    return `${ano}-${mes}`;
+  }
+
+  function rotuloMes(chave, longo) {
+    if (chave === "sem-data") return "Sem data";
+    const [ano, mes] = chave.split("-");
+    return longo ? `${MESES_LONGOS[Number(mes) - 1]} de ${ano}` : `${MESES_CURTOS[Number(mes) - 1]}/${ano}`;
+  }
+
+  function calcularPainel(notas) {
+    const r = { total: notas.length, autorizadas: 0, outras: 0, valor: 0, semXml: 0, icms: 0, icmsSt: 0, ipi: 0, pis: 0, cofins: 0, totTrib: 0 };
+    notas.forEach((n) => {
+      // Cancelada/denegada não são compra de verdade: contam em "Total de
+      // notas", mas ficam fora dos valores e dos impostos.
+      if (n.situacao !== "autorizada") {
+        r.outras += 1;
+        return;
+      }
+      r.autorizadas += 1;
+      r.valor += Number(n.vNf) || 0;
+      if (!n.trib) {
+        r.semXml += 1;
+        return;
+      }
+      r.icms += n.trib.icms || 0;
+      r.icmsSt += n.trib.icmsSt || 0;
+      r.ipi += n.trib.ipi || 0;
+      r.pis += n.trib.pis || 0;
+      r.cofins += n.trib.cofins || 0;
+      r.totTrib += n.trib.totTrib || 0;
+    });
+    return r;
+  }
+
+  function cartaoPainel(rotulo, valor, sub, destaque) {
+    return `
+      <div class="painel-cartao${destaque ? " destaque" : ""}">
+        <span class="painel-rotulo">${esc(rotulo)}</span>
+        <strong class="painel-valor">${esc(valor)}</strong>
+        <span class="painel-sub">${esc(sub || " ")}</span>
+      </div>`;
+  }
+
+  function renderizarPainelPeriodo() {
+    const meses = Array.from(new Set(notasDoPainel.map((n) => chaveMes(n.dhEmi)))).sort().reverse();
+    if (painelMesSelecionado !== "todos" && !meses.includes(painelMesSelecionado)) painelMesSelecionado = "todos";
+    // Um mês só: não faz sentido oferecer escolha.
+    if (meses.length === 1) painelMesSelecionado = meses[0];
+    else if (meses.length > 1 && painelMesSelecionado !== "todos" && !meses.includes(painelMesSelecionado)) painelMesSelecionado = "todos";
+
+    painelMeses.innerHTML =
+      meses.length > 1
+        ? [`<button type="button" class="chip${painelMesSelecionado === "todos" ? " ativo" : ""}" data-mes="todos">Todo o período</button>`]
+            .concat(
+              meses.map(
+                (m) => `<button type="button" class="chip${painelMesSelecionado === m ? " ativo" : ""}" data-mes="${esc(m)}">${esc(rotuloMes(m, false))}</button>`
+              )
+            )
+            .join("")
+        : "";
+    painelMeses.style.display = meses.length > 1 ? "" : "none";
+
+    const visiveis = painelMesSelecionado === "todos" ? notasDoPainel : notasDoPainel.filter((n) => chaveMes(n.dhEmi) === painelMesSelecionado);
+    const t = calcularPainel(visiveis);
+    const mesUnico = painelMesSelecionado !== "todos";
+    const pct = (v) => (t.valor > 0 ? `${((v / t.valor) * 100).toFixed(1).replace(".", ",")}% do valor total` : "");
+
+    const mesLongo = mesUnico ? rotuloMes(painelMesSelecionado, true) : "";
+    painelSubtitulo.textContent = mesUnico ? mesLongo.charAt(0).toUpperCase() + mesLongo.slice(1) : `${meses.length} meses nas notas exibidas`;
+    const subNotas = t.outras ? `${t.autorizadas} autorizada(s) · ${t.outras} cancelada(s)/denegada(s)` : `${t.autorizadas} autorizada(s)`;
+    painelGrade.innerHTML = [
+      cartaoPainel("Total de notas", String(t.total), subNotas, true),
+      cartaoPainel(mesUnico ? "Valor total do mês" : "Valor total do período", formatarValor(t.valor), "notas autorizadas", true),
+      cartaoPainel("Valor total aprox. de tributos", formatarValor(t.totTrib), pct(t.totTrib)),
+      cartaoPainel("Valor total de COFINS", formatarValor(t.cofins), pct(t.cofins)),
+      cartaoPainel("Valor total de ICMS", formatarValor(t.icms), pct(t.icms)),
+      cartaoPainel("Valor total de ICMS ST", formatarValor(t.icmsSt), pct(t.icmsSt)),
+      cartaoPainel("Valor total de IPI", formatarValor(t.ipi), pct(t.ipi)),
+      cartaoPainel("Valor total de PIS", formatarValor(t.pis), pct(t.pis)),
+    ].join("");
+
+    const avisos = [];
+    if (t.semXml) avisos.push(`${t.semXml} nota(s) ainda em "Resumo" (sem XML completo) entram no valor, mas ficam fora dos impostos — dê ciência e sincronize de novo para completar.`);
+    if (t.outras) avisos.push("Notas canceladas ou denegadas contam em \"Total de notas\", mas não entram nos valores.");
+    if (notasDoPainel.length >= LIMITE_NOTAS_LISTA) avisos.push(`Cálculo sobre as ${LIMITE_NOTAS_LISTA} notas mais recentes — refine o filtro para ver o resto.`);
+    avisos.push("Impostos conforme o total informado no XML de cada nota. O \"aprox. de tributos\" só aparece nas notas que o emitente preencheu.");
+    painelNota.textContent = avisos.join(" ");
+    painelPeriodo.style.display = "";
+  }
+
+  painelMeses.addEventListener("click", (e) => {
+    const botao = e.target.closest("[data-mes]");
+    if (!botao) return;
+    painelMesSelecionado = botao.dataset.mes;
+    renderizarPainelPeriodo();
+  });
+
+  function aplicarPainelRecolhido(recolhido) {
+    painelPeriodo.classList.toggle("recolhido", recolhido);
+    btnPainelPeriodo.setAttribute("aria-expanded", String(!recolhido));
+  }
+  try {
+    aplicarPainelRecolhido(localStorage.getItem("cclasstrib-painel-periodo") === "recolhido");
+  } catch (e) {
+    /* sem localStorage: painel começa aberto */
+  }
+  btnPainelPeriodo.addEventListener("click", () => {
+    const recolher = !painelPeriodo.classList.contains("recolhido");
+    aplicarPainelRecolhido(recolher);
+    try {
+      localStorage.setItem("cclasstrib-painel-periodo", recolher ? "recolhido" : "aberto");
+    } catch (e) {
+      /* só uma conveniência */
+    }
+  });
 
   // Até 20 notas a lista cresce normalmente; a partir daí ganha rolagem
   // própria (cabeçalho fixo) com a altura de 20 linhas, no máximo 85% da tela.

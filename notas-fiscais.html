@@ -154,6 +154,20 @@
         <p class="hint filtro-nota">A sincronização com a SEFAZ sempre traz tudo que estiver pendente (o protocolo dela não permite pedir só um período) — aqui você filtra o que já foi sincronizado, para ver ou baixar só as notas desejadas.</p>
       </div>
 
+      <section class="painel-periodo" id="painel-periodo" style="display:none;">
+        <button type="button" class="painel-cabecalho" id="btn-painel-periodo" aria-expanded="true" aria-controls="painel-corpo">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <strong>Informações do período</strong>
+          <span class="painel-subtitulo" id="painel-subtitulo"></span>
+          <svg class="painel-seta" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="painel-corpo" id="painel-corpo">
+          <div class="painel-meses" id="painel-meses" role="tablist" aria-label="Mês das notas"></div>
+          <div class="painel-grade" id="painel-grade"></div>
+          <p class="hint painel-nota" id="painel-nota"></p>
+        </div>
+      </section>
+
       <div id="notas-vazio" class="hint" style="display:none;">Nenhuma nota encontrada ainda para esta empresa. Clique em "Sincronizar agora".</div>
       <div id="notas-acoes-lote" class="notas-barra" style="display:none;">
         <div class="notas-barra-botoes">
