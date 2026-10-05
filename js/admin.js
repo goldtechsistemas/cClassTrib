@@ -103,6 +103,81 @@
     viewPainel.style.display = "";
     document.getElementById("texto-admin-logado").textContent = "Logado como " + emailAdmin;
     carregarUsuarios();
+    carregarRelatorioXml();
+  }
+
+  // ---------- Relatório: XMLs baixados por empresa, por mês ----------
+  const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  let relatorioXml = null;
+
+  function rotuloMesXml(mes) {
+    const m = String(mes || "").match(/^(\d{4})-(\d{2})$/);
+    if (!m) return mes;
+    const nome = MESES_LONGOS[Number(m[2]) - 1];
+    return `${nome.charAt(0).toUpperCase()}${nome.slice(1)} de ${m[1]}`;
+  }
+
+  async function carregarRelatorioXml() {
+    const select = document.getElementById("select-mes-xml");
+    const corpo = document.getElementById("xml-body");
+    corpo.innerHTML = `<tr><td colspan="5">Carregando...</td></tr>`;
+    const mes = select.value || "";
+    const resultado = await chamarApi(`/api/admin/xml-mensal${mes ? "?mes=" + encodeURIComponent(mes) : ""}`);
+    if (resultado.status === 401) { voltarParaLogin(); return; }
+    if (!resultado.ok) {
+      corpo.innerHTML = `<tr><td colspan="5">${esc(resultado.erro || "Erro ao carregar o relatório.")}</td></tr>`;
+      return;
+    }
+    relatorioXml = resultado;
+
+    // Seletor: todos os meses com XML + o mês atual (mesmo que ainda zerado).
+    const meses = new Map(resultado.mesesDisponiveis.map((x) => [x.mes, x.total]));
+    if (!meses.has(resultado.mes)) meses.set(resultado.mes, 0);
+    const ordenados = Array.from(meses.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+    select.innerHTML = ordenados
+      .map(([m, total]) => `<option value="${esc(m)}"${m === resultado.mes ? " selected" : ""}>${esc(rotuloMesXml(m))} — ${total} XML(s)</option>`)
+      .join("");
+
+    document.getElementById("xml-resumo").innerHTML = `
+      <div class="xml-cartao destaque"><strong>${resultado.totais.xmlsNoMes}</strong><span>XMLs em ${esc(rotuloMesXml(resultado.mes))}</span></div>
+      <div class="xml-cartao"><strong>${resultado.totais.empresasComXmlNoMes}</strong><span>empresa(s) com XML no mês</span></div>
+      <div class="xml-cartao"><strong>${resultado.totais.empresas}</strong><span>empresa(s) cadastradas</span></div>
+      <div class="xml-cartao"><strong>${resultado.totais.xmlsAcumulado}</strong><span>XMLs no total, desde o início</span></div>`;
+
+    if (!resultado.empresas.length) {
+      corpo.innerHTML = `<tr><td colspan="5">Nenhuma empresa cadastrada ainda.</td></tr>`;
+    } else {
+      corpo.innerHTML = resultado.empresas
+        .map(
+          (e) => `<tr class="${e.xmlsNoMes ? "" : "xml-zerado"}">
+            <td><strong>${esc(e.usuarioNome || "—")}</strong><div class="hint" style="margin:0;">${esc(e.usuarioEmail)}</div></td>
+            <td>${esc(e.razaoSocial || "—")}<div class="hint mono" style="margin:0;">${esc(formatarDocumento(e.cnpj))}</div></td>
+            <td class="col-valor"><strong>${e.xmlsNoMes}</strong></td>
+            <td class="col-valor">${e.xmlsTotal}</td>
+            <td>${e.ultimaSincronizacao ? esc(formatarData(e.ultimaSincronizacao)) : "Nunca"}</td>
+          </tr>`
+        )
+        .join("");
+    }
+    document.getElementById("xml-nota").textContent =
+      "Conta cada XML completo uma única vez, no dia em que chegou da SEFAZ (fuso de Brasília). XMLs que já existiam antes desse registro passaram a valer pela data em que a nota entrou no sistema.";
+  }
+
+  function exportarRelatorioXml() {
+    if (!relatorioXml) return;
+    const linhas = [["Mês", "Usuário", "E-mail", "Empresa", "CNPJ/CPF", "XMLs no mês", "Total acumulado"]];
+    relatorioXml.empresas.forEach((e) =>
+      linhas.push([relatorioXml.mes, e.usuarioNome || "", e.usuarioEmail, e.razaoSocial || "", e.cnpj, e.xmlsNoMes, e.xmlsTotal])
+    );
+    const csv = linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `xmls-baixados-${relatorioXml.mes}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
   }
 
   function textoStatus(u) {
@@ -438,7 +513,10 @@
     document.getElementById(id).addEventListener("keydown", (e) => { if (e.key === "Enter") tentarEntrar(); });
   });
 
-  document.getElementById("btn-admin-atualizar").addEventListener("click", carregarUsuarios);
+  document.getElementById("btn-admin-atualizar").addEventListener("click", () => { carregarUsuarios(); carregarRelatorioXml(); });
+  document.getElementById("select-mes-xml").addEventListener("change", carregarRelatorioXml);
+  document.getElementById("btn-xml-atualizar").addEventListener("click", carregarRelatorioXml);
+  document.getElementById("btn-xml-csv").addEventListener("click", exportarRelatorioXml);
   document.getElementById("btn-criar-usuario").addEventListener("click", criarUsuario);
   document.getElementById("btn-copiar-dados").addEventListener("click", copiarDados);
   ["input-novo-email", "input-novo-nome", "input-novo-senha"].forEach((id) => {

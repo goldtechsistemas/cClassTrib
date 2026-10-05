@@ -50,11 +50,13 @@ async function upsertLote(empresaId, documentos, eventos) {
     if (!doc.chNFe) continue;
     const ins = await query(
       `INSERT INTO nfe_documentos
-         (empresa_id, ch_nfe, nsu, tipo, numero, serie, emit_cnpj, emit_nome, emit_uf, dest_cnpj, dh_emi, v_nf, situacao, xml_completo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         (empresa_id, ch_nfe, nsu, tipo, numero, serie, emit_cnpj, emit_nome, emit_uf, dest_cnpj, dh_emi, v_nf, situacao, xml_completo, xml_baixado_em)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, CASE WHEN $14::text IS NOT NULL THEN now() END)
        ON CONFLICT (empresa_id, ch_nfe) DO UPDATE SET
          situacao = EXCLUDED.situacao,
          xml_completo = COALESCE(EXCLUDED.xml_completo, nfe_documentos.xml_completo),
+         -- só a PRIMEIRA vez que o XML completo chega conta como "baixado"
+         xml_baixado_em = COALESCE(nfe_documentos.xml_baixado_em, CASE WHEN EXCLUDED.xml_completo IS NOT NULL THEN now() END),
          tipo = CASE WHEN EXCLUDED.tipo = 'completa' THEN 'completa' ELSE nfe_documentos.tipo END
        RETURNING (xmax = 0) AS inserida`,
       [
@@ -488,7 +490,7 @@ async function buscarXmlPorChave(empresa, doc, cert) {
   const completa = resultado.documentos.find((d) => d.tipo === "completa" && d.chNFe === doc.ch_nfe && d.xmlCompleto);
   if (!completa) return null;
   const r = await query(
-    "UPDATE nfe_documentos SET xml_completo = $2, tipo = 'completa', dest_cnpj = COALESCE(dest_cnpj, $3) WHERE id = $1 RETURNING *",
+    "UPDATE nfe_documentos SET xml_completo = $2, tipo = 'completa', dest_cnpj = COALESCE(dest_cnpj, $3), xml_baixado_em = COALESCE(xml_baixado_em, now()) WHERE id = $1 RETURNING *",
     [doc.id, completa.xmlCompleto, completa.destCnpj]
   );
   return r.rows[0] || null;

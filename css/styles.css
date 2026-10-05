@@ -1731,3 +1731,19 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
   .sb-troca { grid-template-columns: 1fr; }
   .sb-troca-seta { transform: rotate(90deg); }
 }
+
+/* ---------- Admin: relatório de XMLs baixados por mês ---------- */
+.xml-card { margin-bottom: 20px; }
+.xml-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap; margin-bottom: 14px; }
+.xml-controles { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.xml-controles select { width: auto; min-width: 230px; padding: 9px 12px; }
+.xml-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.xml-cartao { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.xml-cartao strong { font-size: 1.5rem; color: var(--text-0); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.xml-cartao span { font-size: 0.78rem; color: var(--text-muted); }
+.xml-cartao.destaque { border-color: rgba(var(--gold-rgb), 0.45); box-shadow: inset 3px 0 0 var(--gold); }
+.xml-cartao.destaque strong { color: var(--gold); }
+.xml-lista { max-height: 420px; overflow: auto; }
+.xml-lista thead th { position: sticky; top: 0; z-index: 1; }
+.xml-lista .col-valor { text-align: right; font-variant-numeric: tabular-nums; }
+.xml-lista tr.xml-zerado { opacity: 0.55; }

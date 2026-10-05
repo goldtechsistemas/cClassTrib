@@ -120,6 +120,14 @@ async function main() {
   // Índices — Postgres NÃO indexa colunas de chave estrangeira sozinho, e
   // toda consulta do módulo filtra por empresa_id; sem isso vira table scan
   // conforme as tabelas crescem.
+  // Data em que o XML completo de cada nota chegou — base do relatório
+  // "XMLs baixados por mês" do painel admin. Notas que já tinham XML antes
+  // desta coluna existir recebem a data em que o registro foi criado (melhor
+  // aproximação disponível).
+  await pool.query(`ALTER TABLE nfe_documentos ADD COLUMN IF NOT EXISTS xml_baixado_em TIMESTAMPTZ;`);
+  await pool.query(`UPDATE nfe_documentos SET xml_baixado_em = criado_em WHERE xml_completo IS NOT NULL AND xml_baixado_em IS NULL;`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_nfe_documentos_xml_baixado ON nfe_documentos (empresa_id, xml_baixado_em) WHERE xml_baixado_em IS NOT NULL;`);
+
   // Limite de tentativas de login (força bruta) — api/_limite.js também cria
   // esta tabela sozinho na primeira tentativa; aqui só mantém o esquema documentado.
   await pool.query(`
