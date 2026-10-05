@@ -62,13 +62,22 @@
   let carregamentoNotasSeq = 0;
   const LIMITE_NOTAS_LISTA = 500;
 
+  // Aviso fixo logo acima de "Empresas cadastradas" (onde ficam os botões de
+  // sincronizar) e "grudado" abaixo do cabeçalho enquanto a página rola —
+  // assim aparece à vista mesmo quando a ação foi feita lá embaixo, na lista
+  // de notas. Tem botão pra fechar.
   function mostrarAviso(mensagem, tipo) {
     if (!mensagem) {
       avisoEl.innerHTML = "";
       return;
     }
-    const cor = tipo === "erro" ? "var(--vermelho, #c0392b)" : "var(--verde, #1e824c)";
-    avisoEl.innerHTML = `<div class="aviso-legal" style="border-color:${cor};color:${cor}">${esc(mensagem)}</div>`;
+    avisoEl.innerHTML = `<div class="aviso-nfe-msg ${tipo === "erro" ? "erro" : "ok"}" role="status">
+        <span>${esc(mensagem)}</span>
+        <button type="button" class="aviso-nfe-fechar" aria-label="Fechar aviso">&times;</button>
+      </div>`;
+    avisoEl.querySelector(".aviso-nfe-fechar").addEventListener("click", () => {
+      avisoEl.innerHTML = "";
+    });
   }
 
   function formatarData(iso) {
