@@ -26,19 +26,60 @@
 
     <div id="aviso-nfe"></div>
 
-    <section class="card">
-      <h2 class="section-title" style="margin-top:0;">Cadastrar certificado (.pfx)</h2>
-      <p class="hint">Aceita certificado digital <strong>A1</strong> (arquivo .pfx/.p12). Certificados A3 (cartão/token) não são suportados.
-        A senha do certificado nunca é exibida de novo depois de enviada, e tanto ela quanto o arquivo ficam criptografados no banco de dados.</p>
+    <section class="card cert-card">
+      <div class="cert-grade">
+        <aside class="cert-lateral">
+          <div class="cert-selo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <h2>Cadastrar certificado digital</h2>
+          <p class="cert-sub">Conecte uma empresa em 3 passos e puxe as notas de compra direto da SEFAZ.</p>
 
-      <label for="input-cert-arquivo">Arquivo do certificado (.pfx)</label>
-      <input type="file" id="input-cert-arquivo" accept=".pfx,.p12" />
+          <ol class="cert-passos" id="cert-passos">
+            <li data-passo="1"><span class="cert-passo-num">1</span><span>Escolha o arquivo <strong>.pfx</strong></span></li>
+            <li data-passo="2"><span class="cert-passo-num">2</span><span>Informe a senha do certificado</span></li>
+            <li data-passo="3"><span class="cert-passo-num">3</span><span>Valide e cadastre a empresa</span></li>
+          </ol>
 
-      <label for="input-cert-senha" style="margin-top:14px;">Senha do certificado</label>
-      <input type="text" class="campo-senha-oculta" id="input-cert-senha" name="cert-a1-chave" placeholder="Senha do certificado A1" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+          <ul class="cert-garantias">
+            <li><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg><span>Arquivo e senha criptografados no banco</span></li>
+            <li><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg><span>A senha nunca é exibida de novo</span></li>
+            <li><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Aceita apenas certificado <strong>A1</strong> (arquivo). A3 (cartão/token) não funciona</span></li>
+          </ul>
+        </aside>
 
-      <div class="field-actions">
-        <button class="btn" id="btn-enviar-cert">Validar e cadastrar</button>
+        <div class="cert-form">
+          <input type="file" id="input-cert-arquivo" accept=".pfx,.p12" hidden />
+
+          <div class="cert-drop" id="cert-drop" role="button" tabindex="0" aria-label="Escolher o arquivo do certificado">
+            <div class="cert-drop-icone" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+            </div>
+            <strong>Arraste o certificado até aqui</strong>
+            <span>ou <u>clique para escolher</u> o arquivo (.pfx / .p12)</span>
+          </div>
+
+          <div class="cert-arquivo" id="cert-arquivo" style="display:none;">
+            <div class="cert-arquivo-icone" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 14l2 2 4-4"/></svg>
+            </div>
+            <div class="cert-arquivo-info">
+              <strong id="cert-arquivo-nome"></strong>
+              <span class="hint" id="cert-arquivo-tamanho"></span>
+            </div>
+            <button type="button" class="cert-arquivo-remover" id="btn-remover-cert" aria-label="Remover arquivo" title="Remover arquivo">&times;</button>
+          </div>
+
+          <label for="input-cert-senha" class="cert-rotulo">Senha do certificado</label>
+          <div class="cert-senha">
+            <input type="text" class="campo-senha-oculta" id="input-cert-senha" name="cert-a1-chave" placeholder="Digite a senha do certificado A1" autocomplete="off" data-lpignore="true" data-1p-ignore data-form-type="other" />
+            <button type="button" class="cert-senha-olho" id="btn-ver-senha" aria-label="Mostrar senha" aria-pressed="false" title="Mostrar/ocultar senha">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+
+          <button class="btn cert-enviar" id="btn-enviar-cert" type="button">Validar e cadastrar</button>
+        </div>
       </div>
     </section>
 

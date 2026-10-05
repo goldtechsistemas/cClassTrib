@@ -9,6 +9,13 @@
   const inputArquivo = document.getElementById("input-cert-arquivo");
   const inputSenha = document.getElementById("input-cert-senha");
   const btnEnviar = document.getElementById("btn-enviar-cert");
+  const certDrop = document.getElementById("cert-drop");
+  const certArquivoBox = document.getElementById("cert-arquivo");
+  const certArquivoNome = document.getElementById("cert-arquivo-nome");
+  const certArquivoTamanho = document.getElementById("cert-arquivo-tamanho");
+  const btnRemoverCert = document.getElementById("btn-remover-cert");
+  const btnVerSenha = document.getElementById("btn-ver-senha");
+  const certPassos = document.querySelectorAll("#cert-passos li");
   const wrapVazio = document.getElementById("empresas-vazio");
   const wrapTabela = document.getElementById("empresas-wrap");
   const corpoTabela = document.getElementById("empresas-body");
@@ -484,6 +491,7 @@
       mostrarAviso(`Certificado validado! Empresa ${rotuloDocumento} ${formatarDocumentoEmpresa(documento)} cadastrada.`, "ok");
       inputArquivo.value = "";
       inputSenha.value = "";
+      atualizarFormularioCertificado();
       carregarEmpresas();
     } catch (e) {
       mostrarAviso("Não foi possível enviar o certificado. Tente novamente.", "erro");
@@ -494,6 +502,93 @@
   }
 
   btnEnviar.addEventListener("click", enviarCertificado);
+
+  // ----- Cartão "Cadastrar certificado": arrastar/soltar, nome do arquivo,
+  // passos que vão sendo marcados e botão de mostrar/ocultar a senha.
+  function tamanhoLegivel(bytes) {
+    return bytes < 1024 ? `${bytes} bytes` : `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
+  }
+
+  function atualizarFormularioCertificado() {
+    const arquivo = inputArquivo.files && inputArquivo.files[0];
+    certDrop.style.display = arquivo ? "none" : "";
+    certArquivoBox.style.display = arquivo ? "" : "none";
+    if (arquivo) {
+      certArquivoNome.textContent = arquivo.name;
+      certArquivoTamanho.textContent = tamanhoLegivel(arquivo.size);
+    }
+    const temSenha = inputSenha.value.length > 0;
+    const feitos = [!!arquivo, !!arquivo && temSenha, false];
+    let atualMarcado = false;
+    certPassos.forEach((li, i) => {
+      li.classList.toggle("feito", feitos[i]);
+      const atual = !feitos[i] && !atualMarcado;
+      li.classList.toggle("atual", atual);
+      if (atual) atualMarcado = true;
+    });
+  }
+
+  function receberArquivoCertificado(arquivo) {
+    if (!arquivo) return;
+    if (!/\.(pfx|p12)$/i.test(arquivo.name)) {
+      mostrarAviso("Escolha um arquivo de certificado A1 (.pfx ou .p12).", "erro");
+      return;
+    }
+    mostrarAviso("");
+    const dt = new DataTransfer();
+    dt.items.add(arquivo);
+    inputArquivo.files = dt.files;
+    atualizarFormularioCertificado();
+    inputSenha.focus();
+  }
+
+  certDrop.addEventListener("click", () => inputArquivo.click());
+  certDrop.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      inputArquivo.click();
+    }
+  });
+  ["dragenter", "dragover"].forEach((nome) =>
+    certDrop.addEventListener(nome, (e) => {
+      e.preventDefault();
+      certDrop.classList.add("arrastando");
+    })
+  );
+  ["dragleave", "drop"].forEach((nome) =>
+    certDrop.addEventListener(nome, (e) => {
+      e.preventDefault();
+      certDrop.classList.remove("arrastando");
+    })
+  );
+  certDrop.addEventListener("drop", (e) => {
+    receberArquivoCertificado(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+  inputArquivo.addEventListener("change", () => {
+    const arquivo = inputArquivo.files && inputArquivo.files[0];
+    if (arquivo && !/\.(pfx|p12)$/i.test(arquivo.name)) {
+      inputArquivo.value = "";
+      mostrarAviso("Escolha um arquivo de certificado A1 (.pfx ou .p12).", "erro");
+    }
+    atualizarFormularioCertificado();
+  });
+  btnRemoverCert.addEventListener("click", () => {
+    inputArquivo.value = "";
+    atualizarFormularioCertificado();
+  });
+  inputSenha.addEventListener("input", atualizarFormularioCertificado);
+  inputSenha.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") enviarCertificado();
+  });
+  btnVerSenha.addEventListener("click", () => {
+    const mostrar = inputSenha.classList.toggle("campo-senha-oculta") === false;
+    btnVerSenha.setAttribute("aria-pressed", String(mostrar));
+    btnVerSenha.setAttribute("aria-label", mostrar ? "Ocultar senha" : "Mostrar senha");
+  });
+  // Página inteira: soltar um arquivo fora da zona não deve abrir o .pfx no navegador.
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => e.preventDefault());
+  atualizarFormularioCertificado();
 
   checkboxSelecionarTodas.addEventListener("change", () => {
     const caixas = notasBody.querySelectorAll(".checkbox-nota");

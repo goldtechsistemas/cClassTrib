@@ -788,3 +788,158 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
    "Minha conta") um <input type="password"> faz o Chrome oferecer o e-mail
    salvo nos campos de texto/busca da página — aqui não existe login. */
 .campo-senha-oculta { -webkit-text-security: disc; text-security: disc; }
+
+
+/* ---------- Notas fiscais: cartão "Cadastrar certificado" ---------- */
+.cert-card { padding: 0; overflow: hidden; margin-top: 8px; }
+.cert-grade { display: grid; grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.4fr); }
+.cert-lateral {
+  padding: 28px 26px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--gold-rgb), 0.20), transparent 60%),
+    var(--bg-2);
+  border-right: 1px solid var(--border);
+}
+.cert-selo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--btn-text);
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  box-shadow: 0 6px 18px rgba(var(--gold-rgb), 0.35);
+}
+.cert-lateral h2 { margin: 16px 0 6px; font-size: 1.3rem; color: var(--text-0); }
+.cert-sub { margin: 0 0 20px; color: var(--text-1); font-size: 0.9rem; line-height: 1.45; }
+
+.cert-passos { list-style: none; margin: 0 0 22px; padding: 0; position: relative; }
+.cert-passos li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  position: relative;
+}
+.cert-passos li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 34px;
+  width: 2px;
+  height: 14px;
+  background: var(--border);
+}
+.cert-passo-num {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+.cert-passos li.atual { color: var(--text-0); }
+.cert-passos li.atual .cert-passo-num { border-color: var(--gold); color: var(--gold); }
+.cert-passos li.feito { color: var(--text-1); }
+.cert-passos li.feito .cert-passo-num { background: var(--verde); border-color: var(--verde); color: #fff; font-size: 0; }
+.cert-passos li.feito .cert-passo-num::before { content: "\2713"; font-size: 0.85rem; }
+
+.cert-garantias { list-style: none; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--border); display: grid; gap: 9px; }
+.cert-garantias li { display: flex; gap: 9px; align-items: flex-start; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+.cert-garantias svg { flex: none; margin-top: 1px; color: var(--verde); }
+.cert-garantias strong { color: var(--text-1); }
+
+.cert-form { padding: 28px 26px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cert-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 26px 18px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-0);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.cert-drop strong { color: var(--text-0); font-size: 1rem; }
+.cert-drop u { color: var(--gold); text-decoration: none; font-weight: 600; }
+.cert-drop-icone {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.12);
+  margin-bottom: 6px;
+}
+.cert-drop:hover, .cert-drop:focus-visible, .cert-drop.arrastando {
+  border-color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.07);
+  outline: none;
+}
+.cert-drop.arrastando { transform: scale(1.01); }
+
+.cert-arquivo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--verde);
+  border-radius: var(--radius);
+  background: var(--verde-bg);
+}
+.cert-arquivo-icone { flex: none; color: var(--verde); display: grid; place-items: center; }
+.cert-arquivo-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cert-arquivo-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-0); font-size: 0.92rem; }
+.cert-arquivo-info .hint { margin: 0; }
+.cert-arquivo-remover {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.cert-arquivo-remover:hover { color: var(--vermelho); background: var(--vermelho-bg); }
+
+.cert-rotulo { margin: 4px 0 -8px; }
+.cert-senha { position: relative; }
+.cert-senha input { padding-right: 48px; }
+.cert-senha-olho {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 7px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+.cert-senha-olho:hover, .cert-senha-olho[aria-pressed="true"] { color: var(--gold); }
+.cert-enviar { width: 100%; justify-content: center; padding: 13px 18px; font-size: 1rem; margin-top: 2px; }
+
+@media (max-width: 760px) {
+  .cert-grade { grid-template-columns: 1fr; }
+  .cert-lateral { border-right: none; border-bottom: 1px solid var(--border); padding: 22px 20px; }
+  .cert-form { padding: 22px 20px; }
+}
