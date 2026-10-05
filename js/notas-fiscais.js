@@ -334,27 +334,53 @@
     return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
-  function montarQueryFiltro() {
+  // O mês escolhido nos botões do painel é um filtro só de tela (a lista
+  // buscada no servidor continua trazendo todos os meses, pra os botões não
+  // sumirem) — por isso ele só entra na query dos downloads (comMes), como
+  // intervalo de datas somado ao que já está nos campos "de/até".
+  function mesEstaFiltrando() {
+    if (painelMesSelecionado === "todos") return false;
+    return new Set(notasDoPainel.map((n) => chaveMes(n.dhEmi))).size > 1;
+  }
+
+  function montarQueryFiltro(opcoes) {
     const params = new URLSearchParams();
-    if (inputDataInicio.value) params.set("dataInicio", inputDataInicio.value);
-    if (inputDataFim.value) params.set("dataFim", inputDataFim.value);
+    let inicio = inputDataInicio.value;
+    let fim = inputDataFim.value;
+    if (opcoes && opcoes.comMes && mesEstaFiltrando() && painelMesSelecionado !== "sem-data") {
+      const [ano, mes] = painelMesSelecionado.split("-");
+      const ultimoDia = new Date(Date.UTC(Number(ano), Number(mes), 0)).getUTCDate();
+      const primeiroDoMes = `${ano}-${mes}-01`;
+      const ultimoDoMes = `${ano}-${mes}-${String(ultimoDia).padStart(2, "0")}`;
+      if (!inicio || inicio < primeiroDoMes) inicio = primeiroDoMes;
+      if (!fim || fim > ultimoDoMes) fim = ultimoDoMes;
+    }
+    if (inicio) params.set("dataInicio", inicio);
+    if (fim) params.set("dataFim", fim);
     const busca = inputBuscaNotas.value.trim();
     if (busca) params.set("busca", busca);
     return params;
   }
 
   function filtroNotasAtivo() {
-    return !!(inputBuscaNotas.value.trim() || inputDataInicio.value || inputDataFim.value);
+    return !!(inputBuscaNotas.value.trim() || inputDataInicio.value || inputDataFim.value || mesEstaFiltrando());
+  }
+
+  function notasDoMesEscolhido() {
+    return mesEstaFiltrando() ? notasDoPainel.filter((n) => chaveMes(n.dhEmi) === painelMesSelecionado) : notasDoPainel;
   }
 
   function atualizarLinksExportacao(empresaId) {
-    const params = montarQueryFiltro();
+    const params = montarQueryFiltro({ comMes: true });
     params.set("empresaId", empresaId);
 
     if (notasSelecionadas.size > 0) {
       params.set("chaves", Array.from(notasSelecionadas).join(","));
       notasSelecaoInfo.textContent = `${notasSelecionadas.size} nota(s) selecionada(s) — os downloads abaixo usam só a seleção.`;
     } else {
+      if (mesEstaFiltrando() && painelMesSelecionado === "sem-data") {
+        params.set("chaves", notasDoMesEscolhido().map((n) => n.chNFe).join(","));
+      }
       notasSelecaoInfo.textContent = "Nenhuma nota selecionada — os downloads abaixo usam todas as notas visíveis (respeitando os filtros aplicados).";
     }
 
@@ -387,7 +413,20 @@
       return;
     }
 
-    const notas = dados.documentos || [];
+    notasDoPainel = dados.documentos || [];
+    if (notasDoPainel.length) {
+      renderizarPainelPeriodo();
+    } else {
+      painelPeriodo.style.display = "none";
+      painelMesSelecionado = "todos";
+    }
+    renderizarListaNotas(empresaId);
+  }
+
+  // Desenha a tabela com as notas já carregadas, respeitando o mês escolhido
+  // nos botões do painel (sem ir ao servidor de novo).
+  function renderizarListaNotas(empresaId) {
+    const notas = notasDoMesEscolhido();
     const filtrando = filtroNotasAtivo();
     if (notas.length >= LIMITE_NOTAS_LISTA) {
       notasResumo.textContent = `Mostrando as ${LIMITE_NOTAS_LISTA} notas mais recentes — refine o filtro para ver as demais.`;
@@ -410,11 +449,8 @@
       notasWrap.style.display = "none";
       notasAcoesLote.style.display = "none";
       notasRodape.style.display = "none";
-      painelPeriodo.style.display = "none";
       return;
     }
-    notasDoPainel = notas;
-    renderizarPainelPeriodo();
     notasVazio.style.display = "none";
     notasWrap.style.display = "";
     notasAcoesLote.style.display = "";
@@ -584,6 +620,7 @@
     if (t.outras) avisos.push("Notas canceladas ou denegadas contam em \"Total de notas\", mas não entram nos valores.");
     if (notasDoPainel.length >= LIMITE_NOTAS_LISTA) avisos.push(`Cálculo sobre as ${LIMITE_NOTAS_LISTA} notas mais recentes — refine o filtro para ver o resto.`);
     avisos.push("Impostos conforme o total informado no XML de cada nota. O \"aprox. de tributos\" só aparece nas notas que o emitente preencheu.");
+    if (meses.length > 1) avisos.unshift("Escolher um mês também filtra a lista de notas e os downloads logo abaixo.");
     painelNota.textContent = avisos.join(" ");
     painelPeriodo.style.display = "";
   }
@@ -592,7 +629,12 @@
     const botao = e.target.closest("[data-mes]");
     if (!botao) return;
     painelMesSelecionado = botao.dataset.mes;
+    // A seleção de notas era da lista anterior; recomeça do topo da nova.
+    notasSelecionadas = new Set();
+    checkboxSelecionarTodas.checked = false;
+    notasWrap.scrollTop = 0;
     renderizarPainelPeriodo();
+    if (empresaSelecionadaId != null) renderizarListaNotas(empresaSelecionadaId);
   });
 
   function aplicarPainelRecolhido(recolhido) {
@@ -863,6 +905,7 @@
     inputBuscaNotas.value = "";
     inputDataInicio.value = "";
     inputDataFim.value = "";
+    painelMesSelecionado = "todos";
     if (empresaSelecionadaId != null) carregarNotas(empresaSelecionadaId, empresaSelecionadaNome);
   });
 
