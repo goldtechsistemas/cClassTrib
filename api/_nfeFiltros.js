@@ -31,13 +31,24 @@ function montarFiltroDocumentos(queryParams, params) {
     if (termo) {
       params.push(`%${escaparLike(termo)}%`);
       const alternativas = [`emit_nome ILIKE $${params.length}`];
-      // Termo só com dígitos e pontuação de CNPJ ("10.707.389/0001-63",
-      // "10707389") também procura no CNPJ — sem letras, pra um nome como
-      // "ATACADO 2000" não trazer notas só porque o CNPJ tem "2000".
+      // Termo só com dígitos e pontuação ("10.707.389/0001-63", "10707389",
+      // "163131") também procura no CNPJ do emitente e no número da nota —
+      // sem letras, pra um nome como "ATACADO 2000" não trazer notas só
+      // porque o CNPJ ou o número tem "2000". Com 44 dígitos é a chave de
+      // acesso inteira.
       const digitos = termo.replace(/\D/g, "");
       if (digitos && /^[\d.\-\/\s]+$/.test(termo)) {
         params.push(`%${digitos}%`);
         alternativas.push(`emit_cnpj LIKE $${params.length}`);
+        const semZeros = digitos.replace(/^0+/, "");
+        if (semZeros) {
+          params.push(`%${semZeros}%`);
+          alternativas.push(`numero LIKE $${params.length}`);
+        }
+        if (digitos.length === 44) {
+          params.push(digitos);
+          alternativas.push(`ch_nfe = $${params.length}`);
+        }
       }
       condicoes.push(`(${alternativas.join(" OR ")})`);
     }
