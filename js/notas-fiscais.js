@@ -26,6 +26,8 @@
   const empresasDica = document.getElementById("empresas-dica");
   const empresasRodape = document.getElementById("empresas-rodape");
   const EMPRESAS_VISIVEIS_SEM_ROLAGEM = 10;
+  const NOTAS_VISIVEIS_SEM_ROLAGEM = 20;
+  const notasRodape = document.getElementById("notas-rodape");
 
   const notasSecao = document.getElementById("notas-secao");
   const notasTitulo = document.getElementById("notas-titulo");
@@ -386,6 +388,12 @@
     } else {
       notasResumo.textContent = "";
     }
+    if (notas.length) {
+      const totalAutorizadas = notas
+        .filter((n) => n.situacao === "autorizada")
+        .reduce((soma, n) => soma + (Number(n.vNf) || 0), 0);
+      notasResumo.textContent += ` · ${formatarValor(totalAutorizadas)} em notas autorizadas`;
+    }
     if (!notas.length) {
       notasVazio.textContent = filtrando
         ? "Nenhuma nota encontrada com esses filtros."
@@ -393,6 +401,7 @@
       notasVazio.style.display = "";
       notasWrap.style.display = "none";
       notasAcoesLote.style.display = "none";
+      notasRodape.style.display = "none";
       return;
     }
     notasVazio.style.display = "none";
@@ -400,6 +409,8 @@
     notasAcoesLote.style.display = "";
     atualizarLinksExportacao(empresaId);
 
+    // Recarregar (ex.: depois de "Dar ciência") não deve jogar a lista de volta pro topo.
+    const rolagemAnterior = notasWrap.scrollTop;
     notasBody.innerHTML = notas
       .map((n) => {
         // Denegada/cancelada nunca chegam a ter XML completo — Ciência da
@@ -408,31 +419,46 @@
         // oferecemos o botão (evita um clique que só ia dar erro à toa).
         let acaoManifestacao;
         if (n.manifestacao === "confirmacao") {
-          acaoManifestacao = "Confirmação dada";
+          acaoManifestacao = `<span class="badge cor-verde">✓ Confirmação dada</span>`;
         } else if (n.manifestacao === "ciencia" || n.tipo === "completa") {
-          acaoManifestacao = "Ciência dada";
+          acaoManifestacao = `<span class="badge cor-verde">✓ Ciência dada</span>`;
         } else if (n.situacao === "denegada" || n.situacao === "cancelada") {
-          acaoManifestacao = "Não se aplica";
+          acaoManifestacao = `<span class="badge cor-neutro-fraco">Não se aplica</span>`;
         } else {
-          acaoManifestacao = `<button class="btn secondary btn-sm btn-manifestar" data-ch-nfe="${esc(n.chNFe)}" type="button">Dar ciência</button>`;
+          acaoManifestacao = `<button class="btn btn-sm btn-manifestar" data-ch-nfe="${esc(n.chNFe)}" type="button">Dar ciência</button>`;
         }
+        const corSituacao = { autorizada: "cor-verde", cancelada: "cor-vermelho", denegada: "cor-amarelo" }[n.situacao] || "cor-neutro-fraco";
+        const textoSituacao = n.situacao ? n.situacao.charAt(0).toUpperCase() + n.situacao.slice(1) : "—";
+        const badgeTipo =
+          n.tipo === "completa"
+            ? `<span class="badge cor-verde">XML completo</span>`
+            : `<span class="badge cor-amarelo" title="Ainda sem o XML completo — dê ciência e sincronize de novo">Resumo</span>`;
         const linkPdf = `/api/nfe-exportar-pdf?empresaId=${encodeURIComponent(empresaId)}&chNFe=${encodeURIComponent(n.chNFe)}`;
+        const complementoEmitente = [n.emitCnpj ? formatarCnpj(n.emitCnpj) : null, n.emitUf].filter(Boolean).join(" · ");
         return `
           <tr>
-            <td><input type="checkbox" class="checkbox-nota" data-ch-nfe="${esc(n.chNFe)}" /></td>
-            <td class="mono">${esc(n.numero || "—")}${n.serie ? ` (série ${esc(n.serie)})` : ""}</td>
-            <td>${esc(n.emitNome || "—")}</td>
-            <td class="mono">${esc(n.emitCnpj ? formatarCnpj(n.emitCnpj) : "—")}</td>
-            <td>${esc(n.emitUf || "—")}</td>
-            <td>${esc(formatarData(n.dhEmi))}</td>
-            <td>${esc(formatarValor(n.vNf))}</td>
-            <td>${esc(n.situacao || "—")}</td>
-            <td>${esc(n.tipo === "completa" ? "XML completo" : "Resumo")}</td>
+            <td class="col-check"><input type="checkbox" class="checkbox-nota" data-ch-nfe="${esc(n.chNFe)}" /></td>
+            <td class="nowrap">
+              <strong class="nf-numero mono">${esc(n.numero || "—")}</strong>
+              ${n.serie ? `<div class="hint">série ${esc(n.serie)}</div>` : ""}
+            </td>
+            <td>
+              <div class="nota-emitente">
+                <strong class="empresa-nome" title="${esc(n.emitNome || "")}">${esc(n.emitNome || "—")}</strong>
+                <span class="hint mono">${esc(complementoEmitente || "—")}</span>
+              </div>
+            </td>
+            <td class="nowrap">${esc(formatarData(n.dhEmi))}</td>
+            <td class="col-valor nowrap">${esc(formatarValor(n.vNf))}</td>
+            <td><span class="badge ${corSituacao}">${esc(textoSituacao)}</span></td>
+            <td>${badgeTipo}</td>
             <td>${acaoManifestacao}</td>
-            <td><a class="btn secondary btn-sm" href="${linkPdf}" target="_blank" rel="noopener">Baixar PDF</a></td>
+            <td><a class="btn secondary btn-sm nowrap" href="${linkPdf}" target="_blank" rel="noopener">PDF</a></td>
           </tr>`;
       })
       .join("");
+    ajustarAlturaListaNotas(notas.length);
+    notasWrap.scrollTop = rolagemAnterior;
 
     notasBody.querySelectorAll(".btn-manifestar").forEach((btn) => {
       btn.addEventListener("click", () => manifestarNota(btn.dataset.chNfe, btn));
@@ -441,11 +467,27 @@
       chk.addEventListener("change", () => {
         if (chk.checked) notasSelecionadas.add(chk.dataset.chNfe);
         else notasSelecionadas.delete(chk.dataset.chNfe);
+        chk.closest("tr").classList.toggle("nota-selecionada", chk.checked);
         checkboxSelecionarTodas.checked =
           notasSelecionadas.size > 0 && notasSelecionadas.size === notasBody.querySelectorAll(".checkbox-nota").length;
         atualizarLinksExportacao(empresaId);
       });
     });
+  }
+
+  // Até 20 notas a lista cresce normalmente; a partir daí ganha rolagem
+  // própria (cabeçalho fixo) com a altura de 20 linhas, no máximo 85% da tela.
+  function ajustarAlturaListaNotas(total) {
+    notasWrap.style.maxHeight = "";
+    if (total <= NOTAS_VISIVEIS_SEM_ROLAGEM) {
+      notasRodape.style.display = "none";
+      return;
+    }
+    const linhas = Array.from(notasBody.querySelectorAll("tr")).slice(0, NOTAS_VISIVEIS_SEM_ROLAGEM);
+    const altura = notasWrap.querySelector("thead").offsetHeight + linhas.reduce((soma, tr) => soma + tr.offsetHeight, 0);
+    notasWrap.style.maxHeight = `min(${altura + 2}px, 85vh)`;
+    notasRodape.textContent = `Mostrando ${total} notas — role a lista para ver as demais.`;
+    notasRodape.style.display = "";
   }
 
   async function manifestarNota(chNFe, botao) {
@@ -668,6 +710,7 @@
     const caixas = notasBody.querySelectorAll(".checkbox-nota");
     caixas.forEach((chk) => {
       chk.checked = checkboxSelecionarTodas.checked;
+      chk.closest("tr").classList.toggle("nota-selecionada", chk.checked);
       if (chk.checked) notasSelecionadas.add(chk.dataset.chNfe);
       else notasSelecionadas.delete(chk.dataset.chNfe);
     });

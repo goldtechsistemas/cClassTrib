@@ -1022,3 +1022,44 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
 .empresa-espera { margin-top: 6px !important; }
 .btn-excluir-empresa:hover { color: var(--vermelho); border-color: var(--vermelho); }
 .empresas-rodape { margin: 8px 2px 0; text-align: center; }
+
+
+/* ---------- Notas fiscais: lista de notas ---------- */
+.notas-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.notas-barra-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.notas-barra .hint { margin: 0; }
+
+.notas-lista { overflow: auto; background: var(--bg-1); }
+.notas-lista thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.notas-lista tbody td { vertical-align: middle; padding: 10px 14px; }
+.notas-lista tbody tr { transition: background 0.15s; }
+.notas-lista tbody tr:hover { background: rgba(var(--gold-rgb), 0.05); }
+.notas-lista tbody tr.nota-selecionada { background: rgba(var(--gold-rgb), 0.10); box-shadow: inset 3px 0 0 var(--gold); }
+.notas-lista .hint { margin: 0; }
+.notas-lista .badge { white-space: nowrap; }
+.notas-lista .col-check { width: 44px; text-align: center; }
+.notas-lista .col-check input { accent-color: var(--gold); width: 16px; height: 16px; cursor: pointer; }
+.notas-lista .col-valor { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-0); }
+.notas-lista th.col-valor { text-align: right; }
+.notas-lista .nowrap, .nowrap { white-space: nowrap; }
+.nf-numero { color: var(--text-0); font-size: 0.95rem; }
+.nota-emitente { display: flex; flex-direction: column; gap: 2px; min-width: 220px; }
+.nota-emitente .empresa-nome { font-weight: 600; }

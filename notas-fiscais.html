@@ -155,23 +155,23 @@
       </div>
 
       <div id="notas-vazio" class="hint" style="display:none;">Nenhuma nota encontrada ainda para esta empresa. Clique em "Sincronizar agora".</div>
-      <div id="notas-acoes-lote" class="field-actions" style="display:none;margin-bottom:12px;">
-        <a class="btn secondary btn-sm" id="link-exportar-xml" href="#" target="_blank" rel="noopener">Baixar XMLs (ZIP)</a>
-        <a class="btn secondary btn-sm" id="link-exportar-pdf-lote" href="#" target="_blank" rel="noopener">Baixar PDFs (ZIP)</a>
-        <a class="btn secondary btn-sm" id="link-exportar-excel" href="#" target="_blank" rel="noopener">Baixar Excel</a>
+      <div id="notas-acoes-lote" class="notas-barra" style="display:none;">
+        <div class="notas-barra-botoes">
+          <a class="btn secondary btn-sm" id="link-exportar-xml" href="#" target="_blank" rel="noopener">Baixar XMLs (ZIP)</a>
+          <a class="btn secondary btn-sm" id="link-exportar-pdf-lote" href="#" target="_blank" rel="noopener">Baixar PDFs (ZIP)</a>
+          <a class="btn secondary btn-sm" id="link-exportar-excel" href="#" target="_blank" rel="noopener">Baixar Excel</a>
+        </div>
         <span class="hint" id="notas-selecao-info"></span>
       </div>
-      <div class="table-wrap" id="notas-wrap" style="display:none">
+      <div class="table-wrap notas-lista" id="notas-wrap" style="display:none">
         <table>
           <thead>
             <tr>
-              <th><input type="checkbox" id="checkbox-selecionar-todas" title="Selecionar todas" /></th>
-              <th>Nº NF-e</th>
+              <th class="col-check"><input type="checkbox" id="checkbox-selecionar-todas" title="Selecionar todas" /></th>
+              <th>NF-e</th>
               <th>Emitente</th>
-              <th>CNPJ emitente</th>
-              <th>UF</th>
-              <th>Data emissão</th>
-              <th>Valor</th>
+              <th>Emissão</th>
+              <th class="col-valor">Valor</th>
               <th>Situação</th>
               <th>Tipo</th>
               <th>Manifestação</th>
@@ -181,6 +181,7 @@
           <tbody id="notas-body"></tbody>
         </table>
       </div>
+      <p class="hint empresas-rodape" id="notas-rodape" style="display:none;"></p>
     </section>
   </main>
 
