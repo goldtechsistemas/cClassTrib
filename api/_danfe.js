@@ -410,7 +410,7 @@ async function gerarDanfePdf(xmlCompleto) {
   y += alturaAdic;
 
   pdf.fontSize(6).fillColor("#888888").text(
-    "Documento gerado pelo cClassTrib a partir do XML autorizado pela SEFAZ. Em caso de divergência, o XML assinado digitalmente prevalece.",
+    "Documento gerado pelo FiscalClass a partir do XML autorizado pela SEFAZ. Em caso de divergência, o XML assinado digitalmente prevalece.",
     x,
     y + 6,
     { width: LARGURA, align: "center" }

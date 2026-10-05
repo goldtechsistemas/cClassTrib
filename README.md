@@ -1,4 +1,4 @@
-# cClassTrib — Consulta de Classificação Tributária (LC 214/2025)
+# FiscalClass — Consulta de Classificação Tributária (LC 214/2025)
 
 Site de consulta de classificação tributária (cClassTrib) para a Reforma Tributária
 brasileira, permitindo pesquisar por **NCM**, por **descrição do produto** (nos Anexos
@@ -6,6 +6,13 @@ com tratamento especial ou na **tabela NCM oficial completa**), por **tipo de op
 ou em **lote via CSV** — inclusive descobrindo o NCM de uma lista de produtos só pelo
 nome, um por um ou em lote — e descobrir o Anexo aplicável da Lei Complementar nº
 214/2025, o percentual de redução de IBS/CBS e a alíquota estimada.
+
+> **Nome do produto: FiscalClass** (antes "cClassTrib"). "cClassTrib" continua sendo
+> o nome técnico do código de classificação tributária e permanece em tabelas,
+> CSVs e textos explicativos. Identificadores internos antigos (cookies
+> `cclasstrib_*`, chave `cclasstrib-tema`, `window.CCLASSTRIB_*`, repositório e
+> endereço da Vercel) foram mantidos de propósito, para não deslogar usuários nem
+> quebrar links.
 
 ## Por que este projeto é um site estático (HTML/CSS/JS puro), e não Next.js?
 

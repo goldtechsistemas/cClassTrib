@@ -482,7 +482,7 @@
     document.getElementById("resultado-email").textContent = email;
     document.getElementById("resultado-senha").textContent = senhaProvisoria;
     document.getElementById("resultado-link").textContent = link;
-    dadosParaCopiar = `Acesso ao cClassTrib\nEndereço: ${link}\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n(no primeiro acesso você vai criar a sua própria senha)`;
+    dadosParaCopiar = `Acesso ao FiscalClass\nEndereço: ${link}\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n(no primeiro acesso você vai criar a sua própria senha)`;
     const caixa = document.getElementById("resultado-novo-usuario");
     caixa.style.display = "block";
     caixa.scrollIntoView({ behavior: "smooth", block: "center" });

@@ -82,7 +82,7 @@ function marcarTexto(nome, texto, email) {
   const marca = impressaoDigital(email);
   const rotulo = marca.toString("hex");
   const aviso =
-    `/* © cClassTrib — conteúdo protegido por direitos autorais, licenciado a usuário autorizado (ref. ${rotulo}). ` +
+    `/* © FiscalClass — conteúdo protegido por direitos autorais, licenciado a usuário autorizado (ref. ${rotulo}). ` +
     `Cópia, redistribuição ou uso fora do site é proibido e rastreável. */\n`;
   let corpo = texto;
   const ancora = ANCORAS[nome];

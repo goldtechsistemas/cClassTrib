@@ -69,7 +69,7 @@ function gerarPdfResumo(doc) {
     });
 
     pdf.fillColor("#888888").font("Helvetica").fontSize(7).text(
-      "Documento gerado pelo cClassTrib a partir dos dados recebidos da SEFAZ. Em caso de divergência, o XML assinado digitalmente prevalece.",
+      "Documento gerado pelo FiscalClass a partir dos dados recebidos da SEFAZ. Em caso de divergência, o XML assinado digitalmente prevalece.",
       X,
       y + 18,
       { width: L, align: "center" }

@@ -22,7 +22,7 @@
       <header class="site">
         <div class="nav-inner">
           <div class="brand">
-            <span class="mark">cClassTrib</span><small>Reforma Tributária · LC 214/2025</small>
+            <span class="mark">FiscalClass</span><small>Reforma Tributária · LC 214/2025</small>
           </div>
           <nav class="links">
             ${link("sobre.html", "IBS, CBS e FAQ", "sobre")}
