@@ -6,51 +6,73 @@ const PDFDocument = require("pdfkit");
 // da SEFAZ, deixado claro no próprio documento).
 function gerarPdfResumo(doc) {
   return new Promise((resolve) => {
-    const pdf = new PDFDocument({ size: "A4", margin: 50 });
+    const pdf = new PDFDocument({ size: "A4", margin: 40 });
     const partes = [];
     pdf.on("data", (c) => partes.push(c));
     pdf.on("end", () => resolve(Buffer.concat(partes)));
 
-    pdf.fontSize(16).text("Resumo de Nota Fiscal Eletrônica", { align: "center" });
-    pdf.moveDown(0.5);
-    pdf
-      .fontSize(9)
-      .fillColor("#888888")
-      .text(
-        doc.manifestacao === "ciencia" || doc.manifestacao === "confirmacao"
-          ? "Esta nota já foi manifestada, mas a SEFAZ ainda não liberou o XML completo — por isso este PDF é um resumo, não o DANFE. " +
-              'O XML completo chega pelas próximas sincronizações (a SEFAZ limita quantas notas podem ser buscadas por hora) — clique em "Sincronizar agora" mais tarde e baixe de novo.'
-          : "Esta nota ainda não tem o XML completo (só o resumo) — por isso este PDF é um resumo, não o DANFE. " +
-              'Clique em "Dar ciência" nesta nota: depois disso, o download passa a trazer o DANFE completo automaticamente.',
-        { align: "center" }
-      );
-    pdf.moveDown(2);
-    pdf.fillColor("#000000").fontSize(11);
+    const L = 595.28 - 80; // largura útil
+    const X = 40;
+    const LARANJA = "#E8590C";
 
-    const linha = (rotulo, valor) => {
-      pdf.font("Helvetica-Bold").text(`${rotulo}: `, { continued: true });
-      pdf.font("Helvetica").text(String(valor || "—"));
-    };
+    // Faixa de título
+    pdf.rect(X, 40, L, 46).fill(LARANJA);
+    pdf.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(16).text("Resumo de Nota Fiscal Eletrônica", X + 16, 53, { width: L - 32 });
+    pdf.font("Helvetica").fontSize(8.5).text("Este documento NÃO é o DANFE — traz só os dados do resumo recebido da SEFAZ", X + 16, 72, { width: L - 32 });
 
-    linha("Chave de acesso", doc.ch_nfe);
-    linha("Número / Série", `${doc.numero || "—"} / ${doc.serie || "—"}`);
-    linha("Emitente", doc.emit_nome);
-    linha("CNPJ do emitente", doc.emit_cnpj);
-    linha("UF do emitente", doc.emit_uf);
-    linha("Data de emissão", doc.dh_emi ? new Date(doc.dh_emi).toLocaleString("pt-BR") : "—");
-    linha(
-      "Valor total",
-      doc.v_nf != null ? Number(doc.v_nf).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"
-    );
-    linha("Situação", doc.situacao);
-    linha("Tipo de dado disponível", doc.tipo === "completa" ? "XML completo" : "Resumo (sem itens detalhados)");
-    linha(
-      "Manifestação do destinatário",
-      doc.manifestacao === "confirmacao"
-        ? "Confirmação da Operação registrada"
-        : doc.manifestacao === "ciencia"
-          ? "Ciência da Operação registrada"
-          : "Não manifestada"
+    // Aviso (por que é um resumo e o que fazer)
+    const manifestada = doc.manifestacao === "ciencia" || doc.manifestacao === "confirmacao";
+    const aviso = manifestada
+      ? "Esta nota já foi manifestada, mas a SEFAZ ainda não liberou o XML completo — por isso este PDF é um resumo. O XML completo chega pelas próximas sincronizações (a SEFAZ limita quantas notas podem ser buscadas por hora); clique em \"Sincronizar agora\" ou baixe o PDF de novo mais tarde para obter o DANFE."
+      : "Esta nota ainda não tem o XML completo (só o resumo) — por isso este PDF é um resumo. Clique em \"Dar ciência\" nesta nota: depois disso, o download passa a trazer o DANFE completo automaticamente.";
+    pdf.font("Helvetica").fontSize(9);
+    const hAviso = pdf.heightOfString(aviso, { width: L - 28 }) + 20;
+    pdf.rect(X, 100, L, hAviso).fillAndStroke("#FFF6DB", "#E0B23B");
+    pdf.fillColor("#5B4300").text(aviso, X + 14, 110, { width: L - 28 });
+
+    let y = 100 + hAviso + 18;
+
+    // Chave de acesso em destaque (grupos de 4 dígitos)
+    const chave = String(doc.ch_nfe || "").replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+    pdf.rect(X, y, L, 46).lineWidth(0.75).strokeColor("#999999").stroke();
+    pdf.fillColor("#666666").font("Helvetica").fontSize(7).text("CHAVE DE ACESSO", X + 10, y + 7);
+    pdf.fillColor("#000000").font("Courier-Bold").fontSize(11).text(chave || "—", X + 10, y + 21, { width: L - 20, lineBreak: false });
+    y += 62;
+
+    // Tabela de dados (linhas alternadas)
+    const valorTotal = doc.v_nf != null ? Number(doc.v_nf).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
+    const linhas = [
+      ["Número / Série", `${doc.numero || "—"} / ${doc.serie || "—"}`],
+      ["Emitente", doc.emit_nome || "—"],
+      ["CNPJ do emitente", doc.emit_cnpj || "—"],
+      ["UF do emitente", doc.emit_uf || "—"],
+      ["Data de emissão", doc.dh_emi ? new Date(doc.dh_emi).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"],
+      ["Valor total", valorTotal],
+      ["Situação", doc.situacao ? doc.situacao.charAt(0).toUpperCase() + doc.situacao.slice(1) : "—"],
+      ["Dado disponível", doc.tipo === "completa" ? "XML completo" : "Resumo (sem itens detalhados)"],
+      [
+        "Manifestação do destinatário",
+        doc.manifestacao === "confirmacao"
+          ? "Confirmação da Operação registrada"
+          : doc.manifestacao === "ciencia"
+            ? "Ciência da Operação registrada"
+            : "Não manifestada",
+      ],
+    ];
+    const W_ROTULO = 170;
+    linhas.forEach(([rotulo, valor], i) => {
+      const h = Math.max(24, pdf.font("Helvetica").fontSize(10).heightOfString(String(valor), { width: L - W_ROTULO - 20 }) + 12);
+      if (i % 2 === 0) pdf.rect(X, y, L, h).fill("#F3F4F6");
+      pdf.fillColor("#444444").font("Helvetica-Bold").fontSize(9.5).text(rotulo, X + 10, y + 7, { width: W_ROTULO - 14 });
+      pdf.fillColor("#000000").font("Helvetica").fontSize(10).text(String(valor), X + W_ROTULO, y + 7, { width: L - W_ROTULO - 10 });
+      y += h;
+    });
+
+    pdf.fillColor("#888888").font("Helvetica").fontSize(7).text(
+      "Documento gerado pelo cClassTrib a partir dos dados recebidos da SEFAZ. Em caso de divergência, o XML assinado digitalmente prevalece.",
+      X,
+      y + 18,
+      { width: L, align: "center" }
     );
 
     pdf.end();

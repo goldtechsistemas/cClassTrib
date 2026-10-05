@@ -111,7 +111,7 @@ async function gerarDanfePdf(xmlCompleto) {
   const nfe = interpretarXmlCompleto(xmlCompleto);
   if (!nfe) throw new Error("Não foi possível interpretar o XML completo da nota.");
 
-  const pdf = new PDFDocument({ size: "A4", margin: MARGEM });
+  const pdf = new PDFDocument({ size: "A4", margin: MARGEM, bufferPages: true });
   const partes = [];
   pdf.on("data", (c) => partes.push(c));
   const pronto = new Promise((resolve) => pdf.on("end", resolve));
@@ -161,7 +161,8 @@ async function gerarDanfePdf(xmlCompleto) {
   });
   pdf.font("Helvetica-Bold").fontSize(9).text(`Nº ${nfe.numero}`, xDanfe + 4, y + 50, { width: wDanfe - 8, align: "center" });
   pdf.font("Helvetica").fontSize(8).text(`Série ${nfe.serie}`, xDanfe + 4, y + 64, { width: wDanfe - 8, align: "center" });
-  pdf.fontSize(6.5).text("Folha 1/1", xDanfe + 4, y + 78, { width: wDanfe - 8, align: "center" });
+  // "Folha n/N" só é desenhada no fim (o total de páginas ainda não se sabe).
+  const posFolha = { x: xDanfe + 4, y: y + 78, w: wDanfe - 8 };
   if (nfe.tipoAmbiente === "Homologação") {
     pdf.font("Helvetica-Bold").fontSize(6.5).fillColor("#c0392b").text("SEM VALOR FISCAL — HOMOLOGAÇÃO", xDanfe + 4, y + 92, { width: wDanfe - 8, align: "center" });
     pdf.fillColor("#000000");
@@ -308,19 +309,19 @@ async function gerarDanfePdf(xmlCompleto) {
   // 1.0 ou mais, a última coluna estoura a margem direita da página (já
   // aconteceu). Sobra pouca margem é intencional, não preencher tudo.
   const colunas = [
-    { titulo: "CÓDIGO", w: 0.07, chave: "codigo" },
-    { titulo: "DESCRIÇÃO", w: 0.23, chave: "descricao" },
+    { titulo: "CÓDIGO", w: 0.085, chave: "codigo", quebra: true },
+    { titulo: "DESCRIÇÃO", w: 0.23, chave: "descricao", quebra: true },
     { titulo: "NCM/SH", w: 0.06, chave: "ncm" },
-    { titulo: "O/CST", w: 0.05, chave: "origCst" },
-    { titulo: "CFOP", w: 0.05, chave: "cfop" },
+    { titulo: "O/CST", w: 0.045, chave: "origCst" },
+    { titulo: "CFOP", w: 0.045, chave: "cfop" },
     { titulo: "UNID", w: 0.04, chave: "unidade" },
     { titulo: "QTDE", w: 0.05, chave: "quantidade", num: true },
-    { titulo: "V.UNIT", w: 0.07, chave: "valorUnitario", num: true },
-    { titulo: "V.TOTAL", w: 0.07, chave: "valorTotal", num: true },
-    { titulo: "BASE ICMS", w: 0.07, chave: "baseIcms", num: true },
-    { titulo: "V.ICMS", w: 0.06, chave: "valorIcms", num: true },
-    { titulo: "V.IPI", w: 0.06, chave: "valorIpi", num: true },
-    { titulo: "AL.ICMS%", w: 0.05, chave: "aliquotaIcms", num: true },
+    { titulo: "V.UNIT", w: 0.065, chave: "valorUnitario", num: true },
+    { titulo: "V.TOTAL", w: 0.065, chave: "valorTotal", num: true },
+    { titulo: "BASE ICMS", w: 0.065, chave: "baseIcms", num: true },
+    { titulo: "V.ICMS", w: 0.055, chave: "valorIcms", num: true },
+    { titulo: "V.IPI", w: 0.05, chave: "valorIpi", num: true },
+    { titulo: "AL.ICMS%", w: 0.06, chave: "aliquotaIcms", num: true },
     { titulo: "AL.IPI%", w: 0.05, chave: "aliquotaIpi", num: true },
   ];
 
@@ -345,7 +346,16 @@ async function gerarDanfePdf(xmlCompleto) {
   cabecalhoTabela();
   for (const item of nfe.itens) {
     const temSt = item.valorIcmsSt || item.baseIcmsSt;
-    const alturaLinha = temSt ? 24 : 14;
+    // Código e descrição podem ser longos: em vez de cortar com "…" (perdia
+    // informação), a linha cresce até 5 linhas de texto.
+    pdf.font("Helvetica").fontSize(6);
+    const alturaTexto = Math.max(
+      ...colunas
+        .filter((c) => c.quebra)
+        .map((c) => pdf.heightOfString(String(item[c.chave] ?? ""), { width: LARGURA * c.w - 4 }))
+    );
+    const alturaBase = Math.min(Math.max(14, Math.ceil(alturaTexto) + 7), 43);
+    const alturaLinha = alturaBase + (temSt ? 10 : 0);
     if (y + alturaLinha > ALTURA_MAX_PAGINA) {
       pdf.addPage();
       pagina++;
@@ -360,18 +370,18 @@ async function gerarDanfePdf(xmlCompleto) {
       else if (c.num) texto = moeda(texto);
       pdf.font("Helvetica").fontSize(6).fillColor("#000000").text(String(texto ?? ""), cx + 2, y + 3, {
         width: w - 4,
-        height: alturaLinha - 4,
+        height: alturaBase - 4,
         align: c.num ? "right" : "left",
         ellipsis: true,
-        lineBreak: false,
+        lineBreak: !!c.quebra,
       });
     });
     if (temSt) {
       pdf.font("Helvetica").fontSize(5).fillColor("#555555").text(
         `.vIcmsST ${moeda(item.valorIcmsSt)}  .vBcIcmsST ${moeda(item.baseIcmsSt)}  .pIcmsST ${moeda(item.aliquotaIcmsSt)}%`,
-        x + LARGURA * 0.07 + 2,
-        y + 14,
-        { width: LARGURA * 0.5 }
+        x + LARGURA * 0.085 + 2,
+        y + alturaBase - 1,
+        { width: LARGURA * 0.5, lineBreak: false }
       );
       pdf.fillColor("#000000");
     }
@@ -379,15 +389,24 @@ async function gerarDanfePdf(xmlCompleto) {
   }
 
   // --- Dados adicionais ---
-  const alturaAdic = 70;
-  if (y + alturaAdic > ALTURA_MAX_PAGINA) {
+  // A altura do quadro acompanha o texto (antes era fixa em 70 e um texto
+  // longo vazava pra fora do quadro). Texto maior que uma página inteira é
+  // cortado com aviso — o XML original sempre tem o texto completo.
+  const textoAdic = nfe.informacoesComplementares || "";
+  pdf.font("Helvetica").fontSize(6.5);
+  const alturaMaxAdic = ALTURA_MAX_PAGINA - MARGEM - 30;
+  const alturaNecessaria = pdf.heightOfString(textoAdic, { width: LARGURA - 8 }) + 18;
+  const alturaAdic = Math.min(Math.max(36, Math.ceil(alturaNecessaria)), alturaMaxAdic);
+  // O quadro de dados adicionais é o último elemento — pode usar um pouco mais
+  // da página que as linhas de item (sobra espaço pro rodapé de uma linha).
+  if (y + alturaAdic > ALTURA_MAX_PAGINA + 12) {
     pdf.addPage();
     pagina++;
     y = MARGEM;
   }
   D.pdf.lineWidth(0.75).rect(x, y, LARGURA, alturaAdic).stroke();
   D.rotulo("DADOS ADICIONAIS / INFORMAÇÕES COMPLEMENTARES", x, y);
-  pdf.font("Helvetica").fontSize(6.5).fillColor("#000000").text(nfe.informacoesComplementares || "", x + 4, y + 12, { width: LARGURA - 8, height: alturaAdic - 16 });
+  pdf.font("Helvetica").fontSize(6.5).fillColor("#000000").text(textoAdic, x + 4, y + 12, { width: LARGURA - 8, height: alturaAdic - 16, ellipsis: true });
   y += alturaAdic;
 
   pdf.fontSize(6).fillColor("#888888").text(
@@ -396,6 +415,18 @@ async function gerarDanfePdf(xmlCompleto) {
     y + 6,
     { width: LARGURA, align: "center" }
   );
+
+  // Numeração "Folha n/N": agora que o total é conhecido, escreve no quadro do
+  // DANFE (1ª página) e, nas seguintes, no rodapé.
+  const totalFolhas = pdf.bufferedPageRange().count;
+  for (let i = 0; i < totalFolhas; i++) {
+    pdf.switchToPage(i);
+    if (i === 0) {
+      pdf.font("Helvetica").fontSize(6.5).fillColor("#000000").text(`Folha 1/${totalFolhas}`, posFolha.x, posFolha.y, { width: posFolha.w, align: "center", lineBreak: false });
+    } else {
+      pdf.font("Helvetica").fontSize(6).fillColor("#555555").text(`NF-e Nº ${nfe.numero} · Série ${nfe.serie} · Folha ${i + 1}/${totalFolhas}`, MARGEM, 806, { width: LARGURA, align: "right", lineBreak: false });
+    }
+  }
 
   pdf.end();
   return pronto.then(() => Buffer.concat(partes));
