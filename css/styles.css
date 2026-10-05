@@ -1120,7 +1120,6 @@ code.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; backgroun
 
 
 /* ---------- Notas fiscais: aviso de resultado (sincronizar, ciência, envio) ---------- */
-#aviso-nfe { position: sticky; top: 88px; z-index: 15; }
 .aviso-nfe-msg {
   display: flex;
   align-items: flex-start;

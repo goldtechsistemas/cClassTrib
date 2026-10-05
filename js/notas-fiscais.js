@@ -62,10 +62,8 @@
   let carregamentoNotasSeq = 0;
   const LIMITE_NOTAS_LISTA = 500;
 
-  // Aviso fixo logo acima de "Empresas cadastradas" (onde ficam os botões de
-  // sincronizar) e "grudado" abaixo do cabeçalho enquanto a página rola —
-  // assim aparece à vista mesmo quando a ação foi feita lá embaixo, na lista
-  // de notas. Tem botão pra fechar.
+  // Aviso parado logo acima de "Empresas cadastradas" (onde ficam os botões
+  // de sincronizar); não acompanha a rolagem da página. Tem botão pra fechar.
   function mostrarAviso(mensagem, tipo) {
     if (!mensagem) {
       avisoEl.innerHTML = "";
