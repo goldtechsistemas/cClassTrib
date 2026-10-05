@@ -63,8 +63,18 @@
 
   async function sessaoAtual() {
     try {
-      const resposta = await fetch("/api/session", { credentials: "same-origin" });
-      const dados = await resposta.json();
+      // As páginas protegidas já disparam a checagem no <head> (em paralelo com o
+      // download dos scripts, para a tela aparecer mais cedo); usa-se esse
+      // resultado uma única vez — chamadas seguintes consultam o servidor de novo.
+      let dados = null;
+      if (global.__sessaoInicial) {
+        dados = await global.__sessaoInicial;
+        global.__sessaoInicial = null;
+      }
+      if (!dados) {
+        const resposta = await fetch("/api/session", { credentials: "same-origin" });
+        dados = await resposta.json();
+      }
       return dados.logado ? { email: dados.email, nome: dados.nome } : null;
     } catch (e) {
       return null;

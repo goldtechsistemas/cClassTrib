@@ -45,6 +45,23 @@ const ANCORAS = {
 
 const cache = new Map(); // nome -> { texto, gzip, etag }
 
+// Conferir no banco, a cada um dos ~14 scripts de cada página, que a conta
+// continua ativa era o maior custo desta rota. O resultado "ativa" vale 30 s na
+// memória da instância (um bloqueio feito pelo admin passa a valer em até 30 s
+// para os SCRIPTS; as APIs de dados continuam conferindo a cada chamada).
+const ativos = new Map(); // e-mail -> expira em (ms)
+const VALIDADE_ATIVO_MS = 30 * 1000;
+
+async function usuarioAutorizado(req, res) {
+  const sessao = lerSessaoUsuario(req);
+  if (sessao && (ativos.get(sessao.email) || 0) > Date.now()) return true;
+  const usuarioId = await exigirUsuario(req, res);
+  if (usuarioId == null) return false;
+  if (ativos.size > 500) ativos.clear();
+  ativos.set(sessao.email, Date.now() + VALIDADE_ATIVO_MS);
+  return true;
+}
+
 function arquivoEmCache(nome) {
   if (cache.has(nome)) return cache.get(nome);
   const texto = fs.readFileSync(path.join(PASTA, nome), "utf8");
@@ -108,7 +125,9 @@ function servirConteudo(req, res, nome, email) {
   const aceitaGzip = /\bgzip\b/.test(String((req.headers && req.headers["accept-encoding"]) || ""));
 
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
-  res.setHeader("Cache-Control", "private, no-cache");
+  // 2 min no navegador do próprio usuário: navegar entre as telas não baixa nem
+  // revalida os ~14 scripts de novo. Depois disso, revalida pelo ETag (304).
+  res.setHeader("Cache-Control", "private, max-age=120");
   res.setHeader("Vary", "Cookie, Accept-Encoding");
 
   if (ARQUIVOS_SEM_MARCA.has(nome)) {
@@ -147,8 +166,7 @@ async function handler(req, res) {
     res.status(405).end();
     return;
   }
-  const usuarioId = await exigirUsuario(req, res);
-  if (usuarioId == null) return;
+  if (!(await usuarioAutorizado(req, res))) return;
   const sessao = lerSessaoUsuario(req);
   servirConteudo(req, res, String((req.query && req.query.arquivo) || ""), sessao && sessao.email);
 }

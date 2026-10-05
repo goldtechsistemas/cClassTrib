@@ -581,6 +581,27 @@ hoje (Brasília); há histórico e "Desfazer última baixa".
   N dias** (até 7), **Vence hoje**, **Atrasado há N dias** e **Sem assinatura**.
   O sistema só informa — não bloqueia o login por atraso.
 
+### Desempenho (2026-10-05)
+
+Medido em produção: as páginas e arquivos estáticos respondem em ~0,1–0,3 s (borda
+em São Paulo); as funções rodam em iad1 (EUA) junto do Neon (us-east-1), então o
+banco responde em poucos ms por dentro e cada chamada de função custa ~0,25 s de
+rede para quem está no Brasil. O que mais pesava era a quantidade dessas chamadas
+a cada página. Ajustes:
+
+- Os ~14 scripts protegidos (`/js/*`, `api/_nfe/conteudo.js`) agora ficam 2 min no
+  cache do navegador (`private, max-age=120`, depois revalidam por ETag/304) e a
+  checagem "conta ativa" é guardada 30 s na memória da instância (antes: uma
+  consulta ao banco por script). Um bloqueio feito pelo admin vale em até 30 s
+  para os scripts; as APIs de dados continuam conferindo a cada chamada.
+- As páginas protegidas disparam a checagem de sessão já no `<head>`
+  (`window.__sessaoInicial`), em paralelo com o download dos scripts, em vez de
+  esperar todos carregarem. `Auth.sessaoAtual()` usa esse resultado uma única vez.
+- `css/*` e os scripts públicos pequenos (`auth`, `login`, `tema`, `conta`,
+  `atualizador`) têm cache de 5 min na borda/navegador (`vercel.json`).
+- Limite conhecido: o Neon Free hiberna após ~5 min sem uso; a primeira chamada
+  depois disso leva ~1 s a mais para "acordar" o banco.
+
 ## Como rodar localmente
 
 Desde a migração do login pra backend real (ver seção acima), rodar só um
