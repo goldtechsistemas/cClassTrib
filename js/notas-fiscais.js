@@ -200,7 +200,7 @@
 
         const avisoUf = emp.uf
           ? ""
-          : `<div class="empresa-alerta" title="Não foi possível identificar a UF no certificado; a consulta à SEFAZ pode falhar até isso ser corrigido.">⚠ UF não detectada</div>`;
+          : `<div class="empresa-alerta" title="Este certificado não traz o estado no cadastro do emissor. A consulta à SEFAZ funciona normalmente; a UF é preenchida sozinha assim que chegar uma nota com o XML completo.">ⓘ UF não informada no certificado</div>`;
 
         const ehCpf = String(emp.cnpj || "").replace(/\D/g, "").length === 11;
         return `

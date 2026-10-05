@@ -1,7 +1,7 @@
 const { query } = require("./_db");
 const { decryptSecret } = require("./_crypto");
 const { extrairParaMtls } = require("./_certUtils");
-const { distribuirDfe, enviarManifestacaoDestinatario, ErroSefaz, TP_EVENTO_CIENCIA, TP_EVENTO_CONFIRMACAO } = require("./_sefazClient");
+const { distribuirDfe, enviarManifestacaoDestinatario, ErroSefaz, TP_EVENTO_CIENCIA, TP_EVENTO_CONFIRMACAO, UF_PARA_CODIGO } = require("./_sefazClient");
 
 const TP_EVENTO_CANCELAMENTO = "110111";
 const UMA_HORA_MS = 60 * 60 * 1000;
@@ -20,6 +20,28 @@ const TIMEOUT_MANIFESTACAO_MS = 10000;
 
 function esperar(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Alguns certificados A1 não trazem o estado (campo ST) no cadastro do
+// emissor, e a empresa ficava sem UF. O endereço do destinatário nas próprias
+// notas recebidas (<dest><enderDest><UF>) resolve: é a UF do CNPJ/CPF
+// consultante. Só preenche quando está vazia e o destinatário da nota é de
+// fato esta empresa.
+async function descobrirUfDaEmpresa(empresa, documentos) {
+  if (empresa.uf) return;
+  const meuDocumento = String(empresa.cnpj || "").replace(/\D/g, "");
+  for (const doc of documentos) {
+    if (!doc.xmlCompleto) continue;
+    const dest = (String(doc.xmlCompleto).match(/<dest>([\s\S]*?)<\/dest>/) || [])[1];
+    if (!dest) continue;
+    const docDest = (dest.match(/<CNPJ>(\d+)<\/CNPJ>|<CPF>(\d+)<\/CPF>/) || []).slice(1).find(Boolean);
+    const uf = (dest.match(/<enderDest>[\s\S]*?<UF>([A-Z]{2})<\/UF>/) || [])[1];
+    if (docDest === meuDocumento && uf && UF_PARA_CODIGO[uf]) {
+      await query("UPDATE nfe_empresas SET uf = $1 WHERE id = $2 AND uf IS NULL", [uf, empresa.id]);
+      empresa.uf = uf;
+      return;
+    }
+  }
 }
 
 async function upsertLote(empresaId, documentos, eventos) {
@@ -94,6 +116,7 @@ async function distribuirAteCaughtUp({ empresa, ultNsuInicial, certPem, keyPem, 
     // precisa registrar quantos vieram NESSE lote, não o total acumulado,
     // senão qualquer relatório que somar essa coluna conta em dobro/triplo.
     const docsNovosDoCiclo = await upsertLote(empresa.id, resultado.documentos, resultado.eventos);
+    await descobrirUfDaEmpresa(empresa, resultado.documentos);
     docsNovosTotal += docsNovosDoCiclo;
     await query(
       "INSERT INTO nfe_sync_logs (empresa_id, c_stat, x_motivo, docs_novos) VALUES ($1, $2, $3, $4)",
