@@ -556,22 +556,13 @@ os usuários cadastrados e ações de bloquear/desbloquear/excluir.
   `api/admin/users/[id].js`, não só na interface) antes do `DELETE` de
   verdade.
 
-### Login do admin com segunda senha (2026-10-06)
+### Alterar a senha do admin (2026-10-06)
 
-O login do `admin.html` tem duas etapas: e-mail + senha e, depois, uma **segunda
-senha de confirmação**. Acertar só a primeira não abre a sessão (entrega uma
-permissão de 10 min, cookie `cclasstrib_admin_etapa2`, que `lerSessaoAdmin` ignora).
-No **primeiro acesso** (admin sem segunda senha) a tela pede para criá-la
-(mínimo 8 caracteres, diferente da primeira) e já entra. O botão **Alterar senhas**
-no painel troca a senha e/ou a segunda senha (exige as atuais).
-
-- Banco: coluna `admins.segunda_senha_hash` (aditiva, via `scripts/init-db.js`).
-- Tudo em `api/admin/login.js` (campo `etapa`: vazio, `segunda`, `criar`, `alterar`),
-  sem consumir função nova da Vercel. Erros em qualquer etapa contam no mesmo
-  limite de tentativas (5 em 15 min por e-mail + IP).
-- Se esquecer a segunda senha: apagar `segunda_senha_hash` da linha do admin no
-  banco (`UPDATE admins SET segunda_senha_hash = NULL WHERE email = '...'`) e criar
-  de novo no próximo acesso.
+O login do admin continua sendo e-mail + senha (chegou a ser testada uma segunda
+senha de confirmação, descartada por preferência). O botão **Alterar senha** no
+painel troca a senha exigindo a atual (mínimo 8 caracteres, com confirmação);
+errar a senha atual conta no limite de tentativas. A rota é a própria
+`api/admin/login.js` (campo `etapa: "alterar"`), para não consumir função nova da Vercel.
 
 ### Assinaturas e cobranças (2026-10-05)
 

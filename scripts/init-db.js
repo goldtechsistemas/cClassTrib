@@ -44,10 +44,6 @@ async function main() {
     );
   `);
 
-  // Login do admin em duas etapas: segunda senha de confirmação (criada pelo
-  // próprio admin no primeiro acesso, depois da senha normal).
-  await pool.query(`ALTER TABLE admins ADD COLUMN IF NOT EXISTS segunda_senha_hash TEXT;`);
-
   // Módulo "Notas Fiscais de Compra" (NF-e recebidas) — usa o mesmo login
   // do site (usuarios.id), isolado por usuario_id em cada tabela.
   await pool.query(`

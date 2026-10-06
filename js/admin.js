@@ -75,55 +75,6 @@
     el.style.display = "block";
   }
 
-  // ---------- Login em duas etapas ----------
-
-  const ETAPAS = { senha: "admin-etapa-senha", segunda: "admin-etapa-segunda", criar: "admin-etapa-criar" };
-
-  function mostrarEtapaLogin(etapa) {
-    Object.entries(ETAPAS).forEach(([k, id]) => { document.getElementById(id).style.display = k === etapa ? "" : "none"; });
-    document.getElementById("erro-admin-login").style.display = "none";
-    const foco = { senha: "input-admin-senha", segunda: "input-admin-segunda", criar: "input-admin-nova-segunda" }[etapa];
-    setTimeout(() => document.getElementById(foco).focus(), 0);
-  }
-
-  function limparCamposSensiveis() {
-    ["input-admin-senha", "input-admin-segunda", "input-admin-nova-segunda", "input-admin-conf-segunda"].forEach((id) => { document.getElementById(id).value = ""; });
-  }
-
-  // Executa uma etapa do login mostrando "carregando" no botão.
-  async function enviarEtapa(idBotao, textoOcupado, corpo, aoSucesso) {
-    const btn = document.getElementById(idBotao);
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = textoOcupado;
-    try {
-      const r = await postJson("/api/admin/login", corpo);
-      if (!r.ok) {
-        mostrarErroLogin(r.erro || "Não foi possível entrar.");
-        if (r.voltar) { limparCamposSensiveis(); mostrarEtapaLogin("senha"); mostrarErroLogin(r.erro); }
-        return;
-      }
-      aoSucesso(r);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = original;
-    }
-  }
-
-  function entrarSegunda() {
-    const segundaSenha = document.getElementById("input-admin-segunda").value;
-    if (!segundaSenha) { mostrarErroLogin("Digite a segunda senha."); return; }
-    enviarEtapa("btn-admin-segunda", "Confirmando...", { etapa: "segunda", segundaSenha }, (r) => { limparCamposSensiveis(); adminTemSegundaSenha = true; mostrarPainel(r.email); });
-  }
-
-  function criarSegundaSenha() {
-    const novaSegunda = document.getElementById("input-admin-nova-segunda").value;
-    const confirmarSegunda = document.getElementById("input-admin-conf-segunda").value;
-    if (novaSegunda.length < 8) { mostrarErroLogin("A segunda senha precisa ter no mínimo 8 caracteres."); return; }
-    if (novaSegunda !== confirmarSegunda) { mostrarErroLogin("As duas digitações da segunda senha não conferem."); return; }
-    enviarEtapa("btn-admin-criar-segunda", "Criando...", { etapa: "criar", novaSegunda, confirmarSegunda }, (r) => { limparCamposSensiveis(); adminTemSegundaSenha = true; mostrarPainel(r.email); });
-  }
-
   async function tentarEntrar() {
     const erroEl = document.getElementById("erro-admin-login");
     erroEl.style.display = "none";
@@ -137,17 +88,14 @@
     try {
       const resultado = await postJson("/api/admin/login", { email, senha });
       if (!resultado.ok) { mostrarErroLogin(resultado.erro || "E-mail ou senha incorretos."); return; }
-      document.getElementById("input-admin-senha").value = "";
-      mostrarEtapaLogin(resultado.etapa === "criar" ? "criar" : "segunda");
+      mostrarPainel(resultado.email);
     } finally {
       btn.disabled = false;
       btn.textContent = "Entrar";
     }
   }
 
-  // ---------- Alterar senhas do admin ----------
-
-  let adminTemSegundaSenha = true;
+  // ---------- Alterar a senha do admin ----------
 
   function erroSenhas(msg) {
     const el = document.getElementById("erro-senhas");
@@ -156,33 +104,25 @@
   }
 
   function abrirModalSenhas() {
-    ["senhas-atual", "senhas-segunda-atual", "senhas-nova", "senhas-nova-conf", "senhas-nova-segunda", "senhas-nova-segunda-conf"].forEach((id) => { document.getElementById(id).value = ""; });
+    ["senhas-atual", "senhas-nova", "senhas-nova-conf"].forEach((id) => { document.getElementById(id).value = ""; });
     erroSenhas("");
-    document.getElementById("senhas-bloco-segunda-atual").style.display = adminTemSegundaSenha ? "" : "none";
-    document.getElementById("rotulo-nova-segunda").textContent = adminTemSegundaSenha ? "Nova segunda senha (opcional)" : "Criar a segunda senha";
     document.getElementById("modal-senhas-overlay").classList.add("aberto");
   }
 
   async function salvarSenhas() {
     const v = (id) => document.getElementById(id).value;
-    const corpo = {
-      etapa: "alterar",
-      senhaAtual: v("senhas-atual"), segundaAtual: v("senhas-segunda-atual"),
-      novaSenha: v("senhas-nova"), confirmarSenha: v("senhas-nova-conf"),
-      novaSegunda: v("senhas-nova-segunda"), confirmarSegunda: v("senhas-nova-segunda-conf"),
-    };
+    const corpo = { etapa: "alterar", senhaAtual: v("senhas-atual"), novaSenha: v("senhas-nova"), confirmarSenha: v("senhas-nova-conf") };
     if (!corpo.senhaAtual) { erroSenhas("Informe a senha atual."); return; }
-    if (adminTemSegundaSenha && !corpo.segundaAtual) { erroSenhas("Informe a segunda senha atual."); return; }
-    if (!corpo.novaSenha && !corpo.novaSegunda) { erroSenhas("Digite a nova senha e/ou a nova segunda senha."); return; }
+    if (corpo.novaSenha.length < 8) { erroSenhas("A nova senha precisa ter no mínimo 8 caracteres."); return; }
+    if (corpo.novaSenha !== corpo.confirmarSenha) { erroSenhas("As duas digitações da nova senha não conferem."); return; }
     const btn = document.getElementById("btn-salvar-senhas");
     btn.disabled = true;
     try {
       const r = await chamarApi("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
       if (r.status === 401 && /autorizado/i.test(r.erro || "")) { document.getElementById("modal-senhas-overlay").classList.remove("aberto"); voltarParaLogin(); return; }
-      if (!r.ok) { erroSenhas(r.erro || "Não foi possível alterar."); return; }
-      adminTemSegundaSenha = !!r.temSegundaSenha;
+      if (!r.ok) { erroSenhas(r.erro || "Não foi possível alterar a senha."); return; }
       document.getElementById("modal-senhas-overlay").classList.remove("aberto");
-      mostrarAvisoPainel("Senhas atualizadas.", "ok");
+      mostrarAvisoPainel("Senha alterada.", "ok");
     } finally {
       btn.disabled = false;
     }
@@ -844,23 +784,12 @@
   function voltarParaLogin() {
     viewPainel.style.display = "none";
     viewLogin.style.display = "";
-    limparCamposSensiveis();
-    mostrarEtapaLogin("senha");
+    document.getElementById("input-admin-senha").value = "";
   }
 
   // ---------- Ligações ----------
 
   document.getElementById("btn-admin-entrar").addEventListener("click", tentarEntrar);
-  document.getElementById("btn-admin-segunda").addEventListener("click", entrarSegunda);
-  document.getElementById("btn-admin-criar-segunda").addEventListener("click", criarSegundaSenha);
-  document.querySelectorAll("[data-admin-voltar]").forEach((b) => b.addEventListener("click", () => {
-    postJson("/api/admin/logout", {}); // descarta a permissão da 2ª etapa
-    limparCamposSensiveis();
-    mostrarEtapaLogin("senha");
-  }));
-  [["input-admin-segunda", entrarSegunda], ["input-admin-conf-segunda", criarSegundaSenha]].forEach(([id, fn]) => {
-    document.getElementById(id).addEventListener("keydown", (e) => { if (e.key === "Enter") fn(); });
-  });
   document.getElementById("btn-admin-senhas").addEventListener("click", abrirModalSenhas);
   document.getElementById("btn-salvar-senhas").addEventListener("click", salvarSenhas);
   const overlaySenhas = document.getElementById("modal-senhas-overlay");
@@ -935,7 +864,6 @@
   (async function iniciar() {
     const resultado = await chamarApi("/api/admin/session");
     if (resultado.logado) {
-      adminTemSegundaSenha = resultado.temSegundaSenha !== false;
       mostrarPainel(resultado.email);
     }
     document.documentElement.classList.add("sessao-pronta");
