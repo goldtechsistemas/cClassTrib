@@ -17,14 +17,38 @@
     <div class="card auth-card">
       <div id="erro-admin-login" class="aviso-legal" style="display:none;"></div>
 
-      <label for="input-admin-email">E-mail</label>
-      <input type="email" id="input-admin-email" placeholder="admin@exemplo.com" autocomplete="username" />
+      <div id="admin-etapa-senha">
+        <label for="input-admin-email">E-mail</label>
+        <input type="email" id="input-admin-email" placeholder="admin@exemplo.com" autocomplete="username" />
 
-      <label for="input-admin-senha" style="margin-top:14px;">Senha</label>
-      <input type="password" id="input-admin-senha" placeholder="Sua senha" autocomplete="current-password" />
+        <label for="input-admin-senha" style="margin-top:14px;">Senha</label>
+        <input type="password" id="input-admin-senha" placeholder="Sua senha" autocomplete="current-password" />
 
-      <div class="field-actions">
-        <button class="btn" id="btn-admin-entrar">Entrar</button>
+        <div class="field-actions">
+          <button class="btn" id="btn-admin-entrar">Entrar</button>
+        </div>
+      </div>
+
+      <div id="admin-etapa-segunda" style="display:none;">
+        <p class="hint" style="margin-top:0;">Senha confirmada. Agora digite a <strong>segunda senha de confirmação</strong>.</p>
+        <label for="input-admin-segunda">Segunda senha</label>
+        <input type="password" id="input-admin-segunda" placeholder="Segunda senha" autocomplete="off" />
+        <div class="field-actions">
+          <button class="btn" id="btn-admin-segunda">Confirmar e entrar</button>
+          <button class="btn secondary" type="button" data-admin-voltar>Voltar</button>
+        </div>
+      </div>
+
+      <div id="admin-etapa-criar" style="display:none;">
+        <p class="hint" style="margin-top:0;">Primeiro acesso: crie agora a sua <strong>segunda senha de confirmação</strong>. Ela será pedida em todo login, depois do e-mail e da senha. Use no mínimo 8 caracteres e diferente da primeira senha.</p>
+        <label for="input-admin-nova-segunda">Criar segunda senha</label>
+        <input type="password" id="input-admin-nova-segunda" placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+        <label for="input-admin-conf-segunda" style="margin-top:14px;">Repita a segunda senha</label>
+        <input type="password" id="input-admin-conf-segunda" placeholder="Repita a segunda senha" autocomplete="new-password" />
+        <div class="field-actions">
+          <button class="btn" id="btn-admin-criar-segunda">Criar segunda senha e entrar</button>
+          <button class="btn secondary" type="button" data-admin-voltar>Voltar</button>
+        </div>
       </div>
     </div>
   </main>
@@ -38,6 +62,7 @@
     <div class="field-actions" style="justify-content:flex-end;">
       <span class="hint" id="texto-admin-logado" style="margin-right:auto;"></span>
       <button class="btn secondary" id="btn-admin-atualizar" type="button">Atualizar lista</button>
+      <button class="btn secondary" id="btn-admin-senhas" type="button">Alterar senhas</button>
       <a href="#" class="btn secondary" id="btn-admin-sair">Sair</a>
     </div>
 
@@ -140,6 +165,33 @@
       <button class="modal-fechar" id="btn-fechar-modal-detalhes" type="button" aria-label="Fechar">&times;</button>
       <h2 class="modal-titulo">Detalhes do usuário</h2>
       <div id="corpo-detalhes"></div>
+    </div>
+  </div>
+
+  <!-- Modal: alterar a senha e a segunda senha do admin -->
+  <div class="modal-overlay" id="modal-senhas-overlay">
+    <div class="card modal-card">
+      <button class="modal-fechar" id="btn-fechar-modal-senhas" type="button" aria-label="Fechar">&times;</button>
+      <h2 class="modal-titulo" id="titulo-senhas">Alterar senhas</h2>
+      <div id="erro-senhas" class="aviso-legal" style="display:none;"></div>
+      <p class="hint" style="margin-top:0;" id="dica-senhas">Para confirmar que é você, informe as senhas atuais. Preencha só o que quiser trocar (mínimo 8 caracteres).</p>
+      <label for="senhas-atual">Senha atual</label>
+      <input type="password" id="senhas-atual" autocomplete="current-password" />
+      <div id="senhas-bloco-segunda-atual">
+        <label for="senhas-segunda-atual" style="margin-top:14px;">Segunda senha atual</label>
+        <input type="password" id="senhas-segunda-atual" autocomplete="off" />
+      </div>
+      <label for="senhas-nova" style="margin-top:14px;">Nova senha (opcional)</label>
+      <input type="password" id="senhas-nova" autocomplete="new-password" />
+      <label for="senhas-nova-conf" style="margin-top:14px;">Repita a nova senha</label>
+      <input type="password" id="senhas-nova-conf" autocomplete="new-password" />
+      <label for="senhas-nova-segunda" style="margin-top:14px;" id="rotulo-nova-segunda">Nova segunda senha (opcional)</label>
+      <input type="password" id="senhas-nova-segunda" autocomplete="new-password" />
+      <label for="senhas-nova-segunda-conf" style="margin-top:14px;">Repita a nova segunda senha</label>
+      <input type="password" id="senhas-nova-segunda-conf" autocomplete="new-password" />
+      <div class="field-actions">
+        <button class="btn" id="btn-salvar-senhas" type="button">Salvar</button>
+      </div>
     </div>
   </div>
 

@@ -120,6 +120,32 @@ function iniciarSessaoAdmin(res, dados) {
   adicionarSetCookie(res, montarSetCookie(NOME_COOKIE_ADMIN, token, 60 * 60 * 12));
 }
 
+// Login do admin em duas etapas (e-mail + senha, depois a "segunda senha"):
+// acertar a 1ª senha NÃO abre a sessão — só entrega esta permissão curta, que
+// vale apenas para a 2ª etapa (tipo próprio: lerSessaoAdmin() a ignora).
+const NOME_COOKIE_ADMIN_ETAPA2 = "cclasstrib_admin_etapa2";
+const SEGUNDOS_ADMIN_ETAPA2 = 60 * 10;
+
+function iniciarEtapa2Admin(res, dados) {
+  const token = jwt.sign({ tipo: "admin-etapa2", ...dados }, segredo(), { expiresIn: SEGUNDOS_ADMIN_ETAPA2 });
+  adicionarSetCookie(res, montarSetCookie(NOME_COOKIE_ADMIN_ETAPA2, token, SEGUNDOS_ADMIN_ETAPA2));
+}
+
+function encerrarEtapa2Admin(res) {
+  adicionarSetCookie(res, montarClearCookie(NOME_COOKIE_ADMIN_ETAPA2));
+}
+
+function lerEtapa2Admin(req) {
+  const token = lerCookies(req)[NOME_COOKIE_ADMIN_ETAPA2];
+  if (!token) return null;
+  try {
+    const dados = jwt.verify(token, segredo());
+    return dados.tipo === "admin-etapa2" ? dados : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function encerrarSessaoAdmin(res) {
   adicionarSetCookie(res, montarClearCookie(NOME_COOKIE_ADMIN));
 }
@@ -169,5 +195,8 @@ module.exports = {
   lerTrocaSenha,
   iniciarSessaoAdmin,
   encerrarSessaoAdmin,
+  iniciarEtapa2Admin,
+  encerrarEtapa2Admin,
+  lerEtapa2Admin,
   lerSessaoAdmin,
 };
