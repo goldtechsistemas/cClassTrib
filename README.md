@@ -556,6 +556,22 @@ os usuários cadastrados e ações de bloquear/desbloquear/excluir.
   `api/admin/users/[id].js`, não só na interface) antes do `DELETE` de
   verdade.
 
+### IBS/CBS das notas de compra e busca de hora em hora (2026-10-15)
+
+- **IBS/CBS/IS**: `api/_xmlNfe.js` lê o grupo `IBSCBS`/`IS` de cada item (CST,
+  cClassTrib, base, alíquotas e valores) e os totais `IBSCBSTot`/`ISTot`. O DANFE
+  ganhou o quadro "Tributos da Reforma" e uma faixa fina por item com CST/cClassTrib
+  e valores (junto com o ICMS ST, sem cortar as colunas); o painel do período
+  mostra IBS, CBS e IS (`api/_nfe/documentos.js` extrai os totais por SQL); o
+  Excel tem colunas por nota e a aba "Itens (IBS-CBS)" com NCM, CST e cClassTrib.
+- **Busca de hora em hora**: `.github/workflows/sincronizar-notas.yml` chama
+  `/api/nfe-cron-sincronizar` a cada hora com o segredo `CRON_SECRET` (Settings >
+  Secrets do repositório). O cron diário da Vercel continua como reserva. O log
+  do workflow só mostra o código HTTP (o repositório é público e a resposta traz
+  CNPJs). Empresas com 3 recusas 656 seguidas só são tentadas pela rotina a cada
+  6 h. Atenção: em repositório público o GitHub desativa agendamentos depois de
+  60 dias sem nenhum commit — reative em Actions se isso acontecer.
+
 ### Conferência geral (2026-10-15)
 
 - **Tabelas oficiais conferidas, sem novidades**: cClassTrib igual à publicação

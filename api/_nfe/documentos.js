@@ -32,6 +32,11 @@ function docParaSaida(row) {
           pis: numeroOuNull(row.v_pis),
           cofins: numeroOuNull(row.v_cofins),
           totTrib: numeroOuNull(row.v_tot_trib),
+          // Reforma Tributária (grupo IBSCBSTot/ISTot) — null se a nota não traz.
+          ibs: numeroOuNull(row.v_ibs),
+          cbs: numeroOuNull(row.v_cbs),
+          is: numeroOuNull(row.v_is),
+          temReforma: !!row.tem_reforma,
         }
       : null,
   };
@@ -40,8 +45,8 @@ function docParaSaida(row) {
 // Pega o valor de uma tag do bloco ICMSTot (tag exata, com o ">" — assim
 // <vICMS> não casa com <vICMSDeson>). Só olha dentro do
 // ICMSTot: os itens têm <vICMS>/<vIPI>... próprios e não podem entrar na conta.
-function valorDoTotal(tag) {
-  return `substring(tot from '<${tag}>([0-9.]+)</${tag}>')::numeric`;
+function valorDoTotal(tag, bloco = "tot") {
+  return `substring(${bloco} from '<${tag}>([0-9.]+)</${tag}>')::numeric`;
 }
 
 module.exports = async (req, res) => {
@@ -68,11 +73,17 @@ module.exports = async (req, res) => {
               ${valorDoTotal("vIPI")} AS v_ipi,
               ${valorDoTotal("vPIS")} AS v_pis,
               ${valorDoTotal("vCOFINS")} AS v_cofins,
-              ${valorDoTotal("vTotTrib")} AS v_tot_trib
+              ${valorDoTotal("vTotTrib")} AS v_tot_trib,
+              (tot_reforma IS NOT NULL) AS tem_reforma,
+              ${valorDoTotal("vIBS", "tot_reforma")} AS v_ibs,
+              ${valorDoTotal("vCBS", "tot_reforma")} AS v_cbs,
+              ${valorDoTotal("vIS", "tot_is")} AS v_is
          FROM (
            SELECT id, ch_nfe, tipo, numero, serie, emit_cnpj, emit_nome, emit_uf, dh_emi, v_nf, situacao, manifestacao, criado_em,
                   (xml_completo IS NOT NULL) AS tem_xml,
-                  substring(xml_completo from '<ICMSTot>(.*?)</ICMSTot>') AS tot
+                  substring(xml_completo from '<ICMSTot>(.*?)</ICMSTot>') AS tot,
+                  substring(xml_completo from '<IBSCBSTot>(.*?)</IBSCBSTot>') AS tot_reforma,
+                  substring(xml_completo from '<ISTot>(.*?)</ISTot>') AS tot_is
              FROM nfe_documentos
             WHERE empresa_id = $1${filtro}
             ORDER BY dh_emi DESC NULLS LAST, criado_em DESC

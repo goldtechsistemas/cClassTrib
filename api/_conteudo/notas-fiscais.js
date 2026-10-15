@@ -565,7 +565,7 @@
   }
 
   function calcularPainel(notas) {
-    const r = { total: notas.length, autorizadas: 0, outras: 0, valor: 0, semXml: 0, icms: 0, icmsSt: 0, ipi: 0, pis: 0, cofins: 0, totTrib: 0 };
+    const r = { total: notas.length, autorizadas: 0, outras: 0, valor: 0, semXml: 0, icms: 0, icmsSt: 0, ipi: 0, pis: 0, cofins: 0, totTrib: 0, ibs: 0, cbs: 0, is: 0, comReforma: 0 };
     notas.forEach((n) => {
       // Cancelada/denegada não são compra de verdade: contam em "Total de
       // notas", mas ficam fora dos valores e dos impostos.
@@ -585,6 +585,10 @@
       r.pis += n.trib.pis || 0;
       r.cofins += n.trib.cofins || 0;
       r.totTrib += n.trib.totTrib || 0;
+      if (n.trib.temReforma) r.comReforma += 1;
+      r.ibs += n.trib.ibs || 0;
+      r.cbs += n.trib.cbs || 0;
+      r.is += n.trib.is || 0;
     });
     return r;
   }
@@ -634,13 +638,23 @@
       cartaoPainel("Valor total de ICMS ST", formatarValor(t.icmsSt), pct(t.icmsSt)),
       cartaoPainel("Valor total de IPI", formatarValor(t.ipi), pct(t.ipi)),
       cartaoPainel("Valor total de PIS", formatarValor(t.pis), pct(t.pis)),
-    ].join("");
+    ]
+      .concat(
+        t.comReforma
+          ? [
+              cartaoPainel("IBS destacado (Reforma)", formatarValor(t.ibs), `${t.comReforma} nota(s) com IBS/CBS`),
+              cartaoPainel("CBS destacada (Reforma)", formatarValor(t.cbs), pct(t.cbs)),
+            ].concat(t.is ? [cartaoPainel("Imposto Seletivo (IS)", formatarValor(t.is), pct(t.is))] : [])
+          : []
+      )
+      .join("");
 
     const avisos = [];
     if (t.semXml) avisos.push(`${t.semXml} nota(s) ainda em "Resumo" (sem XML completo) entram no valor, mas ficam fora dos impostos — dê ciência e sincronize de novo para completar.`);
     if (t.outras) avisos.push("Notas canceladas ou denegadas contam em \"Total de notas\", mas não entram nos valores.");
     if (notasDoPainel.length >= LIMITE_NOTAS_LISTA) avisos.push(`Cálculo sobre as ${LIMITE_NOTAS_LISTA} notas mais recentes — refine o filtro para ver o resto.`);
     avisos.push("Impostos conforme o total informado no XML de cada nota. O \"aprox. de tributos\" só aparece nas notas que o emitente preencheu.");
+    if (t.comReforma) avisos.push("Em 2026 o IBS (0,1%) e a CBS (0,9%) vêm destacados nas notas em fase de teste da Reforma Tributária — confira com a contabilidade o efeito na apuração. O CST e o cClassTrib de cada item estão no Excel e no PDF da nota.");
     if (meses.length > 1) avisos.unshift("Escolher um mês também filtra a lista de notas e os downloads logo abaixo.");
     painelNota.textContent = avisos.join(" ");
     painelPeriodo.style.display = "";

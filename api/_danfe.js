@@ -277,6 +277,21 @@ async function gerarDanfePdf(xmlCompleto) {
     ],
   });
 
+  // --- IBS / CBS / IS (Reforma Tributária, NT 2025.002) ---
+  // Só aparece quando o XML traz o grupo IBSCBSTot.
+  if (nfe.reforma) {
+    const rf = nfe.reforma;
+    const celulas = [
+      { label: "BASE DE CÁLC. IBS/CBS", value: moeda(rf.base) },
+      { label: "VALOR DO IBS (UF + MUN.)", value: moeda(rf.valorIbs) },
+      { label: "VALOR DA CBS", value: moeda(rf.valorCbs) },
+      { label: "VALOR DO IS", value: moeda(rf.valorIs) },
+    ];
+    if (rf.valorTotalComTributos != null) celulas.push({ label: "V. TOTAL NF C/ IBS/CBS/IS", value: moeda(rf.valorTotalComTributos) });
+    celulas.forEach((c) => (c.w = 1 / celulas.length));
+    y += D.secao(x, y, LARGURA, { titulo: "TRIBUTOS DA REFORMA (IBS / CBS / IS)", alturaLinha: 20, linhas: [celulas] });
+  }
+
   // --- Transportador/Volumes ---
   const t = nfe.transportador;
   const vol = t.volumes[0] || {};
@@ -346,6 +361,24 @@ async function gerarDanfePdf(xmlCompleto) {
   cabecalhoTabela();
   for (const item of nfe.itens) {
     const temSt = item.valorIcmsSt || item.baseIcmsSt;
+    // Linhas finas abaixo do item: ICMS ST e, quando houver, IBS/CBS (CST,
+    // cClassTrib e valores) e Imposto Seletivo.
+    const partesExtras = [];
+    if (temSt) partesExtras.push(`.vIcmsST ${moeda(item.valorIcmsSt)}  .vBcIcmsST ${moeda(item.baseIcmsSt)}  .pIcmsST ${moeda(item.aliquotaIcmsSt)}%`);
+    if (item.ibsCbs) {
+      const ib = item.ibsCbs;
+      partesExtras.push(
+        `.CST IBS/CBS ${ib.cst}  .cClassTrib ${ib.cClassTrib}  .vBC ${moeda(ib.base)}  .vIBS ${moeda(ib.valorIbs)}  .vCBS ${moeda(ib.valorCbs)}` +
+          (item.impostoSeletivo ? `  .vIS ${moeda(item.impostoSeletivo.valor)}` : "")
+      );
+    }
+    // Numa faixa própria abaixo do item (largura toda, sem as divisórias das
+    // colunas); ST e IBS/CBS dividem a mesma linha quando cabem.
+    pdf.font("Helvetica").fontSize(5);
+    const larguraExtras = LARGURA - LARGURA * 0.085 - 4;
+    const juntas = partesExtras.join("     |     ");
+    const extras = partesExtras.length > 1 && pdf.widthOfString(juntas) > larguraExtras ? partesExtras : partesExtras.length ? [juntas] : [];
+    const alturaExtras = extras.length ? extras.length * 7 + 3 : 0;
     // Código e descrição podem ser longos: em vez de cortar com "…" (perdia
     // informação), a linha cresce até 5 linhas de texto.
     pdf.font("Helvetica").fontSize(6);
@@ -355,14 +388,14 @@ async function gerarDanfePdf(xmlCompleto) {
         .map((c) => pdf.heightOfString(String(item[c.chave] ?? ""), { width: LARGURA * c.w - 4 }))
     );
     const alturaBase = Math.min(Math.max(14, Math.ceil(alturaTexto) + 7), 43);
-    const alturaLinha = alturaBase + (temSt ? 10 : 0);
+    const alturaLinha = alturaBase + alturaExtras;
     if (y + alturaLinha > ALTURA_MAX_PAGINA) {
       pdf.addPage();
       pagina++;
       y = MARGEM;
       cabecalhoTabela();
     }
-    linhaComGrade(y, alturaLinha, (c, cx, w) => {
+    linhaComGrade(y, alturaBase, (c, cx, w) => {
       let texto = item[c.chave];
       if (c.chave === "origCst") texto = `${item.origem || "0"}${item.cst || ""}`;
       else if (c.chave === "quantidade") texto = Number(texto).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
@@ -376,13 +409,14 @@ async function gerarDanfePdf(xmlCompleto) {
         lineBreak: !!c.quebra,
       });
     });
-    if (temSt) {
-      pdf.font("Helvetica").fontSize(5).fillColor("#555555").text(
-        `.vIcmsST ${moeda(item.valorIcmsSt)}  .vBcIcmsST ${moeda(item.baseIcmsSt)}  .pIcmsST ${moeda(item.aliquotaIcmsSt)}%`,
-        x + LARGURA * 0.085 + 2,
-        y + alturaBase - 1,
-        { width: LARGURA * 0.5, lineBreak: false }
-      );
+    if (extras.length) {
+      pdf.lineWidth(0.5).rect(x, y + alturaBase, LARGURA, alturaExtras).stroke();
+      extras.forEach((linha, i) => {
+        pdf.font("Helvetica").fontSize(5).fillColor("#555555").text(linha, x + LARGURA * 0.085 + 2, y + alturaBase + 2 + i * 7, {
+          width: larguraExtras,
+          lineBreak: false,
+        });
+      });
       pdf.fillColor("#000000");
     }
     y += alturaLinha;

@@ -1,4 +1,4 @@
 {
-  "versao": "1.2.0",
-  "notas": "Consulta por NCM agora também mostra benefícios previstos direto em artigos da LC 214/2025 (livros e jornais, medicamentos, soros e vacinas, absorventes, automóveis para taxistas/PcD). Notas Fiscais: aviso quando outro sistema consulta o mesmo CNPJ na SEFAZ e notas canceladas identificadas corretamente."
+  "versao": "1.3.0",
+  "notas": "Notas Fiscais: valores de IBS, CBS e Imposto Seletivo no painel, no Excel (com aba de itens mostrando NCM, CST e cClassTrib) e no PDF/DANFE; busca de notas novas de hora em hora."
 }

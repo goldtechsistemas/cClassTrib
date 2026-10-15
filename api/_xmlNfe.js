@@ -28,6 +28,51 @@ function grupoUnico(obj) {
   return chaves.length ? obj[chaves[0]] : {};
 }
 
+// Grupo IBS/CBS do item (Reforma Tributária, NT 2025.002): CST, cClassTrib e,
+// quando há tributação, os valores em gIBSCBS. null se a nota não traz o grupo.
+function extrairIbsCbsItem(imposto) {
+  const g = imposto && imposto.IBSCBS;
+  if (!g) return null;
+  const v = g.gIBSCBS || {};
+  const uf = v.gIBSUF || {};
+  const mun = v.gIBSMun || {};
+  const cbs = v.gCBS || {};
+  return {
+    cst: txt(g.CST),
+    cClassTrib: txt(g.cClassTrib),
+    base: num(v.vBC),
+    aliquotaIbsUf: num(uf.pIBSUF),
+    aliquotaIbsMun: num(mun.pIBSMun),
+    valorIbs: num(v.vIBS),
+    aliquotaCbs: num(cbs.pCBS),
+    valorCbs: num(cbs.vCBS),
+  };
+}
+
+function extrairIsItem(imposto) {
+  const g = imposto && imposto.IS;
+  if (!g) return null;
+  return { cst: txt(g.CSTIS), cClassTrib: txt(g.cClassTribIS), valor: num(g.vIS) };
+}
+
+// Totais da Reforma (grupos IBSCBSTot e ISTot dentro de <total>).
+function extrairTotaisReforma(totalNfe) {
+  const t = totalNfe && totalNfe.IBSCBSTot;
+  if (!t) return null;
+  const gIbs = t.gIBS || {};
+  const gCbs = t.gCBS || {};
+  const isTot = (totalNfe && totalNfe.ISTot) || {};
+  return {
+    base: num(t.vBCIBSCBS),
+    valorIbs: num(gIbs.vIBS),
+    valorIbsUf: num(gIbs.gIBSUF && gIbs.gIBSUF.vIBSUF),
+    valorIbsMun: num(gIbs.gIBSMun && gIbs.gIBSMun.vIBSMun),
+    valorCbs: num(gCbs.vCBS),
+    valorIs: num(isTot.vIS),
+    valorTotalComTributos: totalNfe.vNFTot != null ? num(totalNfe.vNFTot) : null,
+  };
+}
+
 function extrairEndereco(ender) {
   if (!ender) return null;
   return {
@@ -88,6 +133,8 @@ function interpretarXmlCompleto(xmlTexto) {
       valorIcmsSt: num(icms.vICMSST),
       aliquotaIpi: num(ipiTrib.pIPI),
       valorIpi: num(ipiTrib.vIPI),
+      ibsCbs: extrairIbsCbsItem(imposto),
+      impostoSeletivo: extrairIsItem(imposto),
     };
   });
 
@@ -172,6 +219,9 @@ function interpretarXmlCompleto(xmlTexto) {
       valorIpi: num(total.vIPI),
       valorTotalNota: num(total.vNF),
     },
+
+    // IBS/CBS/IS (Reforma Tributária) — null quando a nota não traz os grupos.
+    reforma: extrairTotaisReforma(infNFe.total),
 
     informacoesComplementares: txt(infAdic.infCpl),
 
