@@ -641,7 +641,7 @@ window.CCLASSTRIB_DATA = {
       vigente: false,
       revogadoPor: "Lei Complementar nº 227, de 2026",
       observacao:
-        "ANEXO REVOGADO. A lista fixa de medicamentos deixou de valer. Atualmente (conforme art. 146, §1º) a redução a zero passa a alcançar medicamentos registrados na Anvisa quando adquiridos por: (I) órgãos da administração pública direta, autarquias e fundações públicas; ou (II) entidades de saúde imunes ao IBS/CBS que possuam CEBAS. Este é um tema em plena regulamentação — consulte a Receita Federal/CGIBS antes de aplicar qualquer classificação de medicamentos.",
+        "ANEXO REVOGADO. A lista fixa de medicamentos deixou de valer. Atualmente (conforme art. 146, §1º, na redação da LC 227/2026) a alíquota zero alcança medicamentos registrados na Anvisa quando: (I) adquiridos por órgãos da administração pública direta, autarquias e fundações públicas; (II) adquiridos por entidades de saúde imunes ao IBS/CBS que possuam CEBAS; ou (III) classificados como soros ou vacinas. Os demais medicamentos têm redução de 60% (art. 133) — a consulta por NCM já mostra essas regras para os capítulos 30.02, 30.03 e 30.04.",
       itens: []
     },
 
@@ -698,6 +698,85 @@ window.CCLASSTRIB_DATA = {
         { item: "Bens minerais", descricao: "2601; 2709.00.10; 2711.11.00; 2711.21.00", ncm: ["2601", "2709.00.10", "2711.11.00", "2711.21.00"] },
         { item: "Concursos de prognósticos e Fantasy sport", descricao: "Loterias, apostas e fantasy sport (base de cálculo específica, sem NCM associado)", ncm: [] }
       ]
+    }
+  ],
+
+  // Benefícios que a LC 214/2025 prevê direto em ARTIGOS (sem lista em Anexo),
+  // mas que dependem do NCM do produto. Sem estas regras a consulta por NCM
+  // caía na regra geral (tributação integral) para livros, jornais,
+  // medicamentos, absorventes etc. O resultado tem o mesmo formato dos Anexos
+  // (ver Rules.classificarPorNcm); o cClassTrib vem fixo da tabela oficial e o
+  // CST é conferido nela. `condicional: true` = só vale para um adquirente ou
+  // uso específico — a regra geral continua aparecendo junto.
+  // Textos conferidos no texto compilado da LC 214/2025 (Planalto) em 2026-10-15.
+  regrasPorArtigo: [
+    {
+      id: "art9-IV",
+      titulo: "Livros, jornais, periódicos e o papel destinado à sua impressão — imunidade",
+      artigo: "9º, IV",
+      tratamento: "imune",
+      cClassTrib: "410008",
+      ncm: ["49.01", "49.02", "4801.00"],
+      palavrasChave: "livro livros brochura jornal jornais revista revistas periodico periodicos papel de jornal papel imprensa dicionario enciclopedia",
+      observacao:
+        "Imunidade: não há incidência de IBS nem de CBS. Para o papel, a imunidade só vale quando ele é destinado à impressão de livros, jornais ou periódicos (o papel de jornal, NCM 4801.00, é o caso típico; outros papéis de impressão também podem ser imunes com essa destinação). Pela Súmula Vinculante 57 do STF, o livro eletrônico e os leitores usados exclusivamente para lê-lo também são imunes."
+    },
+    {
+      id: "art133",
+      titulo: "Medicamentos registrados na Anvisa ou produzidos por farmácias de manipulação",
+      artigo: "133",
+      tratamento: "reduzida",
+      percentualReducao: 60,
+      cClassTrib: "200032",
+      prioridade: 1,
+      ncm: ["30.03", "30.04"],
+      palavrasChave: "medicamento medicamentos remedio remedios farmacia manipulado manipulacao generico comprimido xarope",
+      observacao:
+        "Vale para medicamentos de uso humano registrados na Anvisa (ou manipulados), desde que o fabricante ou importador tenha firmado o compromisso com a União e o Comitê Gestor do IBS ou cumpra a sistemática da CMED (art. 133, § 2º). Medicamentos de uso veterinário seguem o Anexo IX; soros e vacinas têm alíquota zero (art. 146, § 1º, III).",
+      tratamentoAlternativo: {
+        percentualReducao: 100,
+        tratamento: "zero",
+        artigo: "146, § 1º, I e II",
+        condicao: "quando adquiridos por órgãos da administração pública direta, autarquias e fundações públicas, ou por entidades de saúde imunes ao IBS/CBS com CEBAS (serviços ao SUS)",
+        cClassTrib: "200010"
+      }
+    },
+    {
+      id: "art146-III",
+      titulo: "Medicamentos classificados como soros ou vacinas — alíquota zero",
+      artigo: "146, § 1º, III",
+      tratamento: "zero",
+      percentualReducao: 100,
+      cClassTrib: "200053",
+      ncm: ["3002.41", "3002.12.1"],
+      palavrasChave: "vacina vacinas soro soros antissoro antissoros antiofidico antitetanico",
+      observacao:
+        "Incluído pela Lei Complementar nº 227, de 2026: soros e vacinas registrados na Anvisa, conforme a regulamentação sanitária. Vacinas de uso veterinário (3002.42) seguem o Anexo IX."
+    },
+    {
+      id: "art147",
+      titulo: "Produtos de cuidados básicos à saúde menstrual — alíquota zero",
+      artigo: "147",
+      tratamento: "zero",
+      percentualReducao: 100,
+      cClassTrib: "200013",
+      ncm: ["9619.00.00"],
+      palavrasChave: "absorvente absorventes tampao tampoes higienico coletor menstrual calcinha absorvente",
+      observacao:
+        "Vale para tampões higiênicos, absorventes higiênicos internos ou externos (descartáveis ou reutilizáveis), calcinhas absorventes e coletores menstruais que atendam à norma da Anvisa. Fraldas e os demais artigos do mesmo NCM seguem o Anexo VIII (redução de 60%)."
+    },
+    {
+      id: "art149",
+      titulo: "Automóveis de passageiros vendidos a taxistas ou a pessoas com deficiência ou TEA — alíquota zero (condicional)",
+      artigo: "149",
+      tratamento: "zero",
+      percentualReducao: 100,
+      cClassTrib: "200015",
+      condicional: true,
+      ncm: ["87.03"],
+      palavrasChave: "taxi taxista pcd deficiencia autismo tea automovel carro",
+      observacao:
+        "Só vale para automóveis de fabricação nacional com no mínimo 4 portas, vendidos a motoristas profissionais de táxi ou a pessoas com deficiência ou com transtorno do espectro autista, dentro dos limites e requisitos dos arts. 149 a 156 (ex.: valor do veículo e motorização). Nas demais vendas valem a regra geral do IBS/CBS e o Imposto Seletivo."
     }
   ],
 

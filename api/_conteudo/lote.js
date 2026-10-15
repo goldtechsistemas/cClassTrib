@@ -179,7 +179,7 @@
         let encontrados = window.Rules.classificarPorNcm(ncm, data);
         if (descricao && encontrados.length > 1) {
           const termo = descricao.toLowerCase();
-          const filtrados = encontrados.filter((r) => (r.itemDescricao || "").toLowerCase().includes(termo));
+          const filtrados = encontrados.filter((r) => (r.itemDescricao || r.textoBusca || "").toLowerCase().includes(termo));
           if (filtrados.length > 0) encontrados = filtrados;
         }
         if (encontrados.length === 0) {
@@ -189,7 +189,8 @@
         // devolve um segundo resultado sintético com a tributação normal do
         // IBS/CBS (000001) que incide em paralelo — anexamos essa informação
         // extra em vez de descartá-la.
-        const principal = encontrados.find((r) => !r.sintetico) || encontrados[0];
+        // Benefício condicional (ex.: carro para taxista/PcD) só vira a linha principal se não houver outra regra.
+        const principal = encontrados.find((r) => !r.sintetico && !r.condicional) || encontrados.find((r) => !r.sintetico) || encontrados[0];
         const extra = encontrados.find((r) => r !== principal && r.sintetico);
         return Object.assign({}, principal, {
           consultaOriginal: ncm,
@@ -230,7 +231,7 @@
           <td>${esc(r.descricaoOriginal || "")}</td>
           <td>${esc(r.consultaOriginal)}</td>
           <td><span class="badge cor-${r.cor}">${esc(r.tratamentoLabel)}</span></td>
-          <td class="nowrap">${r.anexoId ? esc(r.anexoId) + (r.vigente === false ? " (revogado)" : "") : "regra geral"}</td>
+          <td class="nowrap">${r.anexoId ? esc(r.anexoId) + (r.vigente === false ? " (revogado)" : "") : r.regraId ? "—" : "regra geral"}</td>
           <td class="nowrap">${esc(r.artigo)}</td>
           <td>${cclassCel}</td>
           <td>${r.percentualReducao != null ? r.percentualReducao + "%" : "—"}</td>
@@ -317,7 +318,8 @@
         }
         const codigo = achado.melhor.codigo;
         const encontrados = window.Rules.classificarPorNcm(codigo, data);
-        const principal = encontrados.find((r) => !r.sintetico) || encontrados[0];
+        // Benefício condicional (ex.: carro para taxista/PcD) só vira a linha principal se não houver outra regra.
+        const principal = encontrados.find((r) => !r.sintetico && !r.condicional) || encontrados.find((r) => !r.sintetico) || encontrados[0];
         const extra = encontrados.find((r) => r !== principal && r.sintetico);
         return Object.assign({}, principal, {
           consultaOriginal: codigo,

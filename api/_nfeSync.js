@@ -22,6 +22,25 @@ function esperar(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Rejeição 656 (consumo indevido) da distribuição por NSU. A SEFAZ só aceita UMA
+// sequência de NSU por CNPJ: se outro sistema (ERP, emissor, programa da
+// contabilidade) também baixa as notas desse CNPJ, as consultas dos dois se
+// atropelam e a SEFAZ recusa com "Deve ser utilizado o ultNSU..." ou "Deve ser
+// aguardado 1 hora..." (NT 2014.002). Traduz a rejeição para o usuário.
+function explicarConsumoIndevido(xMotivo) {
+  if (/ultNSU/i.test(String(xMotivo || ""))) {
+    return (
+      "A SEFAZ recusou a consulta (rejeição 656 — consumo indevido) porque outro sistema já está baixando as notas deste CNPJ " +
+      "(ERP, emissor de notas ou programa da contabilidade). A SEFAZ só aceita um sistema por CNPJ nesse serviço: as notas que o outro " +
+      "sistema já baixou não ficam disponíveis aqui. Nova tentativa liberada em 1 hora; se o aviso se repetir, desative a busca automática de notas no outro sistema."
+    );
+  }
+  return (
+    "A SEFAZ pediu para aguardar 1 hora antes de uma nova consulta (rejeição 656 — consumo indevido). Isso acontece quando o CNPJ já foi " +
+    "consultado há menos de 1 hora — por este site ou por outro sistema que também baixa as notas dele."
+  );
+}
+
 // Alguns certificados A1 não trazem o estado (campo ST) no cadastro do
 // emissor, e a empresa ficava sem UF. O endereço do destinatário nas próprias
 // notas recebidas (<dest><enderDest><UF>) resolve: é a UF do CNPJ/CPF
@@ -53,7 +72,8 @@ async function upsertLote(empresaId, documentos, eventos) {
          (empresa_id, ch_nfe, nsu, tipo, numero, serie, emit_cnpj, emit_nome, emit_uf, dest_cnpj, dh_emi, v_nf, situacao, xml_completo, xml_baixado_em)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, CASE WHEN $14::text IS NOT NULL THEN now() END)
        ON CONFLICT (empresa_id, ch_nfe) DO UPDATE SET
-         situacao = EXCLUDED.situacao,
+         -- cancelamento é definitivo: um resumo/XML reenviado depois não desfaz
+         situacao = CASE WHEN nfe_documentos.situacao = 'cancelada' THEN 'cancelada' ELSE EXCLUDED.situacao END,
          xml_completo = COALESCE(EXCLUDED.xml_completo, nfe_documentos.xml_completo),
          -- só a PRIMEIRA vez que o XML completo chega conta como "baixado"
          xml_baixado_em = COALESCE(nfe_documentos.xml_baixado_em, CASE WHEN EXCLUDED.xml_completo IS NOT NULL THEN now() END),
@@ -413,7 +433,10 @@ async function sincronizarEmpresa(empresa, { manifestarAutomaticamente = true } 
     aguardandoXml,
     aguardandoSefaz: emEspera || !!(fase1 && fase1.pararPorSefaz),
     atingiuLimiteCiclos: !!(fase1 && fase1.atingiuLimiteCiclos),
-    avisoDistribuicao: avisoEspera || (erroDistribuicao ? `Não foi possível buscar notas novas agora (${erroDistribuicao}).` : null),
+    avisoDistribuicao:
+      avisoEspera ||
+      (erroDistribuicao ? `Não foi possível buscar notas novas agora (${erroDistribuicao}).` : null) ||
+      (fase1 && fase1.ultimoCStat === "656" ? explicarConsumoIndevido(fase1.ultimoXMotivo) : null),
   };
 }
 
@@ -496,4 +519,4 @@ async function buscarXmlPorChave(empresa, doc, cert) {
   return r.rows[0] || null;
 }
 
-module.exports = { sincronizarEmpresa, completarXmlPorChave, certificadoDaEmpresa, esperar, consultaPorChaveBloqueada };
+module.exports = { sincronizarEmpresa, completarXmlPorChave, certificadoDaEmpresa, esperar, consultaPorChaveBloqueada, explicarConsumoIndevido };

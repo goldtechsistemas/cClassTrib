@@ -68,6 +68,12 @@ function empresaParaSaida(row) {
     certVencido: diasRestantes != null && diasRestantes < 0,
     certPrestesAVencer: diasRestantes != null && diasRestantes >= 0 && diasRestantes <= DIAS_ALERTA_CERTIFICADO,
     ultimaSincronizacao: row.ultima_sincronizacao,
+    // Só vêm preenchidos na listagem de empresas (api/_nfe/empresas.js).
+    ultimaConsultaOk: row.ultima_consulta_ok || null,
+    rejeicoes656Seguidas: Number(row.rejeicoes_656) || 0,
+    // Duas ou mais recusas 656 seguidas, ao menos uma do tipo "use o ultNSU": é o
+    // sinal de que outro sistema também consulta este CNPJ na SEFAZ.
+    outroSistemaConsultando: (Number(row.rejeicoes_656) || 0) >= 2 && (Number(row.rejeicoes_656_ultnsu) || 0) >= 1,
     proximaConsultaPermitidaEm: row.proxima_consulta_permitida_em,
     manifestacaoAutomatica: row.manifestacao_automatica,
   };

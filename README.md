@@ -556,6 +556,29 @@ os usuários cadastrados e ações de bloquear/desbloquear/excluir.
   `api/admin/users/[id].js`, não só na interface) antes do `DELETE` de
   verdade.
 
+### Conferência geral (2026-10-15)
+
+- **Tabelas oficiais conferidas, sem novidades**: cClassTrib igual à publicação
+  mais recente (IT 2025.002 v1.70, 01/10/2026 — 173 códigos, mesmos CST e
+  percentuais na tabela online da SVRS); NCM idêntica à do Siscomex (15.157
+  códigos, Resolução Gecex nº 926/2026); Anexos da LC 214/2025 iguais ao texto
+  compilado do Planalto (a LC 235/2026 só mexeu em exportação e combustíveis).
+- **Regras por artigo** (`data.regrasPorArtigo`, usadas em `Rules.classificarPorNcm`
+  e na busca por descrição): livros, jornais e papel de impressão (imunidade,
+  art. 9º, IV — 410008), medicamentos de uso humano (art. 133 — 200032, com a
+  alternativa zero para compra pública/CEBAS 200010), soros e vacinas (art. 146,
+  § 1º, III, incluído pela LC 227/2026 — 200053), absorventes e itens de saúde
+  menstrual (art. 147 — 200013) e automóveis para taxistas/PcD (art. 149 —
+  200015, marcado como condicional). Antes esses NCMs caíam na regra geral ou só
+  no item veterinário do Anexo IX.
+- **Notas Fiscais**: `cSitNFe = 3` agora é "cancelada" (antes aparecia "código 3")
+  e o upsert não deixa uma nota cancelada voltar a "autorizada". A rejeição 656
+  ganhou mensagem própria e a lista de empresas mostra a última consulta que a
+  SEFAZ atendeu (não a última tentativa) e um alerta quando outro sistema
+  consulta o mesmo CNPJ — a SEFAZ só aceita uma sequência de NSU por CNPJ
+  (NT 2014.002), então dois sistemas buscando as notas do mesmo CNPJ se
+  atropelam e o nosso recebe 656 quase sempre.
+
 ### Alterar a senha do admin (2026-10-06)
 
 O login do admin continua sendo e-mail + senha (chegou a ser testada uma segunda

@@ -334,7 +334,7 @@
   function verificarTratamentoEspecial(codigo, data) {
     if (!global.Rules || !global.Rules.classificarPorNcm) return null;
     const resultados = global.Rules.classificarPorNcm(codigo, data);
-    const especifico = resultados.find((r) => !r.sintetico && r.anexoId);
+    const especifico = resultados.find((r) => !r.sintetico && !r.condicional && (r.anexoId || r.regraId));
     return especifico || null;
   }
 

@@ -158,6 +158,67 @@
     };
   }
 
+  // Resultado de uma regra prevista direto em artigo da lei (data.regrasPorArtigo),
+  // no mesmo formato dos resultados de Anexo. anexoId fica null (não é Anexo) e
+  // regraId identifica a regra; o título já leva o artigo na frente.
+  function cstOficial(codigo) {
+    const oficial = global.CCLASSTRIB_OFICIAL;
+    const c = oficial && oficial.codigos.find((x) => x.codigo === codigo);
+    return c ? c.cst : null;
+  }
+
+  function buildResultadoArtigo(regra, data, matchInfo) {
+    const trat = data.tratamentos[regra.tratamento] || data.tratamentos.pendente;
+    const referencia = data.meta.aliquotaReferenciaEstimada;
+    const percentual = typeof regra.percentualReducao === "number" ? regra.percentualReducao : null;
+    let aliquotaEstimada = null;
+    if (regra.tratamento === "imune") aliquotaEstimada = 0;
+    else if (percentual != null) aliquotaEstimada = +(referencia * (1 - percentual / 100)).toFixed(2);
+
+    let alternativa = null;
+    if (regra.tratamentoAlternativo) {
+      const alt = regra.tratamentoAlternativo;
+      const tratAlt = data.tratamentos[alt.tratamento] || data.tratamentos.pendente;
+      alternativa = {
+        percentualReducao: alt.percentualReducao,
+        tratamentoLabel: tratAlt.label,
+        cor: tratAlt.cor,
+        artigo: alt.artigo,
+        condicao: alt.condicao,
+        cClassTrib: alt.cClassTrib || null
+      };
+    }
+
+    return {
+      anexoId: null,
+      regraId: regra.id,
+      anexoTitulo: `Art. ${regra.artigo} — ${regra.titulo}`,
+      artigo: regra.artigo,
+      vigente: true,
+      revogadoPor: null,
+      tratamento: regra.tratamento,
+      tratamentoLabel: trat.label,
+      cor: trat.cor,
+      percentualReducao: percentual,
+      aliquotaReferencia: referencia,
+      aliquotaEstimada: aliquotaEstimada,
+      item: null,
+      itemDescricao: null,
+      // usado pela consulta em lote para desempatar pela descrição do produto
+      textoBusca: regra.titulo + " " + (regra.palavrasChave || ""),
+      cClassTrib: regra.cClassTrib,
+      cst: cstOficial(regra.cClassTrib),
+      alternativa: alternativa,
+      observacaoAnexo: regra.observacao || null,
+      fonteUrl: data.meta.fonteUrl,
+      matchTipo: matchInfo ? matchInfo.tipo : null,
+      matchEspecificidade: matchInfo ? matchInfo.especificidade : 0,
+      matchCodigo: matchInfo ? matchInfo.codigo : null,
+      prioridade: regra.prioridade || 0,
+      condicional: !!regra.condicional
+    };
+  }
+
   // Quando um NCM não bate com NENHUM Anexo de redução/zero/imunidade, isso
   // NÃO significa "não sabemos" — na grande maioria dos casos significa que
   // o produto simplesmente segue a regra padrão do IBS/CBS: tributação
@@ -246,6 +307,10 @@
         resultados.push(buildResultado(anexo, item, data, matchInfo));
       }
     });
+    (data.regrasPorArtigo || []).forEach((regra) => {
+      const matchInfo = melhorCorrespondencia(regra.ncm || [], inputDigits);
+      if (matchInfo) resultados.push(buildResultadoArtigo(regra, data, matchInfo));
+    });
 
     const anexosPresentes = new Set(resultados.map((r) => r.anexoId));
     resultados = resultados.filter((r) => {
@@ -261,17 +326,25 @@
       return [buildRegraGeralIntegral(data, "semAnexo")];
     }
 
-    // Se o(s) único(s) resultado(s) forem do Imposto Seletivo, acrescenta a
-    // regra geral de tributação integral do IBS/CBS (ver buildRegraGeralIntegral),
-    // já que o IS incide ADICIONALMENTE, não em substituição.
-    if (resultados.every((r) => r.tratamento === "seletivo")) {
-      resultados.push(buildRegraGeralIntegral(data, "seletivo"));
+    // Se só sobraram o Imposto Seletivo e/ou benefícios condicionais (que valem
+    // apenas para um adquirente específico), acrescenta a regra geral de
+    // tributação integral do IBS/CBS (ver buildRegraGeralIntegral) — o IS incide
+    // ADICIONALMENTE e o benefício condicional não é o caso comum.
+    if (resultados.every((r) => r.tratamento === "seletivo" || r.condicional)) {
+      resultados.push(buildRegraGeralIntegral(data, resultados.some((r) => r.tratamento === "seletivo") ? "seletivo" : "semAnexo"));
     }
 
     // Correspondências específicas (código exato de posição/subposição/item)
     // vêm antes de referências amplas a capítulo inteiro, que são menos
     // confiáveis e por isso sinalizadas separadamente na interface.
-    resultados.sort((a, b) => b.matchEspecificidade - a.matchEspecificidade);
+    // Benefícios condicionais vão para o fim; no empate de especificidade, a regra
+    // marcada com prioridade (ex.: medicamentos de uso humano, art. 133) vem antes.
+    resultados.sort(
+      (a, b) =>
+        (a.condicional ? 1 : 0) - (b.condicional ? 1 : 0) ||
+        b.matchEspecificidade - a.matchEspecificidade ||
+        (b.prioridade || 0) - (a.prioridade || 0)
+    );
 
     // Um mesmo NCM pode constar em vários itens do MESMO Anexo (ex.: dezenas
     // de aminoácidos do Anexo VI compartilham o NCM 2922.49.90). A
@@ -325,6 +398,16 @@
       if (score > 0) {
         candidatos.push({ score, resultado: buildResultado(anexo, item, data) });
       }
+    });
+
+    (data.regrasPorArtigo || []).forEach((regra) => {
+      const alvo = normalizeTexto(regra.titulo + " " + (regra.palavrasChave || ""));
+      let score = 0;
+      if (alvo.includes(termo)) score += 10;
+      palavras.forEach((p) => {
+        if (p.length >= 3 && alvo.includes(p)) score += 1;
+      });
+      if (score > 0) candidatos.push({ score, resultado: buildResultadoArtigo(regra, data) });
     });
 
     candidatos.sort((a, b) => b.score - a.score);

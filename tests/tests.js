@@ -72,6 +72,47 @@
     !medicamento.some((r) => r.anexoId === "XIV")
   );
 
+  // --- Regras previstas direto em artigo (data.regrasPorArtigo) ---
+  const livro = R.classificarPorNcm("4901.99.00", data);
+  assert("Livro (4901.99.00) é imune — art. 9º, IV, cClassTrib 410008", livro[0].regraId === "art9-IV" && livro[0].cClassTrib === "410008" && livro[0].cst === "410");
+  assert("Livro (4901.99.00) não cai mais na tributação integral", !livro.some((r) => r.cClassTrib === "000001"));
+  const jornal = R.classificarPorNcm("4902.10.00", data);
+  assert("Jornal (4902.10.00) é imune — 410008", jornal.some((r) => r.cClassTrib === "410008"));
+
+  const medHumano = R.classificarPorNcm("3004.90.69", data);
+  assertEqual("Medicamento (3004.90.69): 1º resultado é o art. 133 (uso humano)", medHumano[0].regraId, "art133");
+  assertEqual("Medicamento (art. 133): cClassTrib 200032", medHumano[0].cClassTrib, "200032");
+  assertEqual("Medicamento (art. 133): redução de 60%", medHumano[0].percentualReducao, 60);
+  assertEqual("Medicamento (art. 133): alternativa zero para compra pública/CEBAS = 200010", medHumano[0].alternativa && medHumano[0].alternativa.cClassTrib, "200010");
+  assert("Medicamento (3004.90.69): mantém a hipótese veterinária do Anexo IX", medHumano.some((r) => r.anexoId === "IX"));
+
+  const vacina = R.classificarPorNcm("3002.41.29", data);
+  assert("Vacina humana (3002.41.29) tem alíquota zero — art. 146, § 1º, III, cClassTrib 200053", vacina.some((r) => r.regraId === "art146-III" && r.cClassTrib === "200053" && r.tratamento === "zero"));
+  const vacinaVet = R.classificarPorNcm("3002.42.10", data);
+  assert("Vacina veterinária (3002.42.10) NÃO recebe a alíquota zero do art. 146", !vacinaVet.some((r) => r.regraId === "art146-III"));
+
+  const absorvente = R.classificarPorNcm("9619.00.00", data);
+  assert("9619.00.00 mostra a alíquota zero dos absorventes (art. 147, 200013)", absorvente.some((r) => r.cClassTrib === "200013"));
+  assert("9619.00.00 mantém fraldas do Anexo VIII (redução de 60%)", absorvente.some((r) => r.anexoId === "VIII"));
+
+  const carro = R.classificarPorNcm("8703.23.10", data);
+  assert("Automóvel (8703.23.10) ainda mostra a regra geral do IBS/CBS (000001)", carro.some((r) => r.cClassTrib === "000001"));
+  assert("Automóvel (8703.23.10) mostra a alíquota zero condicional para taxista/PcD (200015)", carro.some((r) => r.cClassTrib === "200015" && r.condicional));
+  assert("Automóvel: o benefício condicional fica por último", carro[carro.length - 1].condicional === true);
+
+  const notebook = R.classificarPorNcm("8471.30.12", data);
+  assert("Produto comum (8471.30.12) continua só com a regra geral", notebook.length === 1 && notebook[0].cClassTrib === "000001");
+
+  const buscaLivro = R.classificarPorDescricao("livros", data);
+  assert("Busca textual 'livros' encontra a imunidade do art. 9º, IV", buscaLivro.some((r) => r.regraId === "art9-IV"));
+  const buscaAbs = R.classificarPorDescricao("absorvente", data);
+  assert("Busca textual 'absorvente' encontra o art. 147", buscaAbs.some((r) => r.regraId === "art147"));
+
+  (data.regrasPorArtigo || []).forEach((regra) => {
+    const oficial = window.CCLASSTRIB_OFICIAL && window.CCLASSTRIB_OFICIAL.codigos.find((c) => c.codigo === regra.cClassTrib);
+    assert(`Regra ${regra.id}: cClassTrib ${regra.cClassTrib} existe na tabela oficial`, !!oficial);
+  });
+
   // --- classificarPorDescricao ---
   const buscaCadeira = R.classificarPorDescricao("cadeira de rodas", data);
   assert("Busca textual 'cadeira de rodas' encontra resultado", buscaCadeira.length > 0);

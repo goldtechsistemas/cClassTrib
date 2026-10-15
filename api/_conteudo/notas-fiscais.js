@@ -217,7 +217,7 @@
             </td>
             <td>${ambiente}</td>
             <td>${validade}</td>
-            <td>${textoUltimaSincronizacao(emp.ultimaSincronizacao)}</td>
+            <td>${textoUltimaSincronizacao(emp.ultimaConsultaOk, emp.ultimaSincronizacao)}${alertaSefaz(emp)}</td>
             <td>
               <div class="empresa-acoes">
                 <button class="btn btn-sm btn-sincronizar" data-id="${esc(emp.id)}" data-nome="${esc(nomeEmpresa)}" type="button">Sincronizar agora</button>
@@ -248,10 +248,24 @@
     return ((palavras[0] || "?")[0] + (palavras.length > 1 ? palavras[1][0] : "")).toUpperCase();
   }
 
+  // Recusas seguidas da SEFAZ (rejeição 656). O caso mais comum é outro sistema
+  // (ERP, emissor, programa da contabilidade) baixar as notas do mesmo CNPJ —
+  // a SEFAZ só aceita um por CNPJ, então avisamos com a orientação.
+  function alertaSefaz(emp) {
+    if (emp.outroSistemaConsultando) {
+      return `<div class="empresa-alerta empresa-alerta-forte" title="A SEFAZ só aceita um sistema por CNPJ na busca de notas (NT 2014.002). Enquanto outro programa (ERP, emissor de notas ou sistema da contabilidade) também buscar as notas deste CNPJ, a SEFAZ vai recusar as consultas deste site com a rejeição 656. Para usar o FiscalClass, desative a busca/captura automática de notas no outro sistema.">⚠ Outro sistema está consultando este CNPJ na SEFAZ</div>`;
+    }
+    if (emp.rejeicoes656Seguidas >= 2) {
+      return `<div class="empresa-alerta" title="A SEFAZ recusou as últimas consultas com a rejeição 656 (consumo indevido) e pediu para aguardar 1 hora. Se continuar, verifique se outro sistema também busca as notas deste CNPJ.">ⓘ SEFAZ recusando as consultas (656)</div>`;
+    }
+    return "";
+  }
+
   // "Hoje", "Ontem", "Há 3 dias" + a data — mais fácil de bater o olho do que
-  // só a data.
-  function textoUltimaSincronizacao(iso) {
-    if (!iso) return `<span class="hint">Nunca sincronizado</span>`;
+  // só a data. Usa a última consulta que a SEFAZ ATENDEU; uma tentativa recusada
+  // não conta como sincronização.
+  function textoUltimaSincronizacao(iso, tentativa) {
+    if (!iso) return tentativa ? `<span class="hint">Nenhuma consulta atendida pela SEFAZ ainda</span>` : `<span class="hint">Nunca sincronizado</span>`;
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return `<span class="hint">Nunca sincronizado</span>`;
     const inicioDia = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();

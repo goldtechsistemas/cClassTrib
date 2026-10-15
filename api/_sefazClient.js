@@ -43,12 +43,14 @@ const UF_PARA_CODIGO = {
 };
 const CODIGO_PARA_UF = Object.fromEntries(Object.entries(UF_PARA_CODIGO).map(([sigla, cod]) => [String(cod), sigla]));
 
-// Domínio oficial do campo cSitNFe do resNFe (schema resNFe_v1.01.xsd): só
-// existem os valores 1 e 2 — "cancelada" NÃO é um valor de cSitNFe, ela chega
-// depois via um resEvento (tpEvento 110111), tratado à parte em _nfeSync.js.
+// Campo cSitNFe do resNFe (NT 2014.002, leiaute do Resumo da NF-e, campo C14):
+// 1 = uso autorizado, 2 = uso denegado, 3 = NF-e cancelada. Uma nota cancelada
+// DEPOIS de já sincronizada chega também como resEvento (tpEvento 110111),
+// tratado à parte em _nfeSync.js.
 const SITUACOES = {
   1: "autorizada",
   2: "denegada",
+  3: "cancelada",
 };
 
 class ErroSefaz extends Error {}

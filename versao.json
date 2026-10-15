@@ -1,4 +1,4 @@
 {
-  "versao": "1.1.0",
-  "notas": "Tabelas oficiais atualizadas (cClassTrib de 01/10/2026 e NCM de 05/10/2026), Anexos VI, IX e XI completos e melhorias de segurança."
+  "versao": "1.2.0",
+  "notas": "Consulta por NCM agora também mostra benefícios previstos direto em artigos da LC 214/2025 (livros e jornais, medicamentos, soros e vacinas, absorventes, automóveis para taxistas/PcD). Notas Fiscais: aviso quando outro sistema consulta o mesmo CNPJ na SEFAZ e notas canceladas identificadas corretamente."
 }

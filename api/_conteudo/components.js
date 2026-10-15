@@ -266,7 +266,7 @@
       infoTributaria = `
         <div class="meta ncm-especial">
           <span class="badge cor-${r.especial.cor}">${esc(r.especial.tratamentoLabel)}</span>
-          tem tratamento tributário especial no Anexo ${esc(r.especial.anexoId)} da LC 214/2025 (art. ${esc(r.especial.artigo)}).
+          tem tratamento tributário especial ${r.especial.anexoId ? `no Anexo ${esc(r.especial.anexoId)} da LC 214/2025 (art. ${esc(r.especial.artigo)})` : `no art. ${esc(r.especial.artigo)} da LC 214/2025`}.
           <button class="btn secondary btn-sm btn-ver-classificacao" data-ncm="${esc(r.codigo)}" type="button">Ver classificação tributária →</button>
         </div>`;
     } else if (r.completo) {
